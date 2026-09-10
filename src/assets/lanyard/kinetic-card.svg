@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f1a12;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a1109;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00c87a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#009d5e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0f4f0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Card background -->
+  <rect width="600" height="900" rx="32" fill="url(#cardGrad)" />
+
+  <!-- Top accent bar -->
+  <rect x="0" y="0" width="600" height="8" rx="4" fill="url(#accent)" />
+
+  <!-- Clip hole at top -->
+  <rect x="265" y="28" width="70" height="28" rx="14" fill="#d4d9d5" />
+  <rect x="276" y="33" width="48" height="18" rx="9" fill="#b8c0ba" />
+
+  <!-- Logo mark -->
+  <rect x="220" y="120" width="160" height="160" rx="28" fill="url(#accent)" />
+  <!-- Building icon inside logo -->
+  <rect x="248" y="200" width="40" height="56" rx="3" fill="white" opacity="0.95"/>
+  <rect x="254" y="184" width="28" height="20" rx="2" fill="white" opacity="0.75"/>
+  <rect x="250" y="208" width="10" height="10" rx="1.5" fill="#00a060" opacity="0.7"/>
+  <rect x="266" y="208" width="10" height="10" rx="1.5" fill="#00a060" opacity="0.7"/>
+  <rect x="250" y="226" width="10" height="10" rx="1.5" fill="#00a060" opacity="0.5"/>
+  <rect x="266" y="226" width="10" height="10" rx="1.5" fill="#00a060" opacity="0.5"/>
+  <!-- Crane -->
+  <rect x="302" y="148" width="10" height="64" rx="3" fill="white" opacity="0.9"/>
+  <rect x="280" y="148" width="44" height="9" rx="2.5" fill="white" opacity="0.75"/>
+  <rect x="314" y="153" width="14" height="6" rx="2" fill="white" opacity="0.45"/>
+  <line x1="286" y1="157" x2="286" y2="200" stroke="white" stroke-width="2" opacity="0.5" stroke-dasharray="3,2"/>
+
+  <!-- KINETIC wordmark -->
+  <text x="300" y="340" font-family="Arial, sans-serif" font-size="52" font-weight="900" fill="#0f1a12" text-anchor="middle" letter-spacing="-1">KINETIC</text>
+
+  <!-- Subtitle -->
+  <text x="300" y="376" font-family="Arial, sans-serif" font-size="15" fill="#5a7060" text-anchor="middle" letter-spacing="4">CONSTRUCTION OPS</text>
+
+  <!-- Divider -->
+  <rect x="60" y="406" width="480" height="1.5" rx="1" fill="#d0dbd2" />
+
+  <!-- Person section -->
+  <!-- Avatar circle -->
+  <circle cx="120" cy="490" r="44" fill="url(#accent)" />
+  <text x="120" y="498" font-family="Arial, sans-serif" font-size="22" font-weight="800" fill="white" text-anchor="middle">VK</text>
+
+  <!-- Name and role -->
+  <text x="185" y="478" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#0f1a12">Vikas Kulkarni</text>
+  <text x="185" y="506" font-family="Arial, sans-serif" font-size="17" fill="#5a7060">Senior Project Head</text>
+
+  <!-- Company badge -->
+  <rect x="185" y="522" width="120" height="28" rx="14" fill="#00c87a" opacity="0.12"/>
+  <rect x="185" y="522" width="120" height="28" rx="14" fill="none" stroke="#00c87a" stroke-width="1.5" opacity="0.5"/>
+  <text x="245" y="541" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#009d5e" text-anchor="middle" letter-spacing="1">KINETIC OPS</text>
+
+  <!-- Divider 2 -->
+  <rect x="60" y="580" width="480" height="1" rx="1" fill="#d0dbd2" />
+
+  <!-- Stats row -->
+  <text x="120" y="630" font-family="Arial, sans-serif" font-size="32" font-weight="800" fill="#0f1a12" text-anchor="middle">14+</text>
+  <text x="120" y="654" font-family="Arial, sans-serif" font-size="12" fill="#7a9080" text-anchor="middle" letter-spacing="1">PROJECTS</text>
+
+  <text x="300" y="630" font-family="Arial, sans-serif" font-size="32" font-weight="800" fill="#0f1a12" text-anchor="middle">₹655Cr</text>
+  <text x="300" y="654" font-family="Arial, sans-serif" font-size="12" fill="#7a9080" text-anchor="middle" letter-spacing="1">MANAGED</text>
+
+  <text x="480" y="630" font-family="Arial, sans-serif" font-size="32" font-weight="800" fill="#0f1a12" text-anchor="middle">98.2%</text>
+  <text x="480" y="654" font-family="Arial, sans-serif" font-size="12" fill="#7a9080" text-anchor="middle" letter-spacing="1">AI ACCURACY</text>
+
+  <!-- Divider 3 -->
+  <rect x="60" y="676" width="480" height="1" rx="1" fill="#d0dbd2" />
+
+  <!-- QR-like pattern placeholder -->
+  <rect x="60" y="710" width="68" height="68" rx="8" fill="#0f1a12" opacity="0.06"/>
+  <rect x="66" y="716" width="16" height="16" rx="2" fill="#0f1a12" opacity="0.35"/>
+  <rect x="86" y="716" width="8" height="8" rx="1" fill="#0f1a12" opacity="0.2"/>
+  <rect x="98" y="716" width="16" height="16" rx="2" fill="#0f1a12" opacity="0.35"/>
+  <rect x="66" y="736" width="8" height="8" rx="1" fill="#0f1a12" opacity="0.2"/>
+  <rect x="80" y="736" width="12" height="8" rx="1" fill="#0f1a12" opacity="0.15"/>
+  <rect x="98" y="736" width="16" height="8" rx="1" fill="#0f1a12" opacity="0.2"/>
+  <rect x="66" y="748" width="16" height="16" rx="2" fill="#0f1a12" opacity="0.35"/>
+  <rect x="86" y="748" width="8" height="8" rx="1" fill="#0f1a12" opacity="0.15"/>
+  <rect x="98" y="748" width="16" height="16" rx="2" fill="#0f1a12" opacity="0.35"/>
+
+  <!-- ID text -->
+  <text x="152" y="732" font-family="monospace" font-size="13" fill="#0f1a12" opacity="0.4">ID: KNT-2025-0042</text>
+  <text x="152" y="752" font-family="monospace" font-size="13" fill="#0f1a12" opacity="0.4">kinetic.app/dashboard</text>
+  <text x="152" y="772" font-family="monospace" font-size="13" fill="#00a060" opacity="0.8">● Active</text>
+
+  <!-- Bottom accent -->
+  <rect x="0" y="892" width="600" height="8" rx="4" fill="url(#accent)" />
+</svg>

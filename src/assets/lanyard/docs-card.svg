@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f8ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#eaf0ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="acc" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d5fe0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="imgBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8faff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#eef4ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="900" rx="40" fill="url(#bg)" />
+  <rect x="0" y="0" width="600" height="12" rx="6" fill="url(#acc)" />
+
+  <!-- Clip hole -->
+  <rect x="262" y="26" width="76" height="30" rx="15" fill="#a8c0ee" />
+  <rect x="274" y="32" width="52" height="18" rx="9" fill="#8aa8dc" />
+
+  <!-- ── Document vault image block ── -->
+  <rect x="40" y="76" width="520" height="300" rx="24" fill="url(#imgBg)" />
+
+  <!-- Stacked document files -->
+  <!-- Back docs -->
+  <rect x="120" y="130" width="260" height="200" rx="10" fill="white" opacity="0.5"/>
+  <rect x="120" y="130" width="260" height="200" rx="10" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.2"/>
+  <rect x="130" y="112" width="260" height="200" rx="10" fill="white" opacity="0.65"/>
+  <rect x="130" y="112" width="260" height="200" rx="10" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.25"/>
+  <!-- Front main doc -->
+  <rect x="140" y="94" width="260" height="220" rx="12" fill="white" opacity="0.95"/>
+  <rect x="140" y="94" width="260" height="220" rx="12" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.3"/>
+  <!-- Dog-ear fold -->
+  <path d="M370 94 L400 124 L370 124 Z" fill="#e8f0ff" opacity="0.8"/>
+  <path d="M370 94 L400 124" stroke="#3b82f6" stroke-width="1.5" opacity="0.3" fill="none"/>
+  <!-- Doc content lines -->
+  <rect x="162" y="140" width="160" height="14" rx="4" fill="#3b82f6" opacity="0.18"/>
+  <rect x="162" y="164" width="200" height="10" rx="3" fill="#0a1a2f" opacity="0.1"/>
+  <rect x="162" y="182" width="180" height="10" rx="3" fill="#0a1a2f" opacity="0.08"/>
+  <rect x="162" y="200" width="200" height="10" rx="3" fill="#0a1a2f" opacity="0.1"/>
+  <rect x="162" y="218" width="140" height="10" rx="3" fill="#0a1a2f" opacity="0.07"/>
+  <rect x="162" y="248" width="60" height="24" rx="6" fill="#3b82f6" opacity="0.15"/>
+  <rect x="162" y="248" width="60" height="24" rx="6" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.5"/>
+  <text x="192" y="265" font-family="monospace" font-size="12" fill="#1d5fe0" text-anchor="middle">v3.2</text>
+
+  <!-- AI Search bar -->
+  <rect x="430" y="116" width="100" height="260" rx="14" fill="white" opacity="0.8"/>
+  <rect x="430" y="116" width="100" height="260" rx="14" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.25"/>
+  <text x="480" y="148" font-family="monospace" font-size="12" fill="#3b82f6" text-anchor="middle" opacity="0.6">AI</text>
+  <text x="480" y="166" font-family="monospace" font-size="12" fill="#3b82f6" text-anchor="middle" opacity="0.6">SEARCH</text>
+  <rect x="446" y="178" width="68" height="8" rx="3" fill="#3b82f6" opacity="0.15"/>
+  <rect x="446" y="195" width="60" height="6" rx="2" fill="#3b82f6" opacity="0.1"/>
+  <rect x="446" y="209" width="68" height="6" rx="2" fill="#3b82f6" opacity="0.12"/>
+  <rect x="446" y="223" width="50" height="6" rx="2" fill="#3b82f6" opacity="0.1"/>
+  <!-- Magnifier icon -->
+  <circle cx="480" cy="320" r="22" fill="none" stroke="#3b82f6" stroke-width="3" opacity="0.3"/>
+  <circle cx="475" cy="315" r="14" fill="none" stroke="#3b82f6" stroke-width="2.5" opacity="0.5"/>
+  <line x1="486" y1="326" x2="496" y2="336" stroke="#3b82f6" stroke-width="2.5" opacity="0.5" stroke-linecap="round"/>
+
+  <!-- TAG -->
+  <rect x="40" y="396" width="100" height="34" rx="17" fill="#3b82f6" opacity="0.12"/>
+  <rect x="40" y="396" width="100" height="34" rx="17" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.5"/>
+  <text x="90" y="419" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#1d5fe0" text-anchor="middle" letter-spacing="2">DOCS</text>
+
+  <!-- BIG TITLE -->
+  <text x="40" y="510" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900" fill="#071226" letter-spacing="-2">Document</text>
+  <text x="40" y="598" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900" fill="#071226" letter-spacing="-2">Reposi-</text>
+  <text x="40" y="686" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900" fill="#1d5fe0" letter-spacing="-2">tory</text>
+
+  <!-- Stat pill -->
+  <rect x="40" y="716" width="520" height="2" rx="1" fill="#a8c0ee" opacity="0.6"/>
+  <text x="40" y="760" font-family="monospace" font-size="18" fill="#1a3a80" letter-spacing="1">AI-SEARCHABLE  ·  VERSION TRACKED</text>
+
+  <!-- Bottom accent -->
+  <rect x="0" y="888" width="600" height="12" rx="6" fill="url(#acc)" />
+</svg>

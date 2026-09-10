@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff5f8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffe8ef;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="acc" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f43f6e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d82060;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="imgBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0810;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0e0408;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="900" rx="40" fill="url(#bg)" />
+  <rect x="0" y="0" width="600" height="12" rx="6" fill="url(#acc)" />
+
+  <!-- Clip hole -->
+  <rect x="262" y="26" width="76" height="30" rx="15" fill="#e8a8b8" />
+  <rect x="274" y="32" width="52" height="18" rx="9" fill="#d090a0" />
+
+  <!-- ── Workforce / People image block ── -->
+  <rect x="40" y="76" width="520" height="300" rx="24" fill="url(#imgBg)" />
+
+  <!-- Person silhouettes row -->
+  <!-- Person 1 (left) -->
+  <circle cx="130" cy="180" r="30" fill="#f43f6e" opacity="0.4"/>
+  <rect x="100" y="214" width="60" height="80" rx="20" fill="#f43f6e" opacity="0.3"/>
+  <!-- Person 2 (center-left) -->
+  <circle cx="220" cy="170" r="30" fill="#f43f6e" opacity="0.55"/>
+  <rect x="190" y="204" width="60" height="90" rx="20" fill="#f43f6e" opacity="0.4"/>
+  <!-- Person 3 (center - larger/main) -->
+  <circle cx="320" cy="160" r="36" fill="#f43f6e" opacity="0.7"/>
+  <rect x="284" y="200" width="72" height="100" rx="24" fill="#f43f6e" opacity="0.55"/>
+  <!-- Helmet on main person -->
+  <path d="M284 160 Q320 130 356 160" fill="#f43f6e" opacity="0.8"/>
+  <!-- Person 4 (center-right) -->
+  <circle cx="420" cy="170" r="30" fill="#f43f6e" opacity="0.5"/>
+  <rect x="390" y="204" width="60" height="90" rx="20" fill="#f43f6e" opacity="0.35"/>
+  <!-- Person 5 (right) -->
+  <circle cx="510" cy="185" r="26" fill="#f43f6e" opacity="0.3"/>
+  <rect x="484" y="215" width="52" height="70" rx="18" fill="#f43f6e" opacity="0.22"/>
+  <!-- Ground line -->
+  <rect x="40" y="304" width="520" height="3" rx="2" fill="#f43f6e" opacity="0.15"/>
+  <!-- Attendance badge -->
+  <rect x="136" y="88" width="160" height="32" rx="16" fill="#f43f6e" opacity="0.14"/>
+  <rect x="136" y="88" width="160" height="32" rx="16" fill="none" stroke="#f43f6e" stroke-width="1.5" opacity="0.45"/>
+  <circle cx="154" cy="104" r="6" fill="#f43f6e"/>
+  <text x="168" y="110" font-family="monospace" font-size="14" font-weight="700" fill="#d82060">ATTENDANCE</text>
+
+  <!-- Labour count badge -->
+  <rect x="316" y="88" width="120" height="32" rx="16" fill="#f43f6e" opacity="0.14"/>
+  <rect x="316" y="88" width="120" height="32" rx="16" fill="none" stroke="#f43f6e" stroke-width="1.5" opacity="0.45"/>
+  <text x="376" y="110" font-family="monospace" font-size="14" font-weight="700" fill="#d82060" text-anchor="middle">240 ACTIVE</text>
+
+  <!-- TAG -->
+  <rect x="40" y="396" width="80" height="34" rx="17" fill="#f43f6e" opacity="0.12"/>
+  <rect x="40" y="396" width="80" height="34" rx="17" fill="none" stroke="#f43f6e" stroke-width="2" opacity="0.5"/>
+  <text x="80" y="419" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#d82060" text-anchor="middle" letter-spacing="2">HR</text>
+
+  <!-- BIG TITLE -->
+  <text x="40" y="510" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900" fill="#1a0810" letter-spacing="-2">Work-</text>
+  <text x="40" y="598" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900" fill="#1a0810" letter-spacing="-2">force &amp;</text>
+  <text x="40" y="686" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900" fill="#d82060" letter-spacing="-2">Labour</text>
+
+  <!-- Stat pill -->
+  <rect x="40" y="716" width="520" height="2" rx="1" fill="#e8a8b8" opacity="0.6"/>
+  <text x="40" y="760" font-family="monospace" font-size="18" fill="#90183a" letter-spacing="1">240 WORKERS  ·  6 SITES</text>
+
+  <!-- Bottom accent -->
+  <rect x="0" y="888" width="600" height="12" rx="6" fill="url(#acc)" />
+</svg>

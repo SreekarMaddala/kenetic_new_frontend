@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fdf5ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f4e8ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="acc" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#9c5af5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3de8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="imgBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#140a28;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0c0618;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="900" rx="40" fill="url(#bg)" />
+  <rect x="0" y="0" width="600" height="12" rx="6" fill="url(#acc)" />
+
+  <!-- Clip hole -->
+  <rect x="262" y="26" width="76" height="30" rx="15" fill="#c8a8e8" />
+  <rect x="274" y="32" width="52" height="18" rx="9" fill="#b090d0" />
+
+  <!-- ── Approval / checkmark image block ── -->
+  <rect x="40" y="76" width="520" height="300" rx="24" fill="url(#imgBg)" />
+
+  <!-- Workflow nodes -->
+  <!-- Approval chain illustration -->
+  <!-- Step 1 - pending -->
+  <circle cx="130" cy="180" r="40" fill="#9c5af5" opacity="0.15"/>
+  <circle cx="130" cy="180" r="40" fill="none" stroke="#9c5af5" stroke-width="3" opacity="0.5"/>
+  <text x="130" y="188" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#9c5af5" text-anchor="middle" opacity="0.9">1</text>
+  <!-- Connector line -->
+  <rect x="172" y="178" width="56" height="4" rx="2" fill="#9c5af5" opacity="0.3"/>
+  <!-- Step 2 - approved -->
+  <circle cx="300" cy="180" r="40" fill="#9c5af5" opacity="0.3"/>
+  <circle cx="300" cy="180" r="40" fill="none" stroke="#9c5af5" stroke-width="3" opacity="0.7"/>
+  <!-- Checkmark in step 2 -->
+  <path d="M280 180 L294 196 L322 162" stroke="#9c5af5" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  <!-- Connector line -->
+  <rect x="342" y="178" width="56" height="4" rx="2" fill="#9c5af5" opacity="0.3"/>
+  <!-- Step 3 - pending -->
+  <circle cx="470" cy="180" r="40" fill="#9c5af5" opacity="0.1"/>
+  <circle cx="470" cy="180" r="40" fill="none" stroke="#9c5af5" stroke-width="3" opacity="0.3" stroke-dasharray="8,6"/>
+  <text x="470" y="188" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#9c5af5" text-anchor="middle" opacity="0.5">3</text>
+
+  <!-- Labels -->
+  <text x="130" y="238" font-family="monospace" font-size="13" fill="#9c5af5" text-anchor="middle" opacity="0.5">SUBMIT</text>
+  <text x="300" y="238" font-family="monospace" font-size="13" fill="#9c5af5" text-anchor="middle" opacity="0.8">APPROVED</text>
+  <text x="470" y="238" font-family="monospace" font-size="13" fill="#9c5af5" text-anchor="middle" opacity="0.4">COMPLETE</text>
+
+  <!-- 12 pending badge -->
+  <rect x="136" y="266" width="128" height="34" rx="17" fill="#9c5af5" opacity="0.14"/>
+  <rect x="136" y="266" width="128" height="34" rx="17" fill="none" stroke="#9c5af5" stroke-width="1.5" opacity="0.5"/>
+  <text x="200" y="289" font-family="monospace" font-size="14" font-weight="700" fill="#7c3de8" text-anchor="middle">12 PENDING</text>
+  <!-- Audit trail badge -->
+  <rect x="290" y="266" width="130" height="34" rx="17" fill="#9c5af5" opacity="0.1"/>
+  <rect x="290" y="266" width="130" height="34" rx="17" fill="none" stroke="#9c5af5" stroke-width="1.5" opacity="0.4"/>
+  <text x="355" y="289" font-family="monospace" font-size="14" font-weight="700" fill="#7c3de8" text-anchor="middle">AUDIT TRAIL</text>
+
+  <!-- TAG -->
+  <rect x="40" y="396" width="140" height="34" rx="17" fill="#9c5af5" opacity="0.12"/>
+  <rect x="40" y="396" width="140" height="34" rx="17" fill="none" stroke="#9c5af5" stroke-width="2" opacity="0.5"/>
+  <text x="110" y="419" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#7c3de8" text-anchor="middle" letter-spacing="2">WORKFLOW</text>
+
+  <!-- BIG TITLE -->
+  <text x="40" y="510" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900" fill="#140a28" letter-spacing="-2">Approval</text>
+  <text x="40" y="598" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900" fill="#140a28" letter-spacing="-2">Center</text>
+  <text x="40" y="660" font-family="Arial Black, Arial, sans-serif" font-size="36" font-weight="700" fill="#9c5af5" letter-spacing="-1">Structured Workflows</text>
+
+  <!-- Stat pill -->
+  <rect x="40" y="700" width="520" height="2" rx="1" fill="#c8a8e8" opacity="0.6"/>
+  <text x="40" y="744" font-family="monospace" font-size="18" fill="#5a2e90" letter-spacing="1">12 PENDING  ·  ₹4.2Cr EXPOSURE</text>
+
+  <!-- Bottom accent -->
+  <rect x="0" y="888" width="600" height="12" rx="6" fill="url(#acc)" />
+</svg>
