@@ -53,29 +53,35 @@ function LogisticsPage() {
       const parsedVehicles = rawLogistics
         .filter((item: any) => item.tripType === "vehicle" || item.startKm)
         .map((item: any, idx: number) => ({
-          id: item.tripId || `V${idx + 1}`,
-          date: item.date || new Date().toISOString().split("T")[0],
+          id: item.tripId || item.recordId || `V${idx + 1}`,
+          date: item.date || item.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
           name: item.vehicle || item.name || "Mahindra Bolero",
           driver: item.driver || "Driver",
           startKm: item.startKm || 10000,
           endKm: item.endKm || 10100,
           distance: (item.endKm || 10100) - (item.startKm || 10000),
         }));
+
+      const parsedRegVehicles = rawLogistics
+        .filter((item: any) => item.tripType === "vehicle_registration" || item.plate)
+        .map((item: any) => item.vehicle || `${item.model} (${item.plate})`);
+
       const parsedFuel = rawLogistics
         .filter((item: any) => item.tripType === "fuel" || item.liters)
         .map((item: any, idx: number) => ({
-          id: item.tripId || `F${idx + 1}`,
-          date: item.date || new Date().toISOString().split("T")[0],
+          id: item.tripId || item.recordId || `F${idx + 1}`,
+          date: item.date || item.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
           vehicle: item.vehicle || "Mahindra Bolero",
           liters: item.liters || 40,
           rate: item.rate || 98.4,
           total: item.total || 3936,
         }));
+
       const parsedRental = rawLogistics
         .filter((item: any) => item.tripType === "rental" || item.vendor)
         .map((item: any, idx: number) => ({
-          id: item.tripId || `R${idx + 1}`,
-          date: item.date || new Date().toISOString().split("T")[0],
+          id: item.tripId || item.recordId || `R${idx + 1}`,
+          date: item.date || item.createdAt?.split("T")[0] || new Date().toISOString().split("T")[0],
           vendor: item.vendor || "Transport Vendor",
           project: item.project || "Site Operations",
           material: item.material || "Materials",
@@ -83,13 +89,17 @@ function LogisticsPage() {
           helper: item.helper || 500,
           total: item.total || 5000,
         }));
+
       setVehicles(parsedVehicles);
       setFuelLogs(parsedFuel);
       setRentalLogs(parsedRental);
+      const defaults = ["Mahindra Bolero (KA-03-MJ-2401)", "Tata Ace (KA-05-AB-1234)"];
+      setRegisteredVehicles(parsedRegVehicles.length > 0 ? Array.from(new Set([...defaults, ...parsedRegVehicles])) : defaults);
     } else {
       setVehicles([]);
       setFuelLogs([]);
       setRentalLogs([]);
+      setRegisteredVehicles(["Mahindra Bolero (KA-03-MJ-2401)", "Tata Ace (KA-05-AB-1234)"]);
     }
   }, [rawLogistics]);
 
@@ -157,7 +167,15 @@ function LogisticsPage() {
       toast.error("This vehicle is already registered.");
       return;
     }
-    setRegisteredVehicles((prev) => [...prev, fullVehName]);
+
+    createLogisticsMutation.mutate({
+      projectId,
+      tripType: "vehicle_registration",
+      vehicle: fullVehName,
+      plate: newVehPlate.toUpperCase(),
+      model: newVehModel,
+    });
+
     setNewVehModel("");
     setNewVehPlate("");
     toast.success(`Vehicle registered: ${fullVehName}`);
@@ -176,17 +194,16 @@ function LogisticsPage() {
       return;
     }
 
-    const newLog = {
-      id: "V" + (vehicles.length + 1),
-      date: new Date().toISOString().split("T")[0],
-      name: vehName,
+    createLogisticsMutation.mutate({
+      projectId,
+      tripType: "vehicle",
+      vehicle: vehName || registeredVehicles[0],
       driver: vehDriver,
       startKm: start,
       endKm: end,
-      distance: end - start,
-    };
+      date: new Date().toISOString().split("T")[0],
+    });
 
-    setVehicles([newLog, ...vehicles]);
     setVehDriver("");
     setVehStart("");
     setVehEnd("");
@@ -202,16 +219,16 @@ function LogisticsPage() {
     const liters = parseFloat(fuelLiters);
     const rate = parseFloat(fuelRate);
 
-    const newLog = {
-      id: "F" + (fuelLogs.length + 1),
-      date: new Date().toISOString().split("T")[0],
-      vehicle: fuelVeh,
+    createLogisticsMutation.mutate({
+      projectId,
+      tripType: "fuel",
+      vehicle: fuelVeh || registeredVehicles[0],
       liters,
       rate,
       total: Math.round(liters * rate),
-    };
+      date: new Date().toISOString().split("T")[0],
+    });
 
-    setFuelLogs([newLog, ...fuelLogs]);
     setFuelLiters("");
     toast.success("Fuel fill receipt logged!");
   };
@@ -225,18 +242,18 @@ function LogisticsPage() {
     const rateVal = parseInt(rentRate);
     const helperVal = parseInt(rentHelper) || 0;
 
-    const newLog = {
-      id: "R" + (rentalLogs.length + 1),
-      date: new Date().toISOString().split("T")[0],
+    createLogisticsMutation.mutate({
+      projectId,
+      tripType: "rental",
       vendor: rentVendor,
-      project: rentProj,
+      project: rentProj || "Site Operations",
       material: rentMaterial,
       rate: rateVal,
       helper: helperVal,
       total: rateVal + helperVal,
-    };
+      date: new Date().toISOString().split("T")[0],
+    });
 
-    setRentalLogs([newLog, ...rentalLogs]);
     setRentVendor("");
     setRentMaterial("");
     setRentRate("");

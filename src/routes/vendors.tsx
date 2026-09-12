@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../components/AppShell";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Search,
   Filter,
@@ -12,6 +13,7 @@ import {
   Star,
   ShieldCheck,
   Briefcase,
+  X,
 } from "lucide-react";
 import { vendorApi, type Vendor } from "../lib/api";
 
@@ -60,22 +62,71 @@ function StarRating({ value = 0 }: { value?: number }) {
 }
 
 function VendorsPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
+  const [showModal, setShowModal] = useState(false);
 
-  const { data: vendors = [], isLoading } = useQuery({
+  // Onboard Vendor form state
+  const [name, setName] = useState("");
+  const [type, setType] = useState("Materials & Supplies");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  const { data: rawVendors = [], isLoading } = useQuery({
     queryKey: ["vendors"],
     queryFn: () => vendorApi.list(),
     retry: 1,
   });
 
+  const createVendorMutation = useMutation({
+    mutationFn: (body: any) => vendorApi.create(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      toast.success("Vendor onboarded successfully.");
+      setShowModal(false);
+      setName("");
+      setEmail("");
+      setPhone("");
+    },
+  });
+
+  const vendors: Vendor[] = (Array.isArray(rawVendors) ? rawVendors : []).map((v: any, idx: number) => ({
+    vendorId: v.vendorId || v.recordId || `VEN-${idx + 1}`,
+    name: v.name || `Vendor ${idx + 1}`,
+    type: v.type || v.category || "Supplier",
+    status: v.status || "Active",
+    rating: typeof v.rating === "number" ? v.rating : 0,
+    email: v.email || "—",
+    phone: v.phone || "—",
+    badge: v.badge || (v.status === "Active" ? "Standard" : "Under Review"),
+    activeContracts: typeof v.activeContracts === "number" ? v.activeContracts : 0,
+  }));
+
   const filteredVendors = vendors.filter((ven) => {
-    const matchSearch = ven.name.toLowerCase().includes(search.toLowerCase());
-    const matchType = typeFilter === "All" || ven.type === typeFilter;
+    const venName = ven.name || "";
+    const venType = ven.type || "";
+    const matchSearch = venName.toLowerCase().includes(search.toLowerCase());
+    const matchType = typeFilter === "All" || venType === typeFilter;
     return matchSearch && matchType;
   });
 
-  const types = ["All", ...Array.from(new Set(vendors.map((v) => v.type)))];
+  const types = ["All", ...Array.from(new Set(vendors.map((v) => v.type || "Supplier")))];
+
+  const handleCreateVendor = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email) {
+      toast.error("Please enter Vendor Name and Email.");
+      return;
+    }
+    createVendorMutation.mutate({
+      name,
+      type,
+      email,
+      phone,
+      status: "Active",
+    });
+  };
 
   if (isLoading)
     return (
@@ -92,7 +143,10 @@ function VendorsPage() {
         title="Vendor & Supplier Registry"
         eyebrow="Global Workspace"
         actions={
-          <button className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2">
+          <button
+            onClick={() => setShowModal(true)}
+            className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
+          >
             <Plus className="size-4" /> Onboard Vendor
           </button>
         }
@@ -242,6 +296,93 @@ function VendorsPage() {
           </table>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleCreateVendor}
+            className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-fade-up"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/30">
+              <h3 className="font-semibold text-sm">Onboard New Vendor / Supplier</h3>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4 text-xs">
+              <div>
+                <label className="font-semibold text-muted-foreground mb-1 block">Vendor Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. UltraTech Cement Ltd."
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full h-9 px-3 bg-secondary/20 border border-border rounded-md text-xs focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-muted-foreground mb-1 block">Category / Type</label>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  className="w-full h-9 px-3 bg-secondary/20 border border-border rounded-md text-xs focus:outline-none focus:border-primary"
+                >
+                  <option value="Materials & Supplies">Materials & Supplies</option>
+                  <option value="Cement & Aggregate">Cement & Aggregate</option>
+                  <option value="Steel & Metals">Steel & Metals</option>
+                  <option value="Logistics & Fleet">Logistics & Fleet</option>
+                  <option value="Equipment Rental">Equipment Rental</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-semibold text-muted-foreground mb-1 block">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. sales@ultratech.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-9 px-3 bg-secondary/20 border border-border rounded-md text-xs focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-muted-foreground mb-1 block">Phone Number</label>
+                <input
+                  type="text"
+                  placeholder="e.g. +91 98123 45678"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full h-9 px-3 bg-secondary/20 border border-border rounded-md text-xs focus:outline-none focus:border-primary font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border flex justify-end gap-3 bg-secondary/10">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 text-xs font-medium hover:bg-secondary border border-transparent rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-xs font-semibold bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity"
+              >
+                Onboard Vendor
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

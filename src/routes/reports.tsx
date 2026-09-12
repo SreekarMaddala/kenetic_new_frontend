@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../components/AppShell";
 import {
-  BarChart3,
   Download,
   FileText,
   Filter,
@@ -9,83 +8,199 @@ import {
   LineChart,
   PieChart,
   RefreshCcw,
+  Boxes,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { reportsApi } from "../lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { reportsApi, projectApi, vendorApi, inventoryApi } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
+import { exportToExcel } from "../lib/excel";
 
 export const Route = createFileRoute("/reports")({
   component: ReportsPage,
 });
 
-const REPORT_TYPES = [
-  {
-    id: "RT1",
-    name: "Company Financial Overview",
-    desc: "Consolidated P&L, expenses, and margins across all active projects.",
-    icon: <LineChart className="size-5 text-emerald-600" />,
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/20",
-  },
-  {
-    id: "RT2",
-    name: "Workforce & Labour Analytics",
-    desc: "Daily attendance averages, subcontractor manpower, and wage distributions.",
-    icon: <PieChart className="size-5 text-blue-600" />,
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/20",
-  },
-  {
-    id: "RT3",
-    name: "Vendor Performance & Compliance",
-    desc: "Rating matrix for subcontractors, active contract values, and SLA breaches.",
-    icon: <BarChart3 className="size-5 text-orange-600" />,
-    bg: "bg-orange-500/10",
-    border: "border-orange-500/20",
-  },
-];
-
-const RECENT_REPORTS = [
-  {
-    id: "REP-992",
-    name: "Q2 2026 Consolidated P&L",
-    type: "Financial",
-    date: "15 Jul 2026, 10:30 AM",
-    author: "Sneha Patel",
-  },
-  {
-    id: "REP-991",
-    name: "June Workforce Attendance",
-    type: "Labour",
-    date: "02 Jul 2026, 09:15 AM",
-    author: "Rajesh Kumar",
-  },
-  {
-    id: "REP-990",
-    name: "Equipment Utilization H1 2026",
-    type: "Assets",
-    date: "28 Jun 2026, 04:45 PM",
-    author: "Rajesh Kumar",
-  },
-  {
-    id: "REP-989",
-    name: "Subcontractor Payouts - May",
-    type: "Financial",
-    date: "05 Jun 2026, 11:20 AM",
-    author: "Sneha Patel",
-  },
-];
-
 function ReportsPage() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
   const {
     data: execReport,
-    refetch,
-    isFetching,
+    refetch: refetchExec,
+    isFetching: isFetchingExec,
   } = useQuery({
     queryKey: ["executive-report"],
     queryFn: () => reportsApi.executive(),
     retry: 1,
-    staleTime: 5 * 60 * 1000, // cache 5 min
+    staleTime: 5 * 60 * 1000,
   });
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => projectApi.list(),
+  });
+
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["vendors"],
+    queryFn: () => vendorApi.list(),
+  });
+
+  const { data: inventory = [] } = useQuery({
+    queryKey: ["inventory"],
+    queryFn: () => inventoryApi.list(),
+  });
+
+  const handleSyncData = () => {
+    queryClient.invalidateQueries();
+    refetchExec();
+  };
+
+  const authorName = user?.name || user?.email?.split("@")[0] || "Operations Admin";
+  const generatedTime = execReport?.generatedAt
+    ? new Date(execReport.generatedAt).toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : new Date().toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+  const dynamicReports = [
+    {
+      id: "REP-FIN",
+      name: "Executive Financial & P&L Overview",
+      type: "Financial",
+      date: generatedTime,
+      author: authorName,
+      downloadFn: () => {
+        const rows = (execReport?.projectSummaries || projects).map((p) => ({
+          "Project ID": p.projectId,
+          "Project Name": p.name,
+          "Budget (INR)": p.budget,
+          "Spent (INR)": p.spent,
+          "Variance / Margin (INR)": (p.budget ?? 0) - (p.spent ?? 0),
+          Status: p.status,
+        }));
+        exportToExcel(
+          rows.length ? rows : [{ Note: "No project financial records available" }],
+          "Consolidated_Financial_Report",
+          undefined,
+          "Executive Financial Overview"
+        );
+      },
+    },
+    {
+      id: "REP-PROJ",
+      name: "Global Projects & Operations Summary",
+      type: "Operations",
+      date: generatedTime,
+      author: authorName,
+      downloadFn: () => {
+        const rows = projects.map((p) => ({
+          "Project ID": p.projectId,
+          "Project Name": p.name,
+          Location: p.location,
+          Status: p.status,
+          "Start Date": p.startDate,
+          "End Date": p.endDate,
+          "Budget (INR)": p.budget,
+          "Spent (INR)": p.spent,
+        }));
+        exportToExcel(
+          rows.length ? rows : [{ Note: "No project records available" }],
+          "Projects_Operations_Summary",
+          undefined,
+          "Global Projects & Operations Summary"
+        );
+      },
+    },
+    {
+      id: "REP-VEND",
+      name: "Vendor Performance & Contract Matrix",
+      type: "Vendors",
+      date: generatedTime,
+      author: authorName,
+      downloadFn: () => {
+        const rows = vendors.map((v) => ({
+          "Vendor ID": v.vendorId,
+          "Vendor Name": v.name,
+          Category: v.type,
+          Status: v.status,
+          Rating: v.rating ?? "N/A",
+          Email: v.email,
+          Phone: v.phone,
+          "Active Contracts": v.activeContracts ?? 0,
+        }));
+        exportToExcel(
+          rows.length ? rows : [{ Note: "No vendor records available" }],
+          "Vendor_Performance_Report",
+          undefined,
+          "Vendor Performance & Contract Matrix"
+        );
+      },
+    },
+    {
+      id: "REP-INV",
+      name: "Global Equipment & Inventory Utilization",
+      type: "Assets",
+      date: generatedTime,
+      author: authorName,
+      downloadFn: () => {
+        const rows = inventory.map((i) => ({
+          "Item ID": i.itemId,
+          "Item Name": i.name,
+          Category: i.category,
+          "Total Stock": i.totalStock,
+          Unit: i.unit || "units",
+          Status: i.status,
+        }));
+        exportToExcel(
+          rows.length ? rows : [{ Note: "No inventory items available" }],
+          "Inventory_Utilization_Report",
+          undefined,
+          "Global Equipment & Inventory Utilization"
+        );
+      },
+    },
+  ];
+
+  const REPORT_TYPES = [
+    {
+      id: "RT1",
+      name: "Company Financial Overview",
+      desc: `Consolidated P&L across ${projects.length} active project(s). Total spend ₹${(
+        execReport?.totalExpenses ?? projects.reduce((acc, p) => acc + (p.spent || 0), 0)
+      ).toLocaleString("en-IN")}.`,
+      icon: <LineChart className="size-5 text-emerald-600" />,
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20",
+      action: dynamicReports[0].downloadFn,
+    },
+    {
+      id: "RT2",
+      name: "Vendor & Subcontractor Analytics",
+      desc: `Performance and compliance tracking across ${vendors.length} registered vendor(s).`,
+      icon: <PieChart className="size-5 text-blue-600" />,
+      bg: "bg-blue-500/10",
+      border: "border-blue-500/20",
+      action: dynamicReports[2].downloadFn,
+    },
+    {
+      id: "RT3",
+      name: "Inventory & Assets Register",
+      desc: `Stock balances, machinery status, and equipment deployment for ${inventory.length} tracked asset(s).`,
+      icon: <Boxes className="size-5 text-orange-600" />,
+      bg: "bg-orange-500/10",
+      border: "border-orange-500/20",
+      action: dynamicReports[3].downloadFn,
+    },
+  ];
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-8 animate-fade-up">
@@ -93,8 +208,12 @@ function ReportsPage() {
         title="Global Analytics & Reports"
         eyebrow="Global Workspace"
         actions={
-          <button className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2">
-            <RefreshCcw className="size-4" /> Sync Data
+          <button
+            onClick={handleSyncData}
+            disabled={isFetchingExec}
+            className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+          >
+            <RefreshCcw className={`size-4 ${isFetchingExec ? "animate-spin" : ""}`} /> Sync Data
           </button>
         }
       />
@@ -107,19 +226,22 @@ function ReportsPage() {
           {REPORT_TYPES.map((rt) => (
             <div
               key={rt.id}
-              className="p-5 rounded-xl border border-border bg-[color:var(--surface)] hover:border-primary/40 transition-colors cursor-pointer group"
+              onClick={rt.action}
+              className="p-5 rounded-xl border border-border bg-[color:var(--surface)] hover:border-primary/40 transition-colors cursor-pointer group flex flex-col justify-between"
             >
-              <div
-                className={`size-10 rounded-lg flex items-center justify-center mb-4 border ${rt.bg} ${rt.border}`}
-              >
-                {rt.icon}
+              <div>
+                <div
+                  className={`size-10 rounded-lg flex items-center justify-center mb-4 border ${rt.bg} ${rt.border}`}
+                >
+                  {rt.icon}
+                </div>
+                <h4 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+                  {rt.name}
+                </h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">{rt.desc}</p>
               </div>
-              <h4 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
-                {rt.name}
-              </h4>
-              <p className="text-xs text-muted-foreground leading-relaxed">{rt.desc}</p>
-              <div className="mt-4 flex items-center text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                Generate Report &rarr;
+              <div className="mt-4 flex items-center text-xs font-semibold text-primary opacity-80 group-hover:opacity-100 transition-opacity">
+                Generate & Export &rarr;
               </div>
             </div>
           ))}
@@ -142,7 +264,7 @@ function ReportsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {RECENT_REPORTS.map((rep) => (
+              {dynamicReports.map((rep) => (
                 <tr key={rep.id} className="hover:bg-secondary/20 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="font-semibold text-foreground flex items-center gap-2">
@@ -158,8 +280,11 @@ function ReportsPage() {
                   <td className="px-6 py-4 text-xs text-muted-foreground">{rep.date}</td>
                   <td className="px-6 py-4 text-xs font-medium text-foreground">{rep.author}</td>
                   <td className="px-6 py-4 text-right">
-                    <button className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-all flex items-center gap-1.5 text-xs font-semibold ml-auto">
-                      <Download className="size-3.5" /> PDF
+                    <button
+                      onClick={rep.downloadFn}
+                      className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-all flex items-center gap-1.5 text-xs font-semibold ml-auto"
+                    >
+                      <Download className="size-3.5" /> Export
                     </button>
                   </td>
                 </tr>
@@ -171,3 +296,4 @@ function ReportsPage() {
     </div>
   );
 }
+

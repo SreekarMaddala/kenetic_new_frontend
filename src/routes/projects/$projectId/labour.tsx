@@ -65,8 +65,8 @@ function LabourPage() {
         name: item.name || "Worker",
         type: item.type || "Skilled",
         rate: item.rate || 800,
-        bankName: item.bankName || "SBI",
-        accNo: item.accNo || "30291048123",
+        bankName: item.bankName || "—",
+        accNo: item.accNo || "—",
       }));
       const parsedAttendance = rawLabour.map((item: any, idx: number) => ({
         labourId: item.labourAttendanceId || item.labourId || `L${idx + 1}`,
@@ -77,13 +77,16 @@ function LabourPage() {
       }));
       const parsedTotals = rawLabour.map((item: any, idx: number) => ({
         id: item.labourAttendanceId || item.labourId || `L${idx + 1}`,
-        daysPresent: item.daysPresent || 20,
-        nightShifts: item.nightShifts || 0,
+        daysPresent: typeof item.daysPresent === "number" ? item.daysPresent : (item.status === "Present" ? 1 : item.status === "Half Day" ? 0.5 : 0),
+        nightShifts: typeof item.nightShifts === "number" ? item.nightShifts : (item.nightShift ? 1 : 0),
         advanceDeductions: item.advanceDeductions || 0,
       }));
       setLabourers(parsedLabourers);
       setAttendance(parsedAttendance);
       setMonthlyTotals(parsedTotals);
+      if (parsedLabourers.length > 0 && !debitLabourId) {
+        setDebitLabourId(parsedLabourers[0].id);
+      }
     } else {
       setLabourers([]);
       setAttendance([]);
@@ -151,33 +154,18 @@ function LabourPage() {
       return;
     }
 
-    const nextId = "L" + (labourers.length + 1);
     const rateVal = parseInt(newRate);
 
-    const newWorker = {
-      id: nextId,
+    recordLabourMutation.mutate({
+      projectId,
       name: newName,
       type: newType,
       rate: rateVal,
+      status: "Present",
+      nightShift: false,
       bankName: "SBI",
       accNo: "301900" + Math.floor(Math.random() * 90000 + 10000),
-    };
-
-    setLabourers([...labourers, newWorker]);
-    setAttendance([
-      ...attendance,
-      {
-        labourId: nextId,
-        name: newName,
-        status: "Present",
-        project: "",
-        nightShift: false,
-      },
-    ]);
-    setMonthlyTotals([
-      ...monthlyTotals,
-      { id: nextId, daysPresent: 0, nightShifts: 0, advanceDeductions: 0 },
-    ]);
+    });
 
     setNewName("");
     toast.success(`Labourer ${newName} registered successfully!`);
@@ -217,6 +205,22 @@ function LabourPage() {
 
   // Save Today's Attendance
   const handleSaveAttendance = () => {
+    attendance.forEach((att) => {
+      const w = labourers.find((x) => x.id === att.labourId);
+      if (w) {
+        recordLabourMutation.mutate({
+          projectId,
+          labourAttendanceId: att.labourId,
+          name: w.name,
+          type: w.type,
+          rate: w.rate,
+          status: att.status,
+          project: att.project,
+          nightShift: att.nightShift,
+        });
+      }
+    });
+
     toast.success("Attendance Logs Saved!", {
       description:
         "Successfully updated daily roster, shift configurations, and active project works.",
@@ -381,7 +385,7 @@ function LabourPage() {
             <div className="text-3xl font-display font-semibold">
               ₹
               {debits
-                .filter((d) => !isSupervisor || ["L1", "L2", "L4"].includes(d.labourId))
+                .filter((d) => !isSupervisor || filteredLabourers.some((w) => w.id === d.labourId))
                 .reduce((sum, d) => sum + d.amount, 0)
                 .toLocaleString("en-IN")}
             </div>

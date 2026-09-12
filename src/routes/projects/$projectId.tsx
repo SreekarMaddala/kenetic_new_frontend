@@ -8,7 +8,15 @@ export const Route = createFileRoute("/projects/$projectId")({
 });
 
 function ProjectLayout() {
-  const { project } = useProject();
+  const { project, isLoading } = useProject();
+
+  if (isLoading && !project) {
+    return (
+      <div className="p-8 text-center py-20 text-muted-foreground font-mono text-xs animate-pulse">
+        Loading project workspace...
+      </div>
+    );
+  }
 
   if (!project) {
     return (

@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { exportToExcel } from "../../../lib/excel";
 import { useProject } from "../../../lib/ProjectContext";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { financeApi, type Bill, type Expense } from "../../../lib/api";
 
 export const Route = createFileRoute("/projects/$projectId/payments")({
@@ -62,8 +62,10 @@ const MODE_COLOR: Record<PayMode, string> = {
 };
 
 export function PaymentsPage() {
-  const { projectId } = Route.useParams();
-  const { project } = useProject();
+  const { projectId, project, projects, isLoading: projectsLoading } = useProject();
+  const [voucherProjectId, setVoucherProjectId] = useState("");
+  const targetProjectId = projectId || voucherProjectId;
+  const scopedProjects = projectId ? [{ projectId, name: project?.name ?? projectId }] : projects;
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"vouchers" | "summary">("vouchers");
   const [filterType, setFilterType] = useState<VoucherType | "All">("All");
@@ -78,25 +80,44 @@ export function PaymentsPage() {
   const [newMode, setNewMode] = useState<PayMode>("NEFT");
   const [newRemarks, setNewRemarks] = useState("");
 
-  const { data: bills = [], isLoading: billsLoading } = useQuery({
-    queryKey: ["bills", projectId],
-    queryFn: () => financeApi.listBills(projectId),
-    enabled: !!projectId,
-    retry: 1,
+  const billQueries = useQueries({
+    queries: scopedProjects.map((p) => ({
+      queryKey: ["bills", p.projectId],
+      queryFn: () => financeApi.listBills(p.projectId),
+      retry: 1,
+    })),
   });
-
-  const { data: expenses = [], isLoading: expensesLoading } = useQuery({
-    queryKey: ["payments-expenses", projectId],
-    queryFn: () => financeApi.listExpenses(projectId),
-    enabled: !!projectId,
-    retry: 1,
+  const expenseQueries = useQueries({
+    queries: scopedProjects.map((p) => ({
+      queryKey: ["payments-expenses", p.projectId],
+      queryFn: () => financeApi.listExpenses(p.projectId),
+      retry: 1,
+    })),
   });
+  const bills = billQueries.flatMap((q) => q.data ?? []);
+  const expenses = expenseQueries.flatMap((q) => q.data ?? []);
+  const loadError = [...billQueries, ...expenseQueries].find((q) => q.error)?.error;
+  const projectName = (id: string) => scopedProjects.find((p) => p.projectId === id)?.name ?? id;
 
   const createBillMutation = useMutation({
-    mutationFn: (body: Parameters<typeof financeApi.createBill>[1]) =>
-      financeApi.createBill(projectId, body),
+    mutationFn: async () => {
+      if (!targetProjectId) throw new Error("Select a project.");
+      if (newType === "Expense") {
+        return financeApi.createExpense(targetProjectId, {
+          category: "Expense", description: newRemarks, submittedBy: newPayee,
+          amount: Number(newAmount), date: newDate,
+        });
+      }
+      return financeApi.createBill(targetProjectId, {
+        billNumber: `PV-${Date.now()}`, clientOrContractor: newPayee,
+        grossAmount: Number(newAmount), netPayable: Number(newAmount),
+        type: newType, date: newDate,
+      });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bills", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["bills", targetProjectId] });
+      queryClient.invalidateQueries({ queryKey: ["payments-expenses", targetProjectId] });
+      queryClient.invalidateQueries({ queryKey: ["expenses", targetProjectId] });
       toast.success("Voucher created & sent for approval");
       setShowModal(false);
       setNewPayee("");
@@ -114,7 +135,7 @@ export function PaymentsPage() {
       date: b.date ?? b.createdAt?.split("T")[0] ?? "—",
       type: "Payment",
       payee: b.clientOrContractor,
-      project: project?.name ?? projectId,
+      project: projectName(b.projectId),
       category: b.type ?? "Bill",
       amount: b.netPayable ?? b.grossAmount,
       mode: "NEFT",
@@ -128,7 +149,7 @@ export function PaymentsPage() {
       date: e.date ?? e.createdAt?.split("T")[0] ?? "—",
       type: "Expense",
       payee: e.submittedBy ?? "—",
-      project: project?.name ?? projectId,
+      project: projectName(e.projectId),
       category: e.category,
       amount: e.amount,
       mode: "Cash",
@@ -138,7 +159,7 @@ export function PaymentsPage() {
     })),
   ].sort((a, b) => (a.date > b.date ? -1 : 1));
 
-  const isLoading = billsLoading || expensesLoading;
+  const isLoading = projectsLoading || [...billQueries, ...expenseQueries].some((q) => q.isLoading);
 
   const allVendors = Array.from(new Set(VOUCHERS.map((v) => v.payee)));
   const globalFilteredVouchers = VOUCHERS.filter(
@@ -158,16 +179,12 @@ export function PaymentsPage() {
     .filter((v) => v.status === "Pending")
     .reduce((s, v) => s + v.amount, 0);
 
-  const projectSummary = project
-    ? [
-        {
-          project: project.name,
-          payments: globalFilteredVouchers
-            .filter((v) => v.status === "Approved")
-            .reduce((s, v) => s + v.amount, 0),
-        },
-      ]
-    : [];
+  const projectSummary = scopedProjects.map((p) => ({
+    project: p.name,
+    payments: globalFilteredVouchers
+      .filter((v) => v.project === p.name && v.status === "Approved")
+      .reduce((sum, v) => sum + v.amount, 0),
+  }));
 
   const inputCls =
     "w-full h-10 px-3 border border-border rounded-lg bg-[color:var(--surface)] text-sm focus:ring-1 focus:ring-primary outline-none transition-shadow";
@@ -206,7 +223,7 @@ export function PaymentsPage() {
                     Status: v.status,
                     Reference: v.reference,
                   })),
-                  `Kinetic_Payments_${project?.name ?? projectId}`,
+                  `Kinetic_Payments_${project?.name ?? "All_Projects"}`,
                   undefined,
                   "Payments & Expenses",
                 );
@@ -226,6 +243,7 @@ export function PaymentsPage() {
         }
       />
 
+      {loadError && <p role="alert" className="text-sm text-destructive">Unable to load vouchers: {loadError.message}</p>}
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -571,6 +589,12 @@ export function PaymentsPage() {
             </div>
 
             <div className="space-y-4">
+              {!projectId && <label className="block text-sm">Project *
+                <select className={inputCls} value={voucherProjectId} onChange={(e) => setVoucherProjectId(e.target.value)}>
+                  <option value="">Select a project</option>
+                  {projects.map((p) => <option key={p.projectId} value={p.projectId}>{p.name}</option>)}
+                </select>
+              </label>}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
@@ -662,18 +686,11 @@ export function PaymentsPage() {
               </button>
               <button
                 onClick={() => {
-                  if (!newPayee || !newAmount) {
-                    toast.error("Payee and Amount are required.");
+                  if (!targetProjectId || !newPayee.trim() || !Number.isFinite(Number(newAmount)) || Number(newAmount) <= 0) {
+                    toast.error("Project, payee and a positive amount are required.");
                     return;
                   }
-                  createBillMutation.mutate({
-                    billNumber: `PV-${Date.now()}`,
-                    clientOrContractor: newPayee,
-                    grossAmount: parseFloat(newAmount),
-                    netPayable: parseFloat(newAmount),
-                    type: newType,
-                    date: newDate,
-                  });
+                  createBillMutation.mutate();
                 }}
                 disabled={createBillMutation.isPending}
                 className="flex-1 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"

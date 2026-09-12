@@ -215,9 +215,18 @@ export const fieldOperationsApi = {
     api.get<DomainRecord[]>(
       `/supervisor/materials/stock?projectId=${encodeURIComponent(projectId)}`,
     ),
+  listIndents: (projectId: string) =>
+    api.get<DomainRecord[]>(
+      `/supervisor/materials/indents?projectId=${encodeURIComponent(projectId)}`,
+    ),
   createGrn: (body: DomainRecord) => api.post<DomainRecord>("/supervisor/materials/grn", body),
   createIndent: (body: DomainRecord) =>
     api.post<DomainRecord>("/supervisor/materials/indents", body),
+  updateIndent: (projectId: string, id: string, body: DomainRecord) =>
+    api.put<DomainRecord>(
+      `/supervisor/materials/indents/${encodeURIComponent(id)}?projectId=${encodeURIComponent(projectId)}`,
+      body,
+    ),
   listLogistics: (projectId: string) =>
     api.get<DomainRecord[]>(
       `/supervisor/logistics/trips?projectId=${encodeURIComponent(projectId)}`,

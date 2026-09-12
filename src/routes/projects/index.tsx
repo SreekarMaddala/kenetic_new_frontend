@@ -6,7 +6,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { ArrowLeft, User } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { projectApi, type Project } from "../../lib/api";
+import { projectApi, employeeApi, type Project } from "../../lib/api";
 
 export const Route = createFileRoute("/projects/")({
   head: () => ({
@@ -21,12 +21,23 @@ export const Route = createFileRoute("/projects/")({
 function ProjectsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSupervisor = user?.role === "supervisor";
 
   const { data: rawProjects = [], isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: () => projectApi.list(),
     retry: 1,
   });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees"],
+    queryFn: () => employeeApi.list(),
+    enabled: !isSupervisor,
+    retry: 1,
+  });
+
+  const supervisorList = employees.filter((e) => e.role === "supervisor" && e.status === "Active");
 
   // Map API models to components expectation
   const projects = rawProjects.map((p) => ({
@@ -122,18 +133,19 @@ function ProjectsPage() {
     }
 
     const budgetVal = parseFloat(newProjBudget) * 10_000_000; // convert Cr to absolute
+    const selectedSuper = supervisorList.find((s) => s.employeeId === newProjSupervisor);
     createMutation.mutate({
       name: newProjName,
       location: newProjLoc,
       budget: budgetVal,
       startDate: new Date().toISOString().split("T")[0],
       endDate: newProjDeadline,
-      // Pass other fields in request body if schema supports, else they fall back
       phase: newProjPhase || "Planning",
       progress: parseInt(newProjProgress) || 0,
       status: newProjStatus,
       image: customImageUrl || newProjImage,
-      supervisor: newProjSupervisor,
+      supervisor: selectedSuper ? `${selectedSuper.name} (${selectedSuper.email})` : "",
+      supervisorIds: newProjSupervisor ? [newProjSupervisor] : [],
     });
   };
 
@@ -324,6 +336,11 @@ function ProjectsPage() {
                     className="w-full p-2.5 bg-background border border-border rounded-lg text-sm text-foreground"
                   >
                     <option value="">None (Unassigned)</option>
+                    {supervisorList.map((s) => (
+                      <option key={s.employeeId} value={s.employeeId}>
+                        {s.name} ({s.email})
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -457,21 +474,46 @@ function ProjectsPage() {
             eyebrow="Portfolio"
             title="Projects"
             actions={
-              <button
-                onClick={() => setIsAddProjectOpen(true)}
-                className="h-10 px-6 bg-foreground text-background rounded-md text-sm font-medium hover:bg-zinc-800 transition-colors"
-              >
-                + New Project
-              </button>
+              !isSupervisor && (
+                <button
+                  onClick={() => setIsAddProjectOpen(true)}
+                  className="h-10 px-6 bg-foreground text-background rounded-md text-sm font-medium hover:bg-zinc-800 transition-colors"
+                >
+                  + New Project
+                </button>
+              )
             }
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {projects.map((p, i) => (
+          {projects.length === 0 ? (
+            <div className="bg-[color:var(--surface)] border border-border rounded-xl p-12 text-center max-w-xl mx-auto space-y-4 my-8 shadow-sm">
+              <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                <User className="size-6" />
+              </div>
+              <h2 className="text-xl font-display font-semibold text-foreground">
+                {isSupervisor ? "No Construction Projects Assigned Yet" : "No Projects in Portfolio"}
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {isSupervisor
+                  ? `Your Supervisor account (${user?.email}) is active, but your Operations Admin has not assigned you to any construction project site yet. Contact your Operations Admin to assign your account to a project.`
+                  : "Get started by adding your first construction project to the portfolio."}
+              </p>
+              {!isSupervisor && (
+                <button
+                  onClick={() => setIsAddProjectOpen(true)}
+                  className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  + Create First Project
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {projects.map((p, i) => (
               <article
                 key={p.name}
                 onClick={() => {
-                  navigate({ to: `/projects/${p.id}` });
+                  navigate({ to: isSupervisor ? `/projects/${p.id}/supervisors` : `/projects/${p.id}` });
                 }}
                 className="cursor-pointer bg-[color:var(--surface)] hover:shadow-md transition-shadow rounded-xl border border-border overflow-hidden flex flex-col group"
               >
@@ -561,7 +603,7 @@ function ProjectsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate({ to: `/projects/${p.id}` });
+                        navigate({ to: isSupervisor ? `/projects/${p.id}/supervisors` : `/projects/${p.id}` });
                       }}
                       className="py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded hover:opacity-90 transition-opacity"
                     >
@@ -589,8 +631,9 @@ function ProjectsPage() {
               </article>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
+    )}
     </div>
   );
 }

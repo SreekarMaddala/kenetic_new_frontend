@@ -8,6 +8,7 @@ interface ProjectContextType {
   projectId: string | undefined;
   project: Project | undefined;
   projects: Project[];
+  isLoading: boolean;
   switchProject: (newProjectId: string) => void;
 }
 
@@ -21,14 +22,33 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
-  const { data: projects = [] } = useQuery({
+  const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: () => projectApi.list(),
     enabled: !!user && user.role !== "super_admin",
     retry: 1,
   });
 
-  const project = projectId ? projects.find((p) => p.projectId === projectId) : undefined;
+  const foundProject = projectId
+    ? projects.find(
+        (p) => p.projectId === projectId || (p as any).id === projectId || (p as any)._id === projectId,
+      )
+    : undefined;
+
+  const project =
+    foundProject ||
+    (projectId
+      ? {
+          projectId,
+          name: "Project Site",
+          status: "Active",
+          budget: 0,
+          spent: 0,
+          location: "Site",
+          startDate: "",
+          endDate: "",
+        }
+      : undefined);
 
   const switchProject = (newProjectId: string) => {
     if (!projectId) {
@@ -44,7 +64,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ProjectContext.Provider value={{ projectId, project, projects, switchProject }}>
+    <ProjectContext.Provider value={{ projectId, project, projects, isLoading, switchProject }}>
       {children}
     </ProjectContext.Provider>
   );

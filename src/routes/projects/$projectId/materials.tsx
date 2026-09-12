@@ -19,7 +19,7 @@ import {
 import { exportToExcel } from "../../../lib/excel";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fieldOperationsApi } from "../../../lib/api";
+import { fieldOperationsApi, siteControlApi } from "../../../lib/api";
 
 export const Route = createFileRoute("/projects/$projectId/materials")({
   head: () => ({
@@ -46,11 +46,30 @@ function MaterialsPage() {
     retry: 1,
   });
 
+  const { data: rawIndents = [] } = useQuery({
+    queryKey: ["indents", projectId],
+    queryFn: () => fieldOperationsApi.listIndents(projectId),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
   const [items, setItems] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [filter, setFilter] = useState<"all" | "critical" | "warn" | "ok">("all");
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
+
+  // Request form state
+  const [reqMaterial, setReqMaterial] = useState("");
+  const [reqQty, setReqQty] = useState("");
+  const [reqUnit, setReqUnit] = useState("Bags");
+  const [reqDate, setReqDate] = useState("");
+  const [reqRemarks, setReqRemarks] = useState("");
+
+  // Issue form state
+  const [issueType, setIssueType] = useState("Critical Shortage");
+  const [issueMaterial, setIssueMaterial] = useState("");
+  const [issueDetails, setIssueDetails] = useState("");
 
   useEffect(() => {
     if (rawMaterials && rawMaterials.length > 0) {
@@ -69,13 +88,90 @@ function MaterialsPage() {
     }
   }, [rawMaterials]);
 
+  useEffect(() => {
+    if (rawIndents && rawIndents.length > 0) {
+      const parsedReqs = rawIndents.map((r: any, idx: number) => ({
+        id: r.materialId || r.indentId || r.recordId || `REQ-10${idx + 1}`,
+        displayId: `REQ-10${idx + 1}`,
+        material: r.materialName || r.material || "Material",
+        qty: `${r.quantity || r.qty || 100} ${r.unit || "Bags"}`,
+        date: r.createdAt ? r.createdAt.split("T")[0] : new Date().toISOString().split("T")[0],
+        status: r.status || "pending",
+      }));
+      setRequests(parsedReqs);
+    } else {
+      setRequests([]);
+    }
+  }, [rawIndents]);
+
   const createIndentMutation = useMutation({
     mutationFn: (body: any) => fieldOperationsApi.createIndent({ projectId, ...body }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["materials", projectId] });
-      toast.success("Reorder request submitted to central warehouse.");
+      queryClient.invalidateQueries({ queryKey: ["indents", projectId] });
+      toast.success("Material request submitted to central warehouse.");
+      setShowRequestModal(false);
+      setReqMaterial("");
+      setReqQty("");
+      setReqRemarks("");
     },
   });
+
+  const updateIndentMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      fieldOperationsApi.updateIndent(projectId, id, { status }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["indents", projectId] });
+      if (variables.status === "approved") {
+        toast.success("Material request approved successfully.");
+      } else if (variables.status === "rejected") {
+        toast.error("Material request rejected.");
+      } else {
+        toast.success("Material request status updated.");
+      }
+    },
+  });
+
+  const createIssueMutation = useMutation({
+    mutationFn: (body: any) => siteControlApi.createIssue(projectId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
+      toast.success("Issue reported to Head Office.");
+      setShowIssueModal(false);
+      setIssueMaterial("");
+      setIssueDetails("");
+    },
+  });
+
+  const handleSubmitRequest = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reqMaterial || !reqQty) {
+      toast.error("Please provide material name and quantity.");
+      return;
+    }
+    createIndentMutation.mutate({
+      materialName: reqMaterial,
+      quantity: parseInt(reqQty) || 1,
+      unit: reqUnit,
+      requiredDate: reqDate,
+      remarks: reqRemarks,
+      status: "pending",
+    });
+  };
+
+  const handleSubmitIssue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!issueDetails) {
+      toast.error("Please enter issue details.");
+      return;
+    }
+    createIssueMutation.mutate({
+      title: `${issueType}: ${issueMaterial || "Material Issue"}`,
+      type: issueType,
+      material: issueMaterial,
+      description: issueDetails,
+      status: "open",
+    });
+  };
 
   const isSupervisor = activeRole === "supervisor";
   const filtered = filter === "all" ? items : items.filter((i) => i.status === filter);
@@ -167,6 +263,7 @@ function MaterialsPage() {
       />
 
       {/* Page Content based on Role */}
+      {/* Page Content based on Role */}
       {isSupervisor ? (
         <div className="animate-fade-up mt-6">
           <div className="flex items-center justify-between mb-4">
@@ -174,64 +271,170 @@ function MaterialsPage() {
           </div>
 
           <div className="bg-[color:var(--surface)] rounded-xl border border-border overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Request ID</th>
-                  <th>Material</th>
-                  <th>Quantity</th>
-                  <th>Date</th>
-                  <th className="text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((req: any, i: number) => (
-                  <tr
-                    key={req.id}
-                    className="animate-fade-up"
-                    style={{ animationDelay: `${i * 50}ms` }}
-                  >
-                    <td>
-                      <span className="font-mono text-xs font-semibold text-muted-foreground">
-                        {req.id}
-                      </span>
-                    </td>
-                    <td>
-                      <p className="font-semibold text-sm">{req.material}</p>
-                    </td>
-                    <td>
-                      <span className="text-sm">{req.qty}</span>
-                    </td>
-                    <td>
-                      <span className="text-xs text-muted-foreground">{req.date}</span>
-                    </td>
-                    <td className="text-right">
-                      {req.status === "pending" ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-600 text-[10px] font-bold uppercase tracking-wider">
-                          <Clock className="size-3" /> Pending Review
-                        </div>
-                      ) : req.status === "approved" ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                          <Check className="size-3" /> Approved
-                        </div>
-                      ) : req.status === "in-transit" ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-600 text-[10px] font-bold uppercase tracking-wider">
-                          <Truck className="size-3" /> In Transit
-                        </div>
-                      ) : (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold uppercase tracking-wider">
-                          <CheckCircle2 className="size-3" /> Delivered
-                        </div>
-                      )}
-                    </td>
+            {requests.length === 0 ? (
+              <div className="p-12 text-center text-muted-foreground">
+                <Package className="size-8 mx-auto mb-3 opacity-40" />
+                <p className="font-semibold text-sm">No material requests submitted yet</p>
+                <p className="text-xs mt-1">
+                  Click "Raise Request" above to request materials from the central warehouse.
+                </p>
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>Material</th>
+                    <th>Quantity</th>
+                    <th>Date</th>
+                    <th className="text-right">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {requests.map((req: any, i: number) => (
+                    <tr
+                      key={req.id}
+                      className="animate-fade-up"
+                      style={{ animationDelay: `${i * 50}ms` }}
+                    >
+                      <td>
+                        <span className="font-mono text-xs font-semibold text-muted-foreground">
+                          {req.displayId || req.id}
+                        </span>
+                      </td>
+                      <td>
+                        <p className="font-semibold text-sm">{req.material}</p>
+                      </td>
+                      <td>
+                        <span className="text-sm">{req.qty}</span>
+                      </td>
+                      <td>
+                        <span className="text-xs text-muted-foreground">{req.date}</span>
+                      </td>
+                      <td className="text-right">
+                        {req.status === "pending" ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-600 text-[10px] font-bold uppercase tracking-wider">
+                            <Clock className="size-3" /> Pending Review
+                          </div>
+                        ) : req.status === "approved" ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold uppercase tracking-wider">
+                            <Check className="size-3" /> Approved
+                          </div>
+                        ) : req.status === "rejected" ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-red-500/20 bg-red-500/10 text-red-600 text-[10px] font-bold uppercase tracking-wider">
+                            <X className="size-3" /> Rejected
+                          </div>
+                        ) : req.status === "in-transit" ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-600 text-[10px] font-bold uppercase tracking-wider">
+                            <Truck className="size-3" /> In Transit
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold uppercase tracking-wider">
+                            <CheckCircle2 className="size-3" /> Delivered
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       ) : (
         <>
+          {/* Admin Overview: Indents & Requisitions Approval Table */}
+          <div className="mb-8 animate-fade-up">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-display font-semibold flex items-center gap-2">
+                <RefreshCw className="size-4 text-primary" /> Supervisor Material Requests & Approvals
+              </h3>
+              <span className="text-xs font-mono text-muted-foreground">
+                {requests.filter((r) => r.status === "pending").length} PENDING REVIEW
+              </span>
+            </div>
+            <div className="bg-[color:var(--surface)] rounded-xl border border-border overflow-hidden shadow-sm">
+              {requests.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground text-xs font-mono">
+                  No site material requests submitted yet.
+                </div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Request ID</th>
+                      <th>Material</th>
+                      <th>Quantity</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th className="text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {requests.map((req: any) => (
+                      <tr key={req.id}>
+                        <td>
+                          <span className="font-mono text-xs font-semibold text-muted-foreground">
+                            {req.displayId || req.id}
+                          </span>
+                        </td>
+                        <td>
+                          <p className="font-semibold text-sm">{req.material}</p>
+                        </td>
+                        <td>
+                          <span className="text-sm font-medium">{req.qty}</span>
+                        </td>
+                        <td>
+                          <span className="text-xs text-muted-foreground font-mono">{req.date}</span>
+                        </td>
+                        <td>
+                          {req.status === "pending" ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-600 text-[10px] font-bold uppercase">
+                              <Clock className="size-3" /> Pending Review
+                            </span>
+                          ) : req.status === "approved" ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold uppercase">
+                              <Check className="size-3" /> Approved
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-red-500/20 bg-red-500/10 text-red-600 text-[10px] font-bold uppercase">
+                              <X className="size-3" /> Rejected
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-right">
+                          {req.status === "pending" ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() =>
+                                  updateIndentMutation.mutate({ id: req.id, status: "approved" })
+                                }
+                                className="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700 transition-colors flex items-center gap-1"
+                              >
+                                <Check className="size-3.5" /> Approve
+                              </button>
+                              <button
+                                onClick={() =>
+                                  updateIndentMutation.mutate({ id: req.id, status: "rejected" })
+                                }
+                                className="px-3 py-1 bg-destructive text-destructive-foreground rounded text-xs font-semibold hover:bg-red-700 transition-colors flex items-center gap-1"
+                              >
+                                <X className="size-3.5" /> Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic font-mono">
+                              Processed
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {stats.map((s, i) => (
               <div
@@ -372,10 +575,14 @@ function MaterialsPage() {
       {/* Modals */}
       {showRequestModal && (
         <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-fade-up">
+          <form
+            onSubmit={handleSubmitRequest}
+            className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-fade-up"
+          >
             <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/30">
               <h3 className="font-semibold">Raise Material Request</h3>
               <button
+                type="button"
                 onClick={() => setShowRequestModal(false)}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -389,6 +596,9 @@ function MaterialsPage() {
                 </label>
                 <input
                   type="text"
+                  required
+                  value={reqMaterial}
+                  onChange={(e) => setReqMaterial(e.target.value)}
                   className="w-full h-10 px-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
                   placeholder="e.g. Cement OPC 53 Grade"
                 />
@@ -400,6 +610,9 @@ function MaterialsPage() {
                   </label>
                   <input
                     type="number"
+                    required
+                    value={reqQty}
+                    onChange={(e) => setReqQty(e.target.value)}
                     className="w-full h-10 px-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
                     placeholder="e.g. 100"
                   />
@@ -408,7 +621,11 @@ function MaterialsPage() {
                   <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
                     Unit
                   </label>
-                  <select className="w-full h-10 px-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                  <select
+                    value={reqUnit}
+                    onChange={(e) => setReqUnit(e.target.value)}
+                    className="w-full h-10 px-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
+                  >
                     <option>Bags</option>
                     <option>Tons</option>
                     <option>Truckloads</option>
@@ -423,6 +640,8 @@ function MaterialsPage() {
                 </label>
                 <input
                   type="date"
+                  value={reqDate}
+                  onChange={(e) => setReqDate(e.target.value)}
                   className="w-full h-10 px-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
                 />
               </div>
@@ -431,6 +650,8 @@ function MaterialsPage() {
                   Remarks (Optional)
                 </label>
                 <textarea
+                  value={reqRemarks}
+                  onChange={(e) => setReqRemarks(e.target.value)}
                   className="w-full p-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
                   rows={2}
                   placeholder="Any specific requirements..."
@@ -439,33 +660,35 @@ function MaterialsPage() {
             </div>
             <div className="p-4 border-t border-border flex justify-end gap-3 bg-secondary/10">
               <button
+                type="button"
                 onClick={() => setShowRequestModal(false)}
                 className="px-4 py-2 text-sm font-medium hover:bg-secondary border border-transparent rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  toast.success("Request raised successfully");
-                  setShowRequestModal(false);
-                }}
+                type="submit"
                 className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
               >
                 Submit Request
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
       {showIssueModal && (
         <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-fade-up">
+          <form
+            onSubmit={handleSubmitIssue}
+            className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-fade-up"
+          >
             <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/30">
               <h3 className="font-semibold text-amber-600 flex items-center gap-2">
                 <AlertTriangle className="size-4" /> Inform Shortage / Issue
               </h3>
               <button
+                type="button"
                 onClick={() => setShowIssueModal(false)}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -477,7 +700,11 @@ function MaterialsPage() {
                 <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
                   Issue Type
                 </label>
-                <select className="w-full h-10 px-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500">
+                <select
+                  value={issueType}
+                  onChange={(e) => setIssueType(e.target.value)}
+                  className="w-full h-10 px-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500"
+                >
                   <option>Critical Shortage</option>
                   <option>Quality Defect</option>
                   <option>Delivery Delay</option>
@@ -490,6 +717,8 @@ function MaterialsPage() {
                 </label>
                 <input
                   type="text"
+                  value={issueMaterial}
+                  onChange={(e) => setIssueMaterial(e.target.value)}
                   className="w-full h-10 px-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500"
                   placeholder="e.g. TMT Steel 12mm"
                 />
@@ -499,6 +728,9 @@ function MaterialsPage() {
                   Issue Details
                 </label>
                 <textarea
+                  required
+                  value={issueDetails}
+                  onChange={(e) => setIssueDetails(e.target.value)}
                   className="w-full p-3 bg-secondary/20 border border-border rounded-lg text-sm focus:outline-none focus:border-amber-500"
                   rows={4}
                   placeholder="Describe the issue in detail..."
@@ -507,22 +739,20 @@ function MaterialsPage() {
             </div>
             <div className="p-4 border-t border-border flex justify-end gap-3 bg-secondary/10">
               <button
+                type="button"
                 onClick={() => setShowIssueModal(false)}
                 className="px-4 py-2 text-sm font-medium hover:bg-secondary border border-transparent rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  toast.success("Issue reported to Head Office");
-                  setShowIssueModal(false);
-                }}
+                type="submit"
                 className="px-4 py-2 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
               >
                 Report Issue
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

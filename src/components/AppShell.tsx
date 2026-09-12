@@ -164,6 +164,11 @@ const getProjectNav = (projectId: string, role?: string) => {
             label: "Daily Labour Attendance",
             icon: usersIcon,
           },
+          {
+            to: `/projects/${projectId}/payroll`,
+            label: "Labour Rates & Payroll",
+            icon: usersIcon,
+          },
         ],
       },
       {
