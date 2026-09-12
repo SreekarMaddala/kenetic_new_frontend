@@ -251,7 +251,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "Site Operations",
     "Reports",
   ],
-  supervisor: ["/dashboard", "/projects", "Workforce", "Inventory & Logistics"],
+  supervisor: ["/projects", "Workforce", "Inventory & Logistics"],
 };
 
 export function AppShell({ children }: { children: ReactNode }) {

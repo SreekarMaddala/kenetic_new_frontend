@@ -1,3 +1,4 @@
+import { api, projectApi } from "../../../lib/api";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import * as React from "react";
@@ -17,11 +18,12 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useProject } from "../../../lib/ProjectContext";
-import { financeApi } from "../../../lib/api";
-
-const planSheets: any[] = [];
-const materialAvailability: Record<string, any[]> = {};
-const materialTransportation: any[] = [];
+import {
+  financeApi,
+  siteControlApi,
+  fieldOperationsApi,
+  documentControlApi,
+} from "../../../lib/api";
 
 export const Route = createFileRoute("/projects/$projectId/")({
   component: ProjectDetailsPage,
@@ -70,7 +72,7 @@ function ProjectDetailsPage() {
       supervisor: supervisorName,
       supervisorsTimeline: (item.supervisorsTimeline as TimelineItem[]) || [
         {
-          name: supervisorName,
+          name: supervisorName || "Site Supervisor",
           phase: "General Construction",
           start: "Jul 2026",
           end: rawProject.endDate || "Dec 2026",
@@ -97,6 +99,41 @@ function ProjectDetailsPage() {
     retry: 1,
   });
 
+  const { data: rawIssues = [] } = useQuery({
+    queryKey: ["issues", projectId],
+    queryFn: () => siteControlApi.listIssues(projectId!),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const { data: rawInspections = [] } = useQuery({
+    queryKey: ["inspections", projectId],
+    queryFn: () => siteControlApi.listInspections(projectId!),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const { data: rawDrawings = [] } = useQuery({
+    queryKey: ["drawings", projectId],
+    queryFn: () => documentControlApi.listDrawings(projectId!),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const { data: rawMaterials = [] } = useQuery({
+    queryKey: ["materials-stock", projectId],
+    queryFn: () => fieldOperationsApi.listMaterials(projectId!),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const { data: rawLogistics = [] } = useQuery({
+    queryKey: ["logistics-trips", projectId],
+    queryFn: () => fieldOperationsApi.listLogistics(projectId!),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
   const expenses = rawExpenses.map((e) => ({
     id: e.expenseId,
     project: selectedProject?.name || "Unknown Project",
@@ -106,6 +143,75 @@ function ProjectDetailsPage() {
     desc: e.description,
     paidBy: e.submittedBy || "Site Engineer",
   }));
+
+  const todaysExpenseTotal = React.useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayExpenses = expenses.filter((e) => e.date === todayStr);
+    if (todayExpenses.length > 0) {
+      return todayExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    }
+    return expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  }, [expenses]);
+
+  const openIssuesCount = React.useMemo(() => {
+    if (Array.isArray(rawIssues) && rawIssues.length > 0) {
+      return rawIssues.filter((i: any) => i.status !== "Closed" && i.status !== "Resolved").length;
+    }
+    return selectedProject?.openIssues ?? 0;
+  }, [rawIssues, selectedProject?.openIssues]);
+
+  const planSheets = React.useMemo(() => {
+    if (Array.isArray(rawDrawings) && rawDrawings.length > 0) {
+      return rawDrawings.map((d: any, idx: number) => ({
+        id: d.drawingId || d.recordId || `DWG-${idx + 1}`,
+        name: d.title || d.name || `Plan Sheet #${idx + 1}`,
+        type: d.category || d.type || "Architectural",
+        date: d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-IN") : "Recent",
+      }));
+    }
+    return [];
+  }, [rawDrawings]);
+
+  const siteMaterials = React.useMemo(() => {
+    if (Array.isArray(rawMaterials) && rawMaterials.length > 0) {
+      return rawMaterials.map((m: any) => ({
+        name: m.name || m.materialName || "Material Item",
+        stock: `${m.totalStock || m.quantity || 0} ${m.unit || "units"}`,
+        status: m.status || "Healthy",
+      }));
+    }
+    return [];
+  }, [rawMaterials]);
+
+  const siteLogistics = React.useMemo(() => {
+    if (Array.isArray(rawLogistics) && rawLogistics.length > 0) {
+      return rawLogistics.map((l: any, idx: number) => ({
+        material: l.material || l.vehicleNo || `Transit Shipment #${idx + 1}`,
+        carrier: l.carrier || l.driverName || "Logistics Partner",
+        date: l.date || (l.createdAt ? new Date(l.createdAt).toLocaleDateString("en-IN") : "Today"),
+        cost: l.cost ? `₹${Number(l.cost).toLocaleString("en-IN")}` : "In Transit",
+        status: l.status || "In Transit",
+      }));
+    }
+    return [];
+  }, [rawLogistics]);
+
+  const progressPhotos = React.useMemo(() => {
+    if (Array.isArray(rawInspections) && rawInspections.length > 0) {
+      return rawInspections.map((insp: any, idx: number) => ({
+        title: insp.title || insp.name || `Site Inspection #${idx + 1}`,
+        date: insp.createdAt ? new Date(insp.createdAt).toLocaleString("en-IN") : "Recent",
+        gps: insp.gps || insp.location || "Geofenced Site",
+        uploader: insp.inspector || insp.supervisor || selectedProject?.supervisor || "Site Team",
+        img:
+          insp.image ||
+          insp.photo ||
+          "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=400&q=80",
+        tag: insp.category || "Field Progress",
+      }));
+    }
+    return [];
+  }, [rawInspections, selectedProject?.supervisor]);
 
   // Form states - Expense
   const [expCategory, setExpCategory] = React.useState("Food & Mess");
@@ -132,7 +238,7 @@ function ProjectDetailsPage() {
     }
   }, [selectedProject?.supervisorsTimeline]);
 
-  const handleAddTimelineItemToProject = (e: React.FormEvent) => {
+  const handleAddTimelineItemToProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!detailTimelinePhase || !detailTimelineStart || !detailTimelineEnd) {
       toast.error("Please fill in phase, start period, and end period.");
@@ -146,6 +252,15 @@ function ProjectDetailsPage() {
       status: detailTimelineStatus,
     };
 
+    try {
+      await projectApi.update(projectId!, {
+        supervisorsTimeline: [...localTimeline, newItem],
+      } as Parameters<typeof projectApi.update>[1]);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save allocation");
+      return;
+    }
     setLocalTimeline([...localTimeline, newItem]);
     setDetailTimelinePhase("");
     setDetailTimelineStart("");
@@ -199,10 +314,15 @@ function ProjectDetailsPage() {
     });
   };
 
-  const handleViewDocument = (docName: string) => {
-    toast.info(`Viewing Plan Sheet: ${docName}`, {
-      description: "Document rendered securely from online storage ledger.",
-    });
+  const handleViewDocument = async (id: string) => {
+    try {
+      const result = await api.get<{ url: string }>(
+        `/projects/${projectId}/drawings/${id}/download`,
+      );
+      window.location.assign(result.url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open file");
+    }
   };
 
   return (
@@ -274,23 +394,25 @@ function ProjectDetailsPage() {
               <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
                 Today's Exp
               </span>
-              <strong className="text-white text-base block font-semibold mt-0.5">₹21,500</strong>
+              <strong className="text-white text-base block font-semibold mt-0.5">
+                ₹{todaysExpenseTotal.toLocaleString("en-IN")}
+              </strong>
             </div>
             <div className="border-l border-white/15 pl-4 lg:pl-6 flex flex-col justify-center">
               <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
                 Open Issues
               </span>
               <strong
-                className={`text-base block font-semibold mt-0.5 ${(selectedProject.openIssues ?? 0) > 0 ? "text-red-400" : "text-white"}`}
+                className={`text-base block font-semibold mt-0.5 ${openIssuesCount > 0 ? "text-red-400" : "text-white"}`}
               >
-                {selectedProject.openIssues ?? 0}
+                {openIssuesCount}
               </strong>
             </div>
             <div className="border-l border-white/15 pl-4 lg:pl-6 flex flex-col justify-center">
               <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
                 Weather
               </span>
-              <strong className="text-white text-base block font-semibold mt-0.5">32°C ☀️</strong>
+              <strong className="text-white text-base block font-semibold mt-0.5">28°C 🌤️</strong>
             </div>
           </div>
         </div>
@@ -367,14 +489,23 @@ function ProjectDetailsPage() {
               </div>
               <div className="flex gap-1.5 shrink-0">
                 <button
-                  onClick={() => handleViewDocument(sheet.name)}
+                  onClick={() => handleViewDocument(sheet.id)}
                   className="size-8 grid place-items-center border border-border rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                   title="View Drawing"
                 >
                   <Eye className="size-4" />
                 </button>
                 <button
-                  onClick={() => toast.success(`Downloaded ${sheet.name}`)}
+                  onClick={async () => {
+                    try {
+                      const result = await api.get<{ url: string }>(
+                        `/projects/${projectId}/drawings/${sheet.id}/download`,
+                      );
+                      window.location.assign(result.url);
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "Download failed");
+                    }
+                  }}
                   className="size-8 grid place-items-center bg-foreground text-background rounded hover:bg-zinc-800 transition-colors"
                   title="Download Sheet"
                 >
@@ -383,6 +514,11 @@ function ProjectDetailsPage() {
               </div>
             </div>
           ))}
+          {planSheets.length === 0 && (
+            <div className="col-span-2 p-8 text-center bg-[color:var(--surface)] border border-border rounded-xl text-muted-foreground text-xs">
+              No digital plan sheets uploaded for this project yet.
+            </div>
+          )}
         </div>
       )}
 
@@ -398,10 +534,7 @@ function ProjectDetailsPage() {
               <span className="text-[10px] font-mono text-muted-foreground">SITE WAREHOUSE</span>
             </div>
             <div className="divide-y divide-border">
-              {(
-                materialAvailability[selectedProject.name as keyof typeof materialAvailability] ||
-                []
-              ).map((m) => (
+              {siteMaterials.map((m) => (
                 <div
                   key={m.name}
                   className="p-4 flex items-center justify-between hover:bg-secondary/10 transition-colors"
@@ -428,6 +561,11 @@ function ProjectDetailsPage() {
                   </div>
                 </div>
               ))}
+              {siteMaterials.length === 0 && (
+                <div className="p-8 text-center text-xs text-muted-foreground">
+                  No warehouse material records for this site.
+                </div>
+              )}
             </div>
           </div>
 
@@ -440,7 +578,7 @@ function ProjectDetailsPage() {
               <span className="text-[10px] font-mono text-muted-foreground">TRANSIT LEDGER</span>
             </div>
             <div className="divide-y divide-border">
-              {materialTransportation.map((t, idx) => (
+              {siteLogistics.map((t, idx) => (
                 <div
                   key={idx}
                   className="p-4 flex items-start justify-between hover:bg-secondary/10 transition-colors"
@@ -458,6 +596,11 @@ function ProjectDetailsPage() {
                   </div>
                 </div>
               ))}
+              {siteLogistics.length === 0 && (
+                <div className="p-8 text-center text-xs text-muted-foreground">
+                  No inbound logistics shipments in transit.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -650,32 +793,7 @@ function ProjectDetailsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              {
-                title: "Level 17 Pouring Concrete Check",
-                date: "12 Jul 2026, 07:04 AM",
-                gps: "28.459512, 77.026634",
-                uploader: "Supervisor",
-                img: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=400&q=80",
-                tag: "Slab Casting",
-              },
-              {
-                title: "Excavation Pit Shuttering Check",
-                date: "11 Jul 2026, 06:58 AM",
-                gps: "28.459410, 77.026512",
-                uploader: "Vikram Rao (Supervisor)",
-                img: "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&w=400&q=80",
-                tag: "Foundation",
-              },
-              {
-                title: "Interior Fit-out Tiles Delivery",
-                date: "10 Jul 2026, 02:40 PM",
-                gps: "28.459632, 77.026840",
-                uploader: "Aniket Joshi (Site Engg)",
-                img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80",
-                tag: "Materials Registry",
-              },
-            ]
+            {progressPhotos
               .filter((item) => {
                 if (!mediaStartDate && !mediaEndDate) return true;
 
@@ -728,6 +846,11 @@ function ProjectDetailsPage() {
                   </div>
                 </div>
               ))}
+            {progressPhotos.length === 0 && (
+              <div className="col-span-3 p-8 text-center bg-[color:var(--surface)] border border-border rounded-xl text-muted-foreground text-xs">
+                No site progress inspection photos logged yet.
+              </div>
+            )}
           </div>
         </div>
       )}

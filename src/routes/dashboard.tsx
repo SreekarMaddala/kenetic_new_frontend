@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "../components/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ import {
   ChevronRight,
   RefreshCw,
 } from "lucide-react";
-import { dashboardApi, projectApi } from "../lib/api";
+import { dashboardApi, projectApi, api, type DomainRecord } from "../lib/api";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -43,8 +43,20 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
-  const [approvals, setApprovals] = React.useState<any[]>([]);
-  const [stockAlerts, setStockAlerts] = React.useState<any[]>([]);
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const inventory = useQuery({
+    queryKey: ["ledger", "/inventory"],
+    queryFn: () => api.get<DomainRecord[]>("/inventory"),
+  });
+  const stockAlerts = (inventory.data ?? [])
+    .filter((i) => Number(i.centralStock ?? 0) < Number(i.reorderLevel ?? 0))
+    .map((i) => ({
+      name: String(i.name),
+      site: "Central warehouse",
+      stock: Number(i.centralStock),
+      reorder: Number(i.reorderLevel),
+    }));
 
   // Fetch real analytics from backend
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
@@ -78,30 +90,61 @@ function DashboardPage() {
   const totalSpentVal = projects
     ? `₹${(projects.reduce((s, p) => s + (p.spent ?? 0), 0) / 10_000_000).toFixed(2)} Cr`
     : "₹0.00 Cr";
+  const approvals = (analytics?.approvals ?? []).map((r) => {
+    const resource = String(r.resource);
+    const id = String(r[resource + "Id"]);
+    const endpoint =
+      resource === "material"
+        ? `/supervisor/materials/indents/${id}?projectId=${r.projectId}`
+        : resource === "dpr"
+          ? `/supervisor/dpr/${id}?projectId=${r.projectId}`
+          : r.projectId
+            ? `/projects/${r.projectId}/${resource}s/${id}`
+            : `/${resource}s/${id}`;
+    return {
+      id,
+      endpoint,
+      type: resource,
+      title: String(
+        r.description ??
+          r.billNumber ??
+          r.vendorName ??
+          r.materialName ??
+          r.summary ??
+          r.name ??
+          resource,
+      ),
+      project: String(r.projectId ?? "Company"),
+      raisedBy: String(r.createdBy ?? ""),
+      age: String(r.createdAt ?? ""),
+      amount: Number(r.amount ?? r.grossAmount ?? 0).toLocaleString("en-IN"),
+      priority: "medium",
+    };
+  });
   const pendingApprovalsCount = analytics?.pendingApprovals ?? approvals.length;
 
   const recentInvoices: any[] = [];
 
-  const handleApprove = (id: string, title: string) => {
-    setApprovals((prev) => prev.filter((a) => a.id !== id));
-    toast.success(`Approved: ${title}`, {
-      description: `Workflow ID ${id} approved successfully.`,
-    });
-  };
+  const approvalMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => {
+      const row = approvals.find((a) => a.id === id);
+      if (!row) throw new Error("Refresh the approval queue.");
+      return api.patch(row.endpoint, {
+        status: row.type === "material" ? status.toLowerCase() : status,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries();
+      toast.success("Review saved.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const handleApprove = (id: string, _title: string) =>
+    approvalMutation.mutate({ id, status: "Approved" });
+  const handleReject = (id: string, _title: string) =>
+    approvalMutation.mutate({ id, status: "Rejected" });
 
-  const handleReject = (id: string, title: string) => {
-    setApprovals((prev) => prev.filter((a) => a.id !== id));
-    toast.error(`Rejected: ${title}`, {
-      description: `Workflow ID ${id} has been returned for review.`,
-    });
-  };
-
-  const handleReorder = (itemName: string) => {
-    setStockAlerts((prev) => prev.filter((item) => item.name !== itemName));
-    toast.success(`Reorder Request Sent`, {
-      description: `Indented reorder for ${itemName} across sites.`,
-    });
-  };
+  const handleReorder = (_itemName: string) => navigate({ to: "/inventory" });
 
   if (analyticsLoading) {
     return (
@@ -315,7 +358,7 @@ function DashboardPage() {
                       onClick={() => handleReorder(item.name)}
                       className="px-2.5 py-1 text-[10px] font-medium border border-primary/20 hover:border-primary text-primary bg-primary/5 hover:bg-primary/10 rounded transition-all shrink-0"
                     >
-                      Reorder
+                      Review stock
                     </button>
                   </div>
                 ))
@@ -324,7 +367,7 @@ function DashboardPage() {
                   <span className="size-8 rounded bg-accent/15 grid place-items-center text-accent font-bold">
                     ✓
                   </span>
-                  <p>All warehouse stocks are within safe operational thresholds.</p>
+                  <p>No low-stock alerts for configured reorder levels.</p>
                 </div>
               )}
             </CardContent>
@@ -386,6 +429,7 @@ function DashboardPage() {
                     <span className="font-mono text-xs font-semibold">{app.amount}</span>
                     <div className="flex gap-1.5">
                       <button
+                        disabled={approvalMutation.isPending}
                         onClick={() => handleReject(app.id, app.title)}
                         className="size-8 grid place-items-center border border-border hover:border-destructive text-muted-foreground hover:text-destructive rounded transition-colors"
                         title="Reject"
@@ -393,6 +437,7 @@ function DashboardPage() {
                         <X className="size-4" />
                       </button>
                       <button
+                        disabled={approvalMutation.isPending}
                         onClick={() => handleApprove(app.id, app.title)}
                         className="size-8 grid place-items-center bg-accent text-accent-foreground hover:bg-accent/90 rounded transition-colors"
                         title="Approve"
@@ -409,10 +454,8 @@ function DashboardPage() {
                   ✓
                 </span>
                 <div>
-                  <h4 className="font-semibold text-foreground text-sm">Inbox Zero achieved</h4>
-                  <p className="mt-1">
-                    All high-priority operational workflows have been resolved.
-                  </p>
+                  <h4 className="font-semibold text-foreground text-sm">No pending reviews</h4>
+                  <p className="mt-1">No submissions are awaiting review.</p>
                 </div>
               </div>
             )}

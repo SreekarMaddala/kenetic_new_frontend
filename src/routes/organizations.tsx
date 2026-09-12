@@ -62,13 +62,27 @@ function OrganizationsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (body: { name: string; type: string; plan: string; taxId?: string; adminName?: string; adminEmail?: string }) =>
-      orgApi.create(body),
-    onSuccess: () => {
+    mutationFn: (body: {
+      name: string;
+      type: string;
+      plan: string;
+      taxId?: string;
+      adminName?: string;
+      adminEmail?: string;
+    }) => orgApi.create(body),
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["organizations"] });
-      toast.success("Organization & Operations Admin registered successfully.");
+      if (result.provisioningWarning) toast.warning(result.provisioningWarning);
+      else toast.success("Organization & Operations Admin registered successfully.");
       setShowAddModal(false);
-      setNewOrg({ name: "", type: "Enterprise Developer", plan: "Enterprise Plan", taxId: "", adminName: "", adminEmail: "" });
+      setNewOrg({
+        name: "",
+        type: "Enterprise Developer",
+        plan: "Enterprise Plan",
+        taxId: "",
+        adminName: "",
+        adminEmail: "",
+      });
     },
     onError: (err: Error) => toast.error(err.message),
   });

@@ -1,786 +1,219 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useAuth } from "../../../contexts/AuthContext";
 import { createFileRoute } from "@tanstack/react-router";
-import * as React from "react";
-import { PageHeader } from "../../../components/AppShell";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../../components/ui/card";
-import { toast } from "sonner";
-import {
-  UserPlus,
-  Calendar,
-  DollarSign,
-  Moon,
-  Clock,
-  Printer,
-  MinusCircle,
-  Calculator,
-  UserCheck,
-  FileDown,
-} from "lucide-react";
-
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { workforceApi } from "../../../lib/api";
-
-export const Route = createFileRoute("/projects/$projectId/labour")({
-  head: () => ({
-    meta: [
-      { title: "Labour Attendance & Payroll — Kinetic" },
-      {
-        name: "description",
-        content:
-          "Track daily labour attendance, work locations, night shifts, advance debits, and calculate month-end salaries.",
-      },
-    ],
-  }),
-  component: LabourPage,
-});
-
-function LabourPage() {
+import { WorkflowLedger } from "../../../components/WorkflowLedger";
+import { useAuth } from "../../../contexts/AuthContext";
+import { api, type DomainRecord } from "../../../lib/api";
+import { toast } from "sonner";
+export const Route = createFileRoute("/projects/$projectId/labour")({ component: Page });
+function Page() {
   const { projectId } = Route.useParams();
-  const queryClient = useQueryClient();
-  const activeRole = useAuth().user?.role;
-
-  const { data: rawLabour = [] } = useQuery({
-    queryKey: ["labour", projectId],
-    queryFn: () => workforceApi.listLabour(projectId),
-    enabled: !!projectId,
-    retry: 1,
+  const admin = useAuth().user?.role !== "supervisor";
+  const qc = useQueryClient();
+  const [day, setDay] = useState(new Date().toISOString().slice(0, 10));
+  const [draft, setDraft] = useState<Record<string, DomainRecord>>({});
+  useEffect(() => setDraft({}), [projectId]);
+  const endpoint = `/supervisor/labour/attendance?projectId=${encodeURIComponent(projectId)}&date=${day}`;
+  const query = useQuery({
+    queryKey: ["labour", projectId, day],
+    queryFn: () => api.get<DomainRecord[]>(endpoint),
   });
-
-  const [labourers, setLabourers] = React.useState<any[]>([]);
-  const [attendance, setAttendance] = React.useState<any[]>([]);
-  const [debits, setDebits] = React.useState<any[]>([]);
-  const [monthlyTotals, setMonthlyTotals] = React.useState<any[]>([]);
-
-  React.useEffect(() => {
-    if (rawLabour && rawLabour.length > 0) {
-      const parsedLabourers = rawLabour.map((item: any, idx: number) => ({
-        id: item.labourAttendanceId || item.labourId || `L${idx + 1}`,
-        name: item.name || "Worker",
-        type: item.type || "Skilled",
-        rate: item.rate || 800,
-        bankName: item.bankName || "—",
-        accNo: item.accNo || "—",
-      }));
-      const parsedAttendance = rawLabour.map((item: any, idx: number) => ({
-        labourId: item.labourAttendanceId || item.labourId || `L${idx + 1}`,
-        name: item.name || "Worker",
-        status: item.status || "Present",
-        project: item.project || "Site Operations",
-        nightShift: !!item.nightShift,
-      }));
-      const parsedTotals = rawLabour.map((item: any, idx: number) => ({
-        id: item.labourAttendanceId || item.labourId || `L${idx + 1}`,
-        daysPresent: typeof item.daysPresent === "number" ? item.daysPresent : (item.status === "Present" ? 1 : item.status === "Half Day" ? 0.5 : 0),
-        nightShifts: typeof item.nightShifts === "number" ? item.nightShifts : (item.nightShift ? 1 : 0),
-        advanceDeductions: item.advanceDeductions || 0,
-      }));
-      setLabourers(parsedLabourers);
-      setAttendance(parsedAttendance);
-      setMonthlyTotals(parsedTotals);
-      if (parsedLabourers.length > 0 && !debitLabourId) {
-        setDebitLabourId(parsedLabourers[0].id);
-      }
-    } else {
-      setLabourers([]);
-      setAttendance([]);
-      setMonthlyTotals([]);
-    }
-  }, [rawLabour]);
-
-  const recordLabourMutation = useMutation({
-    mutationFn: (body: any) => workforceApi.recordLabour(body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["labour", projectId] });
-    },
-  });
-
-  // Form states - Add Worker
-  const [newName, setNewName] = React.useState("");
-  const [newType, setNewType] = React.useState<"Skilled" | "Unskilled">("Skilled");
-  const [newRate, setNewRate] = React.useState("800");
-
-  // Form states - Debit
-  const [debitLabourId, setDebitLabourId] = React.useState("L1");
-  const [debitAmount, setDebitAmount] = React.useState("");
-  const [debitDesc, setDebitDesc] = React.useState("");
-
-  const isSupervisor = activeRole === "supervisor";
-
-  // Backend already scopes records to this projectId; no client-side ID-based filtering.
-  const filteredAttendance = attendance;
-  const filteredLabourers = labourers;
-
-  // Attendance controls
-  const handleStatusChange = (id: string, newStatus: string) => {
-    setAttendance((prev) =>
-      prev.map((att) => {
-        if (att.labourId === id) {
-          return {
-            ...att,
-            status: newStatus,
-            project:
-              newStatus === "Absent" ? "—" : att.project === "—" ? "" : att.project,
-          };
-        }
-        return att;
-      }),
-    );
-  };
-
-  const handleLocationChange = (id: string, newProject: string) => {
-    setAttendance((prev) =>
-      prev.map((att) => (att.labourId === id ? { ...att, project: newProject } : att)),
-    );
-  };
-
-  const handleNightShiftToggle = (id: string) => {
-    setAttendance((prev) =>
-      prev.map((att) => (att.labourId === id ? { ...att, nightShift: !att.nightShift } : att)),
-    );
-  };
-
-  // Add Worker Submit
-  const handleAddWorker = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName || !newRate) {
-      toast.error("Please enter Name and Daily Rate.");
-      return;
-    }
-
-    const rateVal = parseInt(newRate);
-
-    recordLabourMutation.mutate({
-      projectId,
-      name: newName,
-      type: newType,
-      rate: rateVal,
-      status: "Present",
-      nightShift: false,
-      bankName: "SBI",
-      accNo: "301900" + Math.floor(Math.random() * 90000 + 10000),
-    });
-
-    setNewName("");
-    toast.success(`Labourer ${newName} registered successfully!`);
-  };
-
-  // Add Debit Submit
-  const handleAddDebit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!debitAmount || !debitDesc) {
-      toast.error("Please enter Debit amount and description.");
-      return;
-    }
-    const amt = parseInt(debitAmount);
-
-    const newDebit = {
-      id: "D" + (debits.length + 1),
-      labourId: debitLabourId,
-      date: new Date().toISOString().split("T")[0],
-      amount: amt,
-      desc: debitDesc,
-    };
-
-    setDebits([newDebit, ...debits]);
-
-    // Update monthly totals advance subtraction
-    setMonthlyTotals((prev) =>
-      prev.map((tot) =>
-        tot.id === debitLabourId ? { ...tot, advanceDeductions: tot.advanceDeductions + amt } : tot,
-      ),
-    );
-
-    setDebitAmount("");
-    setDebitDesc("");
-    const w = labourers.find((x) => x.id === debitLabourId);
-    toast.success(`Debited ₹${amt} from ${w?.name}'s payroll.`);
-  };
-
-  // Save Today's Attendance
-  const handleSaveAttendance = () => {
-    attendance.forEach((att) => {
-      const w = labourers.find((x) => x.id === att.labourId);
-      if (w) {
-        recordLabourMutation.mutate({
+  const workers = query.data ?? [];
+  const save = useMutation({
+    mutationFn: async () => {
+      for (const [id, record] of Object.entries(draft)) {
+        await api.post("/supervisor/labour/attendance", {
           projectId,
-          labourAttendanceId: att.labourId,
-          name: w.name,
-          type: w.type,
-          rate: w.rate,
-          status: att.status,
-          project: att.project,
-          nightShift: att.nightShift,
+          date: day,
+          operation: "attendance",
+          labourAttendanceId: id,
+          ...record,
         });
       }
-    });
-
-    toast.success("Attendance Logs Saved!", {
-      description:
-        "Successfully updated daily roster, shift configurations, and active project works.",
-    });
-
-    // Update monthly totals dynamically (simulate adding today to their stats)
-    setMonthlyTotals((prev) =>
-      prev.map((tot) => {
-        const att = attendance.find((a) => a.labourId === tot.id);
-        if (!att) return tot;
-        const addDay = att.status === "Present" ? 1 : att.status === "Half Day" ? 0.5 : 0;
-        const addNight = att.nightShift ? 1 : 0;
-        return {
-          ...tot,
-          daysPresent: tot.daysPresent + addDay,
-          nightShifts: tot.nightShifts + addNight,
-        };
-      }),
-    );
-  };
-
-  // Print Payroll Receipt
-  const handlePrintPayslip = (
-    workerName: string,
-    details: { gross: number; debits: number; net: number },
-  ) => {
-    toast.info(`Generating Payslip for ${workerName}`, {
-      description: `Earnings: ₹${details.gross.toLocaleString("en-IN")} | Debits: ₹${details.debits.toLocaleString("en-IN")} | Net: ₹${details.net.toLocaleString("en-IN")}`,
-    });
-  };
-
-  // Generate Excel (CSV)
-  const handleExportExcel = () => {
-    const headers = [
-      "Date",
-      "Worker Name",
-      "Category",
-      "Status",
-      "Location",
-      "Night Shift",
-      "Wage Amount (INR)",
-    ];
-    const rows = filteredAttendance
-      .map((att) => {
-        const w = labourers.find((x) => x.id === att.labourId);
-        if (!w) return null;
-        const mult = att.status === "Present" ? 1.0 : att.status === "Half Day" ? 0.5 : 0;
-        const baseWage = w.rate * mult;
-        const nightBonus = att.nightShift ? 300 : 0;
-        const totalCost = baseWage + nightBonus;
-        const date = new Date().toISOString().split("T")[0];
-        return [
-          date,
-          w.name,
-          w.type,
-          att.status,
-          att.project,
-          att.nightShift ? "Yes" : "No",
-          totalCost,
-        ].join(",");
-      })
-      .filter(Boolean);
-
-    const csvContent = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute(
-      "download",
-      `Labour_Attendance_Report_${new Date().toISOString().split("T")[0]}.csv`,
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success("Excel report generated successfully!", {
-      description: "Downloaded Labour_Attendance_Report.csv",
-    });
-  };
-
+    },
+    onSuccess: () => {
+      setDraft({});
+      qc.invalidateQueries();
+      toast.success("Attendance saved.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full space-y-8 animate-fade-up">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          eyebrow={isSupervisor ? "Site Workforce" : "Workforce"}
-          title={isSupervisor ? "Daily Site Attendance" : "Labour & Payroll Ledger"}
-          actions={
-            <div className="flex gap-2">
-              {isSupervisor ? (
-                <div className="text-xs bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 font-mono text-primary font-semibold">
-                  Supervisor View
-                </div>
-              ) : (
-                <div className="text-xs bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 font-mono text-emerald-600 font-semibold">
-                  🛡️ Owner Overview (Company Admin)
-                </div>
-              )}
-            </div>
-          }
-        />
-      </div>
-
-      {/* ── Summary Stats ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <Card className="border border-border bg-[color:var(--surface)] shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest">
-              {isSupervisor ? "Site Workers Present" : "Active Workers Today"}
-            </CardTitle>
-            <UserCheck className="size-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-display font-semibold">
-              {filteredAttendance.filter((a) => a.status !== "Absent").length} /{" "}
-              {filteredLabourers.length}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              {filteredAttendance.filter((a) => a.nightShift).length} scheduled on Night Shifts
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border bg-[color:var(--surface)] shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest">
-              {isSupervisor ? "Today's Site Wages" : "Cumulative Daily Wages"}
-            </CardTitle>
-            <DollarSign className="size-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-display font-semibold">
-              ₹
-              {filteredAttendance
-                .reduce((sum, att) => {
-                  if (att.status === "Absent") return sum;
-                  const w = labourers.find((x) => x.id === att.labourId);
-                  if (!w) return sum;
-                  const mult = att.status === "Half Day" ? 0.5 : 1.0;
-                  const base = w.rate * mult;
-                  const night = att.nightShift ? 300 : 0; // Flat ₹300 night bonus
-                  return sum + base + night;
-                }, 0)
-                .toLocaleString("en-IN")}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              {isSupervisor
-                ? "Estimated site charge for today"
-                : "Estimated payroll charge for today"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border bg-[color:var(--surface)] shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest">
-              {isSupervisor ? "Active Advances" : "Deductions / Advances"}
-            </CardTitle>
-            <MinusCircle className="size-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-display font-semibold">
-              ₹
-              {debits
-                .filter((d) => !isSupervisor || filteredLabourers.some((w) => w.id === d.labourId))
-                .reduce((sum, d) => sum + d.amount, 0)
-                .toLocaleString("en-IN")}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              {isSupervisor
-                ? "Deductions for workers at this site"
-                : "Debited grocery/cash advances this week"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── Main Layout: Daily Attendance ── */}
-      <div className="bg-[color:var(--surface)] border border-border rounded-xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-border bg-secondary/10 flex justify-between items-center">
-          <div>
-            <h3 className="font-display font-semibold text-sm">
-              {isSupervisor ? "Project Attendance Marking" : "Daily Attendance Registry"}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {isSupervisor
-                ? "Mark daily check-in status and night shifts for workers on your project site."
-                : "Set workforce status, work site locations, and toggle night shifts for today."}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleExportExcel}
-              className="flex items-center gap-2 px-4 py-2 border border-border bg-background text-foreground text-xs font-medium rounded hover:bg-secondary transition-colors"
-            >
-              <FileDown className="size-3.5" /> Export Excel
-            </button>
-            {isSupervisor && (
-              <button
-                onClick={handleSaveAttendance}
-                className="px-4 py-2 bg-foreground text-background text-xs font-medium rounded hover:bg-zinc-800 transition-colors"
-              >
-                Save Attendance
-              </button>
-            )}
-          </div>
-        </div>
-
+    <div>
+      <section className="p-6 max-w-7xl mx-auto space-y-4">
+        <h1 className="text-2xl font-semibold">Daily Labour Attendance</h1>
+        <label className="block">
+          Attendance date{" "}
+          <input
+            type="date"
+            value={day}
+            disabled={Object.keys(draft).length > 0 || save.isPending}
+            onChange={(e) => setDay(e.target.value)}
+            className="border rounded p-2 bg-background"
+          />
+        </label>
+        {query.error && (
+          <p role="alert" className="text-destructive">
+            {query.error.message}
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          Each worker has one record per day. Night shifts are paid at one additional daily rate.
+          Save or discard changes before changing the date.
+        </p>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="bg-secondary/40 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-                <th className="px-6 py-3 font-medium">Worker Name</th>
-                <th className="px-6 py-3 font-medium">Category / Wage</th>
-                <th className="px-6 py-3 font-medium">Daily Status</th>
-                <th className="px-6 py-3 font-medium">Location of Work</th>
-                <th className="px-6 py-3 font-medium">Night Work Shift</th>
-                <th className="px-6 py-3 text-right">Computed Cost</th>
+              <tr>
+                {[
+                  "Worker",
+                  "Daily rate",
+                  "Attendance",
+                  "Night shift",
+                  "Days this month",
+                  "Deductions this month",
+                ].map((h) => (
+                  <th key={h} className="p-3 text-left">
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="text-xs divide-y divide-border">
-              {filteredAttendance.map((att) => {
-                const w = labourers.find((x) => x.id === att.labourId);
-                if (!w) return null;
-
-                // Wage Math
-                const mult = att.status === "Present" ? 1.0 : att.status === "Half Day" ? 0.5 : 0;
-                const baseWage = w.rate * mult;
-                const nightBonus = att.nightShift ? 300 : 0; // ₹300 bonus
-                const totalCost = baseWage + nightBonus;
-
+            <tbody>
+              {workers.map((w) => {
+                const id = String(w.labourAttendanceId);
+                const value = draft[id] ?? { status: w.status, nightShift: w.nightShift };
                 return (
-                  <tr key={att.labourId} className="hover:bg-secondary/15 transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-sm">{w.name}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">ID: {w.id}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium font-mono ${
-                          w.type === "Skilled"
-                            ? "bg-accent/10 text-accent"
-                            : "bg-zinc-100 text-zinc-600"
-                        }`}
+                  <tr key={id} className="border-t">
+                    <td className="p-3">{String(w.name)}</td>
+                    <td>{Number(w.rate).toLocaleString("en-IN")}</td>
+                    <td>
+                      <select
+                        aria-label={`Attendance for ${w.name}`}
+                        disabled={save.isPending}
+                        className="bg-background border rounded p-2"
+                        value={String(value.status)}
+                        onChange={(e) =>
+                          setDraft((d) => ({
+                            ...d,
+                            [id]: {
+                              ...value,
+                              status: e.target.value,
+                              nightShift: e.target.value === "Absent" ? false : value.nightShift,
+                            },
+                          }))
+                        }
                       >
-                        {w.type}
-                      </span>
-                      <p className="text-[10px] text-muted-foreground mt-1 font-mono">
-                        ₹{w.rate}/day
-                      </p>
+                        {["Present", "Absent", "Half Day"].map((s) => (
+                          <option key={s}>{s}</option>
+                        ))}
+                      </select>
                     </td>
-                    <td className="px-6 py-4">
-                      {isSupervisor ? (
-                        <div className="flex gap-1.5">
-                          {["Present", "Half Day", "Absent"].map((st) => (
-                            <button
-                              key={st}
-                              onClick={() => handleStatusChange(att.labourId, st)}
-                              className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
-                                att.status === st
-                                  ? st === "Present"
-                                    ? "bg-accent text-accent-foreground"
-                                    : st === "Half Day"
-                                      ? "bg-yellow-500 text-white"
-                                      : "bg-destructive text-destructive-foreground"
-                                  : "bg-secondary text-muted-foreground hover:bg-secondary-foreground/10"
-                              }`}
-                            >
-                              {st}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <span
-                          className={`inline-block px-2.5 py-1 rounded text-[10px] font-semibold ${
-                            att.status === "Present"
-                              ? "bg-emerald-500/10 text-emerald-600"
-                              : att.status === "Half Day"
-                                ? "bg-yellow-500/10 text-yellow-600"
-                                : "bg-red-500/10 text-red-600"
-                          }`}
-                        >
-                          {att.status}
-                        </span>
-                      )}
+                    <td>
+                      <input
+                        aria-label={`Night shift for ${w.name}`}
+                        type="checkbox"
+                        checked={!!value.nightShift}
+                        disabled={save.isPending || value.status === "Absent"}
+                        onChange={(e) =>
+                          setDraft((d) => ({
+                            ...d,
+                            [id]: { ...value, nightShift: e.target.checked },
+                          }))
+                        }
+                      />
                     </td>
-                    <td className="px-6 py-4">
-                      {att.status === "Absent" ? (
-                        <span className="text-muted-foreground italic">Off Work</span>
-                      ) : isSupervisor ? (
-                        <input
-                          type="text"
-                          value={att.project === "—" ? "" : att.project}
-                          onChange={(e) => handleLocationChange(att.labourId, e.target.value)}
-                          placeholder="Enter location"
-                          className="p-1 border border-border rounded bg-background text-xs w-28"
-                        />
-                      ) : (
-                        <span className="font-medium text-foreground">{att.project}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {isSupervisor ? (
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            disabled={att.status === "Absent"}
-                            checked={att.nightShift}
-                            onChange={() => handleNightShiftToggle(att.labourId)}
-                            className="size-4 accent-primary rounded border-border"
-                          />
-                          <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
-                            <Moon className="size-3 text-primary" /> Night Duty (+₹300)
-                          </span>
-                        </label>
-                      ) : (
-                        <span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
-                          {att.nightShift ? (
-                            <>
-                              <Moon className="size-3.5 text-primary" /> Night Shift (+₹300)
-                            </>
-                          ) : (
-                            "☀️ Day Shift"
-                          )}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono font-semibold">
-                      ₹{totalCost.toLocaleString("en-IN")}
-                    </td>
+                    <td>{Number(w.daysPresent)}</td>
+                    <td>{Number(w.advanceDeductions)}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Side Forms (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Form: Add Worker (Supervisor only) */}
-          {isSupervisor && (
-            <Card className="border border-border bg-[color:var(--surface)] shadow-sm">
-              <CardHeader>
-                <CardTitle className="font-display font-semibold text-base flex items-center gap-2">
-                  <UserPlus className="size-4 text-accent" /> Register New Labourer
-                </CardTitle>
-                <CardDescription className="text-xs text-muted-foreground">
-                  Add skilled or unskilled labour to the daily registry roster.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleAddWorker} className="space-y-4 text-xs">
-                  <div className="space-y-1.5">
-                    <label className="font-medium text-muted-foreground">Labourer Full Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Ramesh Pujari"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="w-full p-2 bg-background border border-border rounded-md"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="font-medium text-muted-foreground">Category</label>
-                      <select
-                        value={newType}
-                        onChange={(e) => {
-                          const val = e.target.value as "Skilled" | "Unskilled";
-                          setNewType(val);
-                          setNewRate(val === "Skilled" ? "800" : "500");
-                        }}
-                        className="w-full p-2 bg-background border border-border rounded-md"
-                      >
-                        <option value="Skilled">Skilled (Mason / MEP)</option>
-                        <option value="Unskilled">Unskilled (Helper)</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="font-medium text-muted-foreground">Daily Wage (₹)</label>
-                      <input
-                        type="number"
-                        placeholder="Daily rate"
-                        value={newRate}
-                        onChange={(e) => setNewRate(e.target.value)}
-                        className="w-full p-2 bg-background border border-border rounded-md font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-2 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors mt-2"
-                  >
-                    Register Worker
-                  </button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Form: Deductions / Debits (Admin & Supervisor) */}
-          <Card className="border border-border bg-[color:var(--surface)] shadow-sm">
-            <CardHeader>
-              <CardTitle className="font-display font-semibold text-base flex items-center gap-2">
-                <MinusCircle className="size-4 text-primary" /> Log Weekly Expense Debit
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
-                Subtract mess, boots, cash advances, or materials personal debits.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddDebit} className="space-y-4 text-xs">
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Deduct From Worker</label>
-                  <select
-                    value={debitLabourId}
-                    onChange={(e) => setDebitLabourId(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md"
-                  >
-                    {(isSupervisor ? filteredLabourers : labourers).map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name} ({w.type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Debit Amount (₹)</label>
-                  <input
-                    type="number"
-                    placeholder="Deduction amount"
-                    value={debitAmount}
-                    onChange={(e) => setDebitAmount(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Reason / Description</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Mess advances / Boots supply"
-                    value={debitDesc}
-                    onChange={(e) => setDebitDesc(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors mt-2"
-                >
-                  Apply Debit
-                </button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Side: Month Settlement Calculations (7 cols) */}
-        <Card className="lg:col-span-7 border border-border bg-[color:var(--surface)] shadow-sm">
-          <CardHeader className="border-b border-border bg-secondary/15">
-            <CardTitle className="font-display font-semibold text-base flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Calculator className="size-4 text-accent" /> Month-End Payroll Calculations
-              </span>
-              <span className="text-[10px] font-mono text-muted-foreground">SETTLEMENT LEDGER</span>
-            </CardTitle>
-            <CardDescription className="text-xs text-muted-foreground">
-              Auto-calculates gross wages (including night shifts) minus weekly advances.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="divide-y divide-border p-0">
-            {filteredLabourers.map((w) => {
-              const totals = monthlyTotals.find((t) => t.id === w.id) || {
-                daysPresent: 0,
-                nightShifts: 0,
-                advanceDeductions: 0,
-              };
-
-              // Math formulas
-              const grossSalary = totals.daysPresent * w.rate + totals.nightShifts * 300;
-              const netPayout = Math.max(0, grossSalary - totals.advanceDeductions);
-
-              return (
-                <div
-                  key={w.id}
-                  className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-secondary/10 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-semibold text-foreground flex items-baseline gap-2">
-                      {w.name}
-                      <span className="text-[10px] font-mono text-muted-foreground font-normal uppercase">
-                        ({w.type} · ₹{w.rate}/d)
-                      </span>
-                    </h4>
-                    <p className="text-[10px] text-muted-foreground font-mono mt-1">
-                      Bank Acc: {w.bankName} ({w.accNo})
-                    </p>
-
-                    <div className="grid grid-cols-3 gap-2 mt-3 text-[10px] font-mono text-muted-foreground">
-                      <div>
-                        <span>Present Days</span>
-                        <p className="font-semibold text-foreground font-sans mt-0.5">
-                          {totals.daysPresent} days
-                        </p>
-                      </div>
-                      <div>
-                        <span>Night Shifts</span>
-                        <p className="font-semibold text-foreground font-sans mt-0.5">
-                          {totals.nightShifts} shifts
-                        </p>
-                      </div>
-                      <div>
-                        <span>Advance Debits</span>
-                        <p className="font-semibold text-destructive font-sans mt-0.5">
-                          -₹{totals.advanceDeductions.toLocaleString("en-IN")}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0 justify-between md:justify-end border-t md:border-t-0 border-border pt-3 md:pt-0">
-                    <div className="text-left md:text-right">
-                      <span className="text-[9px] font-mono text-muted-foreground uppercase block">
-                        NET MONTH PAYOUT
-                      </span>
-                      <strong className="text-base font-mono font-bold text-accent">
-                        ₹{netPayout.toLocaleString("en-IN")}
-                      </strong>
-                      <span className="text-[9px] text-muted-foreground block font-mono">
-                        Gross: ₹{grossSalary}
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() =>
-                        handlePrintPayslip(w.name, {
-                          gross: grossSalary,
-                          debits: totals.advanceDeductions,
-                          net: netPayout,
-                        })
-                      }
-                      className="size-8 grid place-items-center border border-border hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
-                      title="Print Payslip Summary"
-                    >
-                      <Printer className="size-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </div>
+        {!workers.length && (
+          <p>{query.isLoading ? "Loading workers..." : "No workers registered."}</p>
+        )}
+        <button
+          className="bg-primary text-primary-foreground p-2 rounded disabled:opacity-50"
+          disabled={!Object.keys(draft).length || save.isPending}
+          onClick={() => save.mutate()}
+        >
+          {save.isPending ? "Saving..." : "Save attendance"}
+        </button>
+        <button
+          className="border rounded p-2 ml-2"
+          disabled={save.isPending}
+          onClick={() => setDraft({})}
+        >
+          Discard changes
+        </button>
+      </section>
+      {admin && (
+        <WorkflowLedger
+          title="Worker Register"
+          endpoint={endpoint}
+          idKey="labourAttendanceId"
+          fields={[
+            { key: "name", label: "Worker name", required: true },
+            { key: "type", label: "Trade", required: true },
+            { key: "rate", label: "Daily rate", type: "number", min: 0.01, required: true },
+            { key: "bankName", label: "Bank name (optional)" },
+            { key: "accNo", label: "Account number (optional)" },
+          ]}
+          onCreate={(body) =>
+            api.post("/supervisor/labour/attendance", { ...body, projectId, operation: "register" })
+          }
+          columns={[
+            { key: "name", label: "Worker" },
+            { key: "type", label: "Trade" },
+            { key: "rate", label: "Daily rate" },
+          ]}
+        />
+      )}
+      {admin && (
+        <WorkflowLedger
+          title="Monthly Deductions"
+          endpoint={endpoint}
+          idKey="id"
+          transform={(rows) =>
+            rows.flatMap((w) =>
+              ((w.deductions as DomainRecord[]) ?? []).map((d, i) => ({
+                ...d,
+                id: `${w.labourAttendanceId}-${i}`,
+                name: w.name,
+              })),
+            )
+          }
+          fields={[
+            {
+              key: "labourAttendanceId",
+              label: "Worker",
+              required: true,
+              options: workers.map((w) => ({
+                value: String(w.labourAttendanceId),
+                label: String(w.name),
+              })),
+            },
+            { key: "amount", label: "Deduction amount", type: "number", min: 0.01, required: true },
+            { key: "description", label: "Reason", required: true },
+          ]}
+          onCreate={(body) =>
+            api.post("/supervisor/labour/attendance", {
+              ...body,
+              projectId,
+              date: day,
+              operation: "debit",
+            })
+          }
+          columns={[
+            { key: "date", label: "Date" },
+            { key: "name", label: "Worker" },
+            { key: "description", label: "Reason" },
+            { key: "amount", label: "Amount" },
+          ]}
+        />
+      )}
     </div>
   );
 }

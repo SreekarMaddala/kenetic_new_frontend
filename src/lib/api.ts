@@ -297,6 +297,7 @@ export const governanceApi = {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface Organization {
+  provisioningWarning?: string;
   orgId: string;
   name: string;
   type: string;
@@ -359,6 +360,7 @@ export interface DashboardAnalytics {
   totalSpent?: number;
   pendingApprovals?: number;
   stockAlerts?: number;
+  approvals?: DomainRecord[];
 }
 
 export interface Project {
