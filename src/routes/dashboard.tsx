@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -31,7 +32,11 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — Kinetic" },
-      { name: "description", content: "Kinetic construction operations control center. Track projects, budgets, materials, and approvals." },
+      {
+        name: "description",
+        content:
+          "Kinetic construction operations control center. Track projects, budgets, materials, and approvals.",
+      },
     ],
   }),
   component: DashboardPage,
@@ -56,15 +61,17 @@ function DashboardPage() {
   });
 
   // Build chart data from real projects
-  const projectsData = projects && projects.length > 0
-    ? projects.slice(0, 6).map((p) => ({
-        name: p.name.length > 18 ? p.name.slice(0, 15) + "…" : p.name,
-        Budget: Number((p.budget / 10_000_000).toFixed(1)),   // convert to Cr
-        Spent: Number((p.spent / 10_000_000).toFixed(1)),
-      }))
-    : [];
+  const projectsData =
+    projects && projects.length > 0
+      ? projects.slice(0, 6).map((p) => ({
+          name: p.name.length > 18 ? p.name.slice(0, 15) + "…" : p.name,
+          Budget: Number((p.budget / 10_000_000).toFixed(1)), // convert to Cr
+          Spent: Number((p.spent / 10_000_000).toFixed(1)),
+        }))
+      : [];
 
-  const activeProjectsCount = analytics?.activeProjects ?? projects?.filter((p) => p.status === "Active").length ?? 0;
+  const activeProjectsCount =
+    analytics?.activeProjects ?? projects?.filter((p) => p.status === "Active").length ?? 0;
   const totalBudgetVal = projects
     ? `₹${(projects.reduce((s, p) => s + (p.budget ?? 0), 0) / 10_000_000).toFixed(2)} Cr`
     : "₹0.00 Cr";
@@ -77,17 +84,23 @@ function DashboardPage() {
 
   const handleApprove = (id: string, title: string) => {
     setApprovals((prev) => prev.filter((a) => a.id !== id));
-    toast.success(`Approved: ${title}`, { description: `Workflow ID ${id} approved successfully.` });
+    toast.success(`Approved: ${title}`, {
+      description: `Workflow ID ${id} approved successfully.`,
+    });
   };
 
   const handleReject = (id: string, title: string) => {
     setApprovals((prev) => prev.filter((a) => a.id !== id));
-    toast.error(`Rejected: ${title}`, { description: `Workflow ID ${id} has been returned for review.` });
+    toast.error(`Rejected: ${title}`, {
+      description: `Workflow ID ${id} has been returned for review.`,
+    });
   };
 
   const handleReorder = (itemName: string) => {
     setStockAlerts((prev) => prev.filter((item) => item.name !== itemName));
-    toast.success(`Reorder Request Sent`, { description: `Indented reorder for ${itemName} across sites.` });
+    toast.success(`Reorder Request Sent`, {
+      description: `Indented reorder for ${itemName} across sites.`,
+    });
   };
 
   if (analyticsLoading) {
@@ -95,7 +108,9 @@ function DashboardPage() {
       <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
         <div className="h-8 w-48 bg-secondary rounded animate-pulse" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-secondary rounded-xl animate-pulse" />)}
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 bg-secondary rounded-xl animate-pulse" />
+          ))}
         </div>
       </div>
     );
@@ -116,7 +131,7 @@ function DashboardPage() {
               View Projects
             </Link>
             <Link
-              to="/approvals"
+              to={"/expenses" as any}
               className="inline-flex h-10 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background hover:bg-zinc-800 transition-colors"
             >
               Review Approvals
@@ -176,7 +191,8 @@ function DashboardPage() {
           <CardContent>
             <div className="text-3xl font-display font-semibold">{pendingApprovalsCount}</div>
             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-              <span className="text-primary font-medium">{approvals.length} critical</span> items await sign-off
+              <span className="text-primary font-medium">{approvals.length} critical</span> items
+              await sign-off
             </p>
           </CardContent>
         </Card>
@@ -199,12 +215,13 @@ function DashboardPage() {
 
       {/* ── Main Dashboard grid ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
         {/* Left Side: Chart (8 cols) */}
         <Card className="lg:col-span-8 border border-border bg-[color:var(--surface)] shadow-sm">
           <CardHeader className="flex flex-row items-start justify-between">
             <div>
-              <CardTitle className="font-display font-semibold text-lg">Portfolio Budget vs Spent</CardTitle>
+              <CardTitle className="font-display font-semibold text-lg">
+                Portfolio Budget vs Spent
+              </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
                 Financial comparison across all active project sites (in ₹ Crores)
               </CardDescription>
@@ -216,51 +233,48 @@ function DashboardPage() {
           </CardHeader>
           <CardContent className="h-[350px] pr-4">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={projectsData}
-                margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
-              >
+              <BarChart data={projectsData} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fill: "#64748b", fontSize: 11 }} 
-                  axisLine={false} 
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: "#64748b", fontSize: 11 }}
+                  axisLine={false}
                   tickLine={false}
                 />
-                <YAxis 
+                <YAxis
                   tick={{ fill: "#64748b", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                   unit="Cr"
                 />
-                <Tooltip 
+                <Tooltip
                   cursor={{ fill: "rgba(0,0,0,0.02)" }}
                   contentStyle={{
                     background: "var(--color-surface)",
                     borderColor: "var(--color-border)",
                     borderRadius: "0.5rem",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                   }}
-                  labelStyle={{ fontWeight: "bold", fontFamily: "var(--font-display)", fontSize: 12 }}
+                  labelStyle={{
+                    fontWeight: "bold",
+                    fontFamily: "var(--font-display)",
+                    fontSize: 12,
+                  }}
                   itemStyle={{ fontSize: 12 }}
                 />
-                <Legend 
+                <Legend
                   wrapperStyle={{ fontSize: 12, paddingTop: 10 }}
                   iconType="circle"
                   iconSize={8}
                 />
-                <Bar 
-                  dataKey="Budget" 
-                  fill="hsl(22 90% 48% / 0.15)" 
-                  stroke="hsl(22 90% 48%)" 
+                <Bar
+                  dataKey="Budget"
+                  fill="hsl(22 90% 48% / 0.15)"
+                  stroke="hsl(22 90% 48%)"
                   strokeWidth={1}
-                  radius={[4, 4, 0, 0]} 
+                  radius={[4, 4, 0, 0]}
                 />
-                <Bar 
-                  dataKey="Spent" 
-                  fill="hsl(158 64% 32% / 0.85)" 
-                  radius={[4, 4, 0, 0]} 
-                />
+                <Bar dataKey="Spent" fill="hsl(158 64% 32% / 0.85)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -283,12 +297,17 @@ function DashboardPage() {
             <CardContent className="divide-y divide-border p-0">
               {stockAlerts.length > 0 ? (
                 stockAlerts.map((item) => (
-                  <div key={item.name} className="p-4 flex items-start justify-between gap-3 hover:bg-secondary/20 transition-colors">
+                  <div
+                    key={item.name}
+                    className="p-4 flex items-start justify-between gap-3 hover:bg-secondary/20 transition-colors"
+                  >
                     <div>
                       <h4 className="text-xs font-semibold">{item.name}</h4>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{item.site}</p>
                       <div className="flex gap-3 text-[10px] font-mono text-muted-foreground mt-2">
-                        <span>Stock: <strong className="text-foreground">{item.stock}</strong></span>
+                        <span>
+                          Stock: <strong className="text-foreground">{item.stock}</strong>
+                        </span>
                         <span>Reorder: {item.reorder}</span>
                       </div>
                     </div>
@@ -302,7 +321,9 @@ function DashboardPage() {
                 ))
               ) : (
                 <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
-                  <span className="size-8 rounded bg-accent/15 grid place-items-center text-accent font-bold">✓</span>
+                  <span className="size-8 rounded bg-accent/15 grid place-items-center text-accent font-bold">
+                    ✓
+                  </span>
                   <p>All warehouse stocks are within safe operational thresholds.</p>
                 </div>
               )}
@@ -310,7 +331,7 @@ function DashboardPage() {
           </div>
           <CardHeader className="border-t border-border p-4 bg-secondary/20">
             <Link
-              to="/materials"
+              to={"/inventory" as any}
               className="text-xs font-medium text-accent hover:text-accent/80 transition-colors flex items-center justify-center gap-1 w-full"
             >
               Open Material Ledger <ChevronRight className="size-3.5" />
@@ -321,34 +342,43 @@ function DashboardPage() {
 
       {/* ── Sub-level grid: Approvals & Invoices ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
         {/* Left Side: Critical Approvals (7 cols) */}
         <Card className="lg:col-span-7 border border-border bg-[color:var(--surface)] shadow-sm">
           <CardHeader className="border-b border-border">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="font-display font-semibold text-lg">Action Needed: Approvals</CardTitle>
+                <CardTitle className="font-display font-semibold text-lg">
+                  Action Needed: Approvals
+                </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
                   High & medium priority transactions pending project head authorization
                 </CardDescription>
               </div>
-              <span className="text-[10px] font-mono text-muted-foreground">{approvals.length} PENDING</span>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {approvals.length} PENDING
+              </span>
             </div>
           </CardHeader>
           <CardContent className="divide-y divide-border p-0">
             {approvals.length > 0 ? (
               approvals.map((app) => (
-                <div key={app.id} className="p-4 flex items-center justify-between gap-4 hover:bg-secondary/10 transition-colors">
+                <div
+                  key={app.id}
+                  className="p-4 flex items-center justify-between gap-4 hover:bg-secondary/10 transition-colors"
+                >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`size-1.5 rounded-full shrink-0 ${app.priority === "high" ? "bg-primary" : "bg-yellow-500"}`} />
+                      <span
+                        className={`size-1.5 rounded-full shrink-0 ${app.priority === "high" ? "bg-primary" : "bg-yellow-500"}`}
+                      />
                       <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
                         {app.id} · {app.type}
                       </span>
                     </div>
                     <h4 className="text-sm font-semibold truncate leading-tight">{app.title}</h4>
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      {app.project} · {app.raisedBy} · <span className="font-mono">{app.age} ago</span>
+                      {app.project} · {app.raisedBy} ·{" "}
+                      <span className="font-mono">{app.age} ago</span>
                     </p>
                   </div>
 
@@ -375,10 +405,14 @@ function DashboardPage() {
               ))
             ) : (
               <div className="p-12 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
-                <span className="size-10 rounded-full bg-accent/15 grid place-items-center text-accent text-sm font-bold">✓</span>
+                <span className="size-10 rounded-full bg-accent/15 grid place-items-center text-accent text-sm font-bold">
+                  ✓
+                </span>
                 <div>
                   <h4 className="font-semibold text-foreground text-sm">Inbox Zero achieved</h4>
-                  <p className="mt-1">All high-priority operational workflows have been resolved.</p>
+                  <p className="mt-1">
+                    All high-priority operational workflows have been resolved.
+                  </p>
                 </div>
               </div>
             )}
@@ -386,7 +420,7 @@ function DashboardPage() {
           {approvals.length > 0 && (
             <CardHeader className="border-t border-border p-4 text-center">
               <Link
-                to="/approvals"
+                to={"/expenses" as any}
                 className="text-xs font-medium text-accent hover:text-accent/80 transition-colors flex items-center justify-center gap-1"
               >
                 Go to Approval Center <ChevronRight className="size-3.5" />
@@ -410,7 +444,10 @@ function DashboardPage() {
           </CardHeader>
           <CardContent className="divide-y divide-border p-0">
             {recentInvoices.map((inv) => (
-              <div key={inv.invoice} className="p-4 flex items-center justify-between gap-3 hover:bg-secondary/20 transition-colors">
+              <div
+                key={inv.invoice}
+                className="p-4 flex items-center justify-between gap-3 hover:bg-secondary/20 transition-colors"
+              >
                 <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-semibold truncate">{inv.vendor}</h4>
                   <p className="text-[10px] text-muted-foreground mt-1 font-mono">
@@ -419,9 +456,13 @@ function DashboardPage() {
                 </div>
                 <div className="text-right shrink-0">
                   <span className="font-mono text-xs font-semibold block">{inv.amount}</span>
-                  <span className={`inline-block text-[9px] font-mono mt-1 px-1.5 py-0.5 rounded ${
-                    inv.status === "AI Verified" ? "bg-accent/10 text-accent" : "bg-yellow-500/10 text-yellow-700"
-                  }`}>
+                  <span
+                    className={`inline-block text-[9px] font-mono mt-1 px-1.5 py-0.5 rounded ${
+                      inv.status === "AI Verified"
+                        ? "bg-accent/10 text-accent"
+                        : "bg-yellow-500/10 text-yellow-700"
+                    }`}
+                  >
                     {inv.status}
                   </span>
                 </div>
@@ -430,7 +471,7 @@ function DashboardPage() {
           </CardContent>
           <CardHeader className="border-t border-border p-4 bg-secondary/20">
             <Link
-              to="/bills"
+              to={"/expenses" as any}
               className="text-xs font-medium text-accent hover:text-accent/80 transition-colors flex items-center justify-center gap-1 w-full"
             >
               Verify Invoices <ChevronRight className="size-3.5" />

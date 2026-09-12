@@ -2,9 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../components/AppShell";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Building2, Users, FolderKanban, ShieldCheck, MoreHorizontal, Plus, Search, Filter, Loader2 } from "lucide-react";
+import {
+  Building2,
+  Users,
+  FolderKanban,
+  ShieldCheck,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Filter,
+  Loader2,
+} from "lucide-react";
 import { orgApi, type Organization } from "../lib/api";
 import { toast } from "sonner";
+import { useAuth } from "../contexts/AuthContext";
 
 export const Route = createFileRoute("/organizations")({
   head: () => ({
@@ -17,19 +28,40 @@ export const Route = createFileRoute("/organizations")({
 });
 
 function OrganizationsPage() {
+  const { user } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newOrg, setNewOrg] = useState({ name: "", type: "Enterprise Developer", plan: "Enterprise Plan", taxId: "" });
+  const [newOrg, setNewOrg] = useState({
+    name: "",
+    type: "Enterprise Developer",
+    plan: "Enterprise Plan",
+    taxId: "",
+  });
 
-  const { data: organizations = [], isLoading } = useQuery({
+  const {
+    data: organizations = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["organizations"],
     queryFn: () => orgApi.list(),
     retry: 1,
   });
 
+  const statusMutation = useMutation({
+    mutationFn: ({ orgId, status }: { orgId: string; status: string }) =>
+      orgApi.updateStatus(orgId, status),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["organizations"] });
+      toast.success("Organization status updated.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const createMutation = useMutation({
-    mutationFn: (body: { name: string; type: string; plan: string; taxId?: string }) => orgApi.create(body),
+    mutationFn: (body: { name: string; type: string; plan: string; taxId?: string }) =>
+      orgApi.create(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["organizations"] });
       toast.success("Organization registered successfully.");
@@ -43,20 +75,27 @@ function OrganizationsPage() {
     (o) =>
       o.name.toLowerCase().includes(search.toLowerCase()) ||
       o.orgId.toLowerCase().includes(search.toLowerCase()) ||
-      (o.taxId ?? "").toLowerCase().includes(search.toLowerCase())
+      (o.taxId ?? "").toLowerCase().includes(search.toLowerCase()),
   );
 
   const handleAddOrg = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOrg.name) return;
-    createMutation.mutate({ name: newOrg.name, type: newOrg.type, plan: newOrg.plan, taxId: newOrg.taxId || undefined });
+    createMutation.mutate({
+      name: newOrg.name,
+      type: newOrg.type,
+      plan: newOrg.plan,
+      taxId: newOrg.taxId || undefined,
+    });
   };
 
   if (isLoading) {
     return (
       <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
         <div className="h-8 w-64 bg-secondary rounded animate-pulse" />
-        {[...Array(5)].map((_, i) => <div key={i} className="h-16 bg-secondary rounded-xl animate-pulse" />)}
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-16 bg-secondary rounded-xl animate-pulse" />
+        ))}
       </div>
     );
   }
@@ -67,7 +106,7 @@ function OrganizationsPage() {
         eyebrow="Platform Governance"
         title="Organizations Registry"
         actions={
-          <button 
+          <button
             onClick={() => setShowAddModal(true)}
             className="h-10 px-6 bg-foreground text-background rounded-md text-sm font-medium hover:bg-zinc-800 transition-colors"
           >
@@ -77,10 +116,23 @@ function OrganizationsPage() {
       />
 
       {/* Metrics Row */}
+      {error && (
+        <p role="alert" className="text-red-600 mb-4">
+          {error.message}
+        </p>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <MetricCard label="Total Organizations" value={organizations.length} suffix="Active" />
-        <MetricCard label="Total Connected Sites" value={organizations.reduce((acc, o) => acc + (o.activeProjectsCount ?? 0), 0)} suffix="Across India" />
-        <MetricCard label="Registered Users" value={organizations.reduce((acc, o) => acc + (o.activeUsersCount ?? 0), 0)} suffix="Live Now" />
+        <MetricCard
+          label="Total Connected Sites"
+          value={organizations.reduce((acc, o) => acc + (o.activeProjectsCount ?? 0), 0)}
+          suffix="Across India"
+        />
+        <MetricCard
+          label="Registered Users"
+          value={organizations.reduce((acc, o) => acc + (o.activeUsersCount ?? 0), 0)}
+          suffix="Live Now"
+        />
         <MetricCard label="Platform Plan Ratio" value="100%" suffix="Premium / Enterprise" />
       </div>
 
@@ -131,15 +183,35 @@ function OrganizationsPage() {
                   <td className="p-4 pl-6 font-mono text-xs text-muted-foreground">{org.orgId}</td>
                   <td className="p-4 font-semibold text-foreground">{org.name}</td>
                   <td className="p-4 text-muted-foreground text-xs">{org.type}</td>
-                  <td className="p-4 font-mono text-xs text-muted-foreground">{org.taxId ?? "—"}</td>
-                  <td className="p-4 text-center font-mono font-medium">{org.activeProjectsCount ?? 0}</td>
-                  <td className="p-4 text-center font-mono font-medium text-muted-foreground">{org.activeUsersCount ?? 0}</td>
+                  <td className="p-4 font-mono text-xs text-muted-foreground">
+                    {org.taxId ?? "—"}
+                  </td>
+                  <td className="p-4 text-center font-mono font-medium">
+                    {org.activeProjectsCount ?? 0}
+                  </td>
+                  <td className="p-4 text-center font-mono font-medium text-muted-foreground">
+                    {org.activeUsersCount ?? 0}
+                  </td>
                   <td className="p-4 text-xs font-medium text-primary/80">{org.plan}</td>
                   <td className="p-4 pr-6">
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-accent/10 text-accent">
                       <span className="size-1 rounded-full bg-accent" />
                       {org.status}
                     </span>
+                    {org.orgId !== user?.orgId && (
+                      <button
+                        disabled={statusMutation.isPending}
+                        className="block mt-2 text-xs text-primary"
+                        onClick={() =>
+                          statusMutation.mutate({
+                            orgId: org.orgId,
+                            status: org.status === "Active" ? "Suspended" : "Active",
+                          })
+                        }
+                      >
+                        {org.status === "Active" ? "Suspend access" : "Activate access"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -151,19 +223,33 @@ function OrganizationsPage() {
       {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
+          <div
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+            onClick={() => setShowAddModal(false)}
+          />
           <div className="bg-[color:var(--surface)] border border-border rounded-xl shadow-xl w-full max-w-md overflow-hidden relative z-10 animate-scale-in">
             <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-secondary/30">
               <h3 className="font-display font-semibold">Register New Organization</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-muted-foreground hover:text-foreground">
-                <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <svg
+                  viewBox="0 0 16 16"
+                  className="size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
                   <path d="M4 4 L12 12 M12 4 L4 12" strokeLinecap="round" />
                 </svg>
               </button>
             </div>
             <form onSubmit={handleAddOrg} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">Company Name</label>
+                <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">
+                  Company Name
+                </label>
                 <input
                   required
                   type="text"
@@ -175,7 +261,9 @@ function OrganizationsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">Org Type</label>
+                  <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">
+                    Org Type
+                  </label>
                   <select
                     value={newOrg.type}
                     onChange={(e) => setNewOrg({ ...newOrg, type: e.target.value })}
@@ -188,7 +276,9 @@ function OrganizationsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">GSTIN / Tax ID</label>
+                  <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">
+                    GSTIN / Tax ID
+                  </label>
                   <input
                     type="text"
                     placeholder="27AAACU1234J1Z5"
@@ -199,7 +289,9 @@ function OrganizationsPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">Platform Plan</label>
+                <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">
+                  Platform Plan
+                </label>
                 <select
                   value={newOrg.plan}
                   onChange={(e) => setNewOrg({ ...newOrg, plan: e.target.value })}
@@ -233,11 +325,23 @@ function OrganizationsPage() {
   );
 }
 
-function MetricCard({ label, value, suffix }: { label: string; value: string | number; suffix: string }) {
+function MetricCard({
+  label,
+  value,
+  suffix,
+}: {
+  label: string;
+  value: string | number;
+  suffix: string;
+}) {
   return (
     <div className="p-5 bg-[color:var(--surface)] border border-border rounded-xl shadow-sm">
-      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{label}</p>
-      <p className="text-2xl font-bold font-display tracking-tight mt-1.5 mb-1 text-foreground">{value}</p>
+      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+        {label}
+      </p>
+      <p className="text-2xl font-bold font-display tracking-tight mt-1.5 mb-1 text-foreground">
+        {value}
+      </p>
       <span className="text-[9.5px] font-medium text-accent">{suffix}</span>
     </div>
   );

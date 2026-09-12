@@ -2,23 +2,59 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../components/AppShell";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Filter, MoreHorizontal, Mail, Phone, Plus, Star, ShieldCheck, Briefcase } from "lucide-react";
+import {
+  Search,
+  Filter,
+  MoreHorizontal,
+  Mail,
+  Phone,
+  Plus,
+  Star,
+  ShieldCheck,
+  Briefcase,
+} from "lucide-react";
 import { vendorApi, type Vendor } from "../lib/api";
 
 export const Route = createFileRoute("/vendors")({
   component: VendorsPage,
 });
 
-function MetricCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
+function MetricCard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: string;
+}) {
   return (
-    <div className={`p-4 rounded-xl border border-border bg-[color:var(--surface)] flex items-center gap-4`}>
-      <div className={`size-10 rounded-lg flex items-center justify-center ${color}`}>
-        {icon}
-      </div>
+    <div
+      className={`p-4 rounded-xl border border-border bg-[color:var(--surface)] flex items-center gap-4`}
+    >
+      <div className={`size-10 rounded-lg flex items-center justify-center ${color}`}>{icon}</div>
       <div>
         <div className="text-2xl font-display font-bold text-foreground">{value}</div>
-        <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function StarRating({ value = 0 }: { value?: number }) {
+  const rounded = Math.max(0, Math.min(5, Math.round(value)));
+  return (
+    <div className="flex gap-0.5" aria-label={`${value.toFixed(1)} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className={`size-3 ${star <= rounded ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+        />
+      ))}
     </div>
   );
 }
@@ -33,19 +69,22 @@ function VendorsPage() {
     retry: 1,
   });
 
-  const filteredVendors = vendors.filter(ven => {
+  const filteredVendors = vendors.filter((ven) => {
     const matchSearch = ven.name.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "All" || ven.type === typeFilter;
     return matchSearch && matchType;
   });
 
-  const types = ["All", ...Array.from(new Set(vendors.map(v => v.type)))];
+  const types = ["All", ...Array.from(new Set(vendors.map((v) => v.type)))];
 
-  if (isLoading) return (
-    <div className="p-8 max-w-7xl mx-auto w-full space-y-4 animate-fade-up">
-      {[...Array(4)].map((_, i) => <div key={i} className="h-14 bg-secondary rounded-xl animate-pulse" />)}
-    </div>
-  );
+  if (isLoading)
+    return (
+      <div className="p-8 max-w-7xl mx-auto w-full space-y-4 animate-fade-up">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-14 bg-secondary rounded-xl animate-pulse" />
+        ))}
+      </div>
+    );
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -60,10 +99,34 @@ function VendorsPage() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <MetricCard label="Total Vendors" value={vendors.length} icon={<Briefcase className="size-5" />} color="bg-blue-500/10 text-blue-600" />
-        <MetricCard label="Preferred Partners" value={vendors.filter(v => v.badge === "Preferred").length} icon={<ShieldCheck className="size-5" />} color="bg-emerald-500/10 text-emerald-600" />
-        <MetricCard label="Avg Rating" value={vendors.length > 0 ? (vendors.reduce((a, b) => a + (b.rating ?? 0), 0) / vendors.length).toFixed(1) : "—"} icon={<Star className="size-5" />} color="bg-amber-500/10 text-amber-600" />
-        <MetricCard label="Blacklisted" value={vendors.filter(v => v.status === "Blacklisted").length} icon={<ShieldCheck className="size-5" />} color="bg-red-500/10 text-red-600" />
+        <MetricCard
+          label="Total Vendors"
+          value={vendors.length}
+          icon={<Briefcase className="size-5" />}
+          color="bg-blue-500/10 text-blue-600"
+        />
+        <MetricCard
+          label="Preferred Partners"
+          value={vendors.filter((v) => v.badge === "Preferred").length}
+          icon={<ShieldCheck className="size-5" />}
+          color="bg-emerald-500/10 text-emerald-600"
+        />
+        <MetricCard
+          label="Avg Rating"
+          value={
+            vendors.length > 0
+              ? (vendors.reduce((a, b) => a + (b.rating ?? 0), 0) / vendors.length).toFixed(1)
+              : "—"
+          }
+          icon={<Star className="size-5" />}
+          color="bg-amber-500/10 text-amber-600"
+        />
+        <MetricCard
+          label="Blacklisted"
+          value={vendors.filter((v) => v.status === "Blacklisted").length}
+          icon={<ShieldCheck className="size-5" />}
+          color="bg-red-500/10 text-red-600"
+        />
       </div>
 
       <div className="bg-[color:var(--surface)] rounded-xl border border-border shadow-sm overflow-hidden">
@@ -86,7 +149,11 @@ function VendorsPage() {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="w-full sm:w-auto h-9 pl-9 pr-8 rounded-md bg-[color:var(--surface)] border border-border text-sm focus:outline-none focus:border-primary/50 appearance-none"
               >
-                {types.map(t => <option key={t} value={t}>{t}</option>)}
+                {types.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -115,31 +182,45 @@ function VendorsPage() {
                       <div>
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                           {ven.name}
-                          {ven.badge === "Preferred" && <ShieldCheck className="size-3.5 text-emerald-500" />}
+                          {ven.badge === "Preferred" && (
+                            <ShieldCheck className="size-3.5 text-emerald-500" />
+                          )}
                         </div>
-                        <div className="text-[11px] text-muted-foreground font-mono">{ven.vendorId}</div>
+                        <div className="text-[11px] text-muted-foreground font-mono">
+                          {ven.vendorId}
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-xs">{ven.type}</div>
-                    <div className="mt-1"><StarRating value={ven.rating} /></div>
+                    <div className="mt-1">
+                      <StarRating value={ven.rating} />
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1.5"><Mail className="size-3" /> {ven.email}</span>
-                      <span className="flex items-center gap-1.5"><Phone className="size-3" /> {ven.phone}</span>
+                      <span className="flex items-center gap-1.5">
+                        <Mail className="size-3" /> {ven.email}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Phone className="size-3" /> {ven.phone}
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-xs font-semibold text-foreground">
                     {ven.activeContracts ?? 0} Active
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      ven.status === "Active" ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
-                      ven.status === "Under Review" ? "bg-amber-500/10 text-amber-600 border border-amber-500/20" :
-                      "bg-red-500/10 text-red-600 border border-red-500/20"
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        ven.status === "Active"
+                          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                          : ven.status === "Under Review"
+                            ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                            : "bg-red-500/10 text-red-600 border border-red-500/20"
+                      }`}
+                    >
                       {ven.status}
                     </span>
                   </td>

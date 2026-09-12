@@ -8,17 +8,69 @@ export const Route = createFileRoute("/projects/$projectId/bills")({
   head: () => ({
     meta: [
       { title: "Vendor Bills — Kinetic" },
-      { name: "description", content: "AI-powered invoice extraction with GST, vendor, and line-item parsing for construction vendor bills." },
+      {
+        name: "description",
+        content:
+          "AI-powered invoice extraction with GST, vendor, and line-item parsing for construction vendor bills.",
+      },
     ],
   }),
   component: BillsPage,
 });
 
 const bills = [
-  { id: "1", vendor: "UltraTech Cement Ltd.", invoice: "UTC/2845", amount: "₹12,42,000", amountVal: "₹12,42,000.00", gst: "18%", gstin: "27AAACU1234J1Z5", date: "08 Aug 2025", status: "AI Verified", conf: "98.2%", lineItems: ["Portland Cement 53G (420 Bags)", "Logistics / Unloading Charges"] },
-  { id: "2", vendor: "Jindal Steel & Power", invoice: "JSP-9821", amount: "₹8,40,000", amountVal: "₹8,40,000.00", gst: "18%", gstin: "07BBACT5678K2Z9", date: "05 Aug 2025", status: "Pending Review", conf: "94.1%", lineItems: ["TMT Bars 12mm (50 Tons)", "Binding Wire (2 Tons)"] },
-  { id: "3", vendor: "Kajaria Ceramics", invoice: "KC-4421", amount: "₹2,18,400", amountVal: "₹2,18,400.00", gst: "18%", gstin: "09CCBBD9012L3Z4", date: "01 Aug 2025", status: "AI Verified", conf: "99.0%", lineItems: ["Vitrified Tiles 600x600 (120 Boxes)", "Tile Adhesive (15 Bags)"] },
-  { id: "4", vendor: "Finolex Industries", invoice: "FIN-1182", amount: "₹64,200", amountVal: "₹64,200.00", gst: "12%", gstin: "24DDCBE3456M5Z8", date: "28 Jul 2025", status: "Flagged", conf: "82.4%", lineItems: ["PVC Pipes 4 inch (100 Pcs)", "Fittings (Assorted)"] },
+  {
+    id: "1",
+    vendor: "UltraTech Cement Ltd.",
+    invoice: "UTC/2845",
+    amount: "₹12,42,000",
+    amountVal: "₹12,42,000.00",
+    gst: "18%",
+    gstin: "27AAACU1234J1Z5",
+    date: "08 Aug 2025",
+    status: "AI Verified",
+    conf: "98.2%",
+    lineItems: ["Portland Cement 53G (420 Bags)", "Logistics / Unloading Charges"],
+  },
+  {
+    id: "2",
+    vendor: "Jindal Steel & Power",
+    invoice: "JSP-9821",
+    amount: "₹8,40,000",
+    amountVal: "₹8,40,000.00",
+    gst: "18%",
+    gstin: "07BBACT5678K2Z9",
+    date: "05 Aug 2025",
+    status: "Pending Review",
+    conf: "94.1%",
+    lineItems: ["TMT Bars 12mm (50 Tons)", "Binding Wire (2 Tons)"],
+  },
+  {
+    id: "3",
+    vendor: "Kajaria Ceramics",
+    invoice: "KC-4421",
+    amount: "₹2,18,400",
+    amountVal: "₹2,18,400.00",
+    gst: "18%",
+    gstin: "09CCBBD9012L3Z4",
+    date: "01 Aug 2025",
+    status: "AI Verified",
+    conf: "99.0%",
+    lineItems: ["Vitrified Tiles 600x600 (120 Boxes)", "Tile Adhesive (15 Bags)"],
+  },
+  {
+    id: "4",
+    vendor: "Finolex Industries",
+    invoice: "FIN-1182",
+    amount: "₹64,200",
+    amountVal: "₹64,200.00",
+    gst: "12%",
+    gstin: "24DDCBE3456M5Z8",
+    date: "28 Jul 2025",
+    status: "Flagged",
+    conf: "82.4%",
+    lineItems: ["PVC Pipes 4 inch (100 Pcs)", "Fittings (Assorted)"],
+  },
 ];
 
 function BillsPage() {
@@ -35,7 +87,7 @@ function BillsPage() {
     const file = e.target.files?.[0];
     if (file) {
       toast.success(`Invoice "${file.name}" uploaded successfully!`, {
-        description: "AI processing will begin shortly."
+        description: "AI processing will begin shortly.",
       });
       e.target.value = "";
     }
@@ -48,14 +100,14 @@ function BillsPage() {
         title="Vendor Bill Processing"
         actions={
           <>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
+            <input
+              type="file"
+              ref={fileInputRef}
               className="hidden"
-              accept=".pdf,image/*" 
-              onChange={handleFileChange} 
+              accept=".pdf,image/*"
+              onChange={handleFileChange}
             />
-            <button 
+            <button
               onClick={handleUploadClick}
               className="h-10 px-6 bg-foreground text-background rounded-md text-sm font-medium hover:bg-zinc-800 transition-colors"
             >
@@ -103,19 +155,21 @@ function BillsPage() {
                   value={
                     <div className="mt-1 space-y-1">
                       {selectedBill.lineItems.map((item, idx) => (
-                        <p key={idx} className="text-xs font-medium">— {item}</p>
+                        <p key={idx} className="text-xs font-medium">
+                          — {item}
+                        </p>
                       ))}
                     </div>
                   }
                 />
                 <div className="pt-2 flex gap-2">
-                  <button 
+                  <button
                     onClick={() => toast.success(`Bill from ${selectedBill.vendor} approved!`)}
                     className="flex-1 py-2 bg-foreground text-background rounded text-xs font-medium hover:bg-zinc-800 transition-colors"
                   >
                     Approve Bill
                   </button>
-                  <button 
+                  <button
                     onClick={() => toast.error(`Issue flagged for invoice ${selectedBill.invoice}`)}
                     className="px-4 py-2 border border-border rounded text-xs font-medium hover:bg-secondary transition-colors"
                   >
@@ -134,15 +188,19 @@ function BillsPage() {
           </div>
           <ul className="divide-y divide-border">
             {bills.map((b) => (
-              <li 
-                key={b.invoice} 
+              <li
+                key={b.invoice}
                 onClick={() => setSelectedBillId(b.id)}
                 className={`px-5 py-4 flex items-center gap-3 transition-colors cursor-pointer ${
-                  selectedBillId === b.id ? "bg-secondary/60 border-l-2 border-l-primary" : "hover:bg-secondary/40 border-l-2 border-l-transparent"
+                  selectedBillId === b.id
+                    ? "bg-secondary/60 border-l-2 border-l-primary"
+                    : "hover:bg-secondary/40 border-l-2 border-l-transparent"
                 }`}
               >
                 <div className="min-w-0 flex-1">
-                  <p className={`font-medium text-sm truncate ${selectedBillId === b.id ? "text-foreground" : "text-foreground/80"}`}>
+                  <p
+                    className={`font-medium text-sm truncate ${selectedBillId === b.id ? "text-foreground" : "text-foreground/80"}`}
+                  >
                     {b.vendor}
                   </p>
                   <p className="text-xs text-muted-foreground font-mono mt-0.5">
@@ -150,7 +208,9 @@ function BillsPage() {
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className={`font-mono text-sm font-medium ${selectedBillId === b.id ? "text-foreground" : "text-foreground/80"}`}>
+                  <p
+                    className={`font-mono text-sm font-medium ${selectedBillId === b.id ? "text-foreground" : "text-foreground/80"}`}
+                  >
                     {b.amount}
                   </p>
                   <p
@@ -159,8 +219,8 @@ function BillsPage() {
                       (b.status === "Flagged"
                         ? "text-primary"
                         : b.status === "Pending Review"
-                        ? "text-yellow-700"
-                        : "text-accent")
+                          ? "text-yellow-700"
+                          : "text-accent")
                     }
                   >
                     {b.status} · {b.conf}
@@ -191,7 +251,11 @@ function Field({
         (highlight ? "bg-accent/5 border-accent/20" : "bg-secondary border-border")
       }
     >
-      <p className={"text-[10px] font-mono uppercase " + (highlight ? "text-accent" : "text-muted-foreground")}>
+      <p
+        className={
+          "text-[10px] font-mono uppercase " + (highlight ? "text-accent" : "text-muted-foreground")
+        }
+      >
         {label}
       </p>
       {typeof value === "string" ? <p className="text-sm font-semibold">{value}</p> : value}

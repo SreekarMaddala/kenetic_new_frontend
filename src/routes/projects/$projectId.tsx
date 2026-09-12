@@ -20,7 +20,9 @@ function ProjectLayout() {
           >
             <ArrowLeft className="size-4" />
           </Link>
-          <span className="text-xs text-muted-foreground font-mono uppercase">Back to Portfolio</span>
+          <span className="text-xs text-muted-foreground font-mono uppercase">
+            Back to Portfolio
+          </span>
         </div>
         <div className="text-center py-20 text-muted-foreground">Project not found</div>
       </div>
@@ -28,13 +30,13 @@ function ProjectLayout() {
   }
 
   // We only show the "Back to Portfolio" and Project Header if we are NOT on the index page
-  // Actually, we can just render the Outlet and let the children define their headers, 
+  // Actually, we can just render the Outlet and let the children define their headers,
   // or we can put a sticky header here. For now, let's just render the Outlet.
   // The AppShell sidebar will handle the project context.
-  
+
   return (
     <div className="w-full">
-      <Outlet context={{ project }} />
+      <Outlet />
     </div>
   );
 }

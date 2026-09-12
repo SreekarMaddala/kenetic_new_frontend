@@ -9,15 +9,27 @@ export const Route = createFileRoute("/inventory")({
   component: InventoryPage,
 });
 
-function MetricCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
+function MetricCard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: string;
+}) {
   return (
-    <div className={`p-4 rounded-xl border border-border bg-[color:var(--surface)] flex items-center gap-4`}>
-      <div className={`size-10 rounded-lg flex items-center justify-center ${color}`}>
-        {icon}
-      </div>
+    <div
+      className={`p-4 rounded-xl border border-border bg-[color:var(--surface)] flex items-center gap-4`}
+    >
+      <div className={`size-10 rounded-lg flex items-center justify-center ${color}`}>{icon}</div>
       <div>
         <div className="text-2xl font-display font-bold text-foreground">{value}</div>
-        <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
       </div>
     </div>
   );
@@ -33,19 +45,24 @@ function InventoryPage() {
     retry: 1,
   });
 
-  const filteredInventory = inventory.filter(item => {
-    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase()) || item.itemId.toLowerCase().includes(search.toLowerCase());
+  const filteredInventory = inventory.filter((item) => {
+    const matchSearch =
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.itemId.toLowerCase().includes(search.toLowerCase());
     const matchCategory = categoryFilter === "All" || item.category === categoryFilter;
     return matchSearch && matchCategory;
   });
 
-  const categories = ["All", ...Array.from(new Set(inventory.map(i => i.category)))];
+  const categories = ["All", ...Array.from(new Set(inventory.map((i) => i.category)))];
 
-  if (isLoading) return (
-    <div className="p-8 max-w-7xl mx-auto w-full space-y-4 animate-fade-up">
-      {[...Array(4)].map((_, i) => <div key={i} className="h-14 bg-secondary rounded-xl animate-pulse" />)}
-    </div>
-  );
+  if (isLoading)
+    return (
+      <div className="p-8 max-w-7xl mx-auto w-full space-y-4 animate-fade-up">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-14 bg-secondary rounded-xl animate-pulse" />
+        ))}
+      </div>
+    );
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -60,10 +77,30 @@ function InventoryPage() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <MetricCard label="Total Categories" value={categories.length - 1} icon={<Package className="size-5" />} color="bg-blue-500/10 text-blue-600" />
-        <MetricCard label="Low Stock Items" value={inventory.filter(i => i.status === "Low Stock").length} icon={<PackageOpen className="size-5" />} color="bg-orange-500/10 text-orange-600" />
-        <MetricCard label="Heavy Equipment" value={inventory.filter(i => i.category === "Heavy Equipment").length} icon={<Truck className="size-5" />} color="bg-purple-500/10 text-purple-600" />
-        <MetricCard label="Total Est. Value" value="₹17.3Cr" icon={<PackageCheck className="size-5" />} color="bg-emerald-500/10 text-emerald-600" />
+        <MetricCard
+          label="Total Categories"
+          value={categories.length - 1}
+          icon={<Package className="size-5" />}
+          color="bg-blue-500/10 text-blue-600"
+        />
+        <MetricCard
+          label="Low Stock Items"
+          value={inventory.filter((i) => i.status === "Low Stock").length}
+          icon={<PackageOpen className="size-5" />}
+          color="bg-orange-500/10 text-orange-600"
+        />
+        <MetricCard
+          label="Heavy Equipment"
+          value={inventory.filter((i) => i.category === "Heavy Equipment").length}
+          icon={<Truck className="size-5" />}
+          color="bg-purple-500/10 text-purple-600"
+        />
+        <MetricCard
+          label="Total Est. Value"
+          value="₹17.3Cr"
+          icon={<PackageCheck className="size-5" />}
+          color="bg-emerald-500/10 text-emerald-600"
+        />
       </div>
 
       <div className="bg-[color:var(--surface)] rounded-xl border border-border shadow-sm overflow-hidden">
@@ -86,7 +123,11 @@ function InventoryPage() {
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="w-full sm:w-auto h-9 pl-9 pr-8 rounded-md bg-[color:var(--surface)] border border-border text-sm focus:outline-none focus:border-primary/50 appearance-none"
               >
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -110,11 +151,17 @@ function InventoryPage() {
                   <td className="px-6 py-4">
                     <div className="font-semibold text-foreground flex items-center gap-2">
                       <div className="size-8 rounded bg-secondary flex items-center justify-center shrink-0">
-                        {item.category === "Heavy Equipment" ? <Truck className="size-4 text-muted-foreground" /> : <Package className="size-4 text-muted-foreground" />}
+                        {item.category === "Heavy Equipment" ? (
+                          <Truck className="size-4 text-muted-foreground" />
+                        ) : (
+                          <Package className="size-4 text-muted-foreground" />
+                        )}
                       </div>
                       <div>
                         {item.name}
-                        <div className="text-[11px] text-muted-foreground font-mono">{item.itemId}</div>
+                        <div className="text-[11px] text-muted-foreground font-mono">
+                          {item.itemId}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -123,9 +170,7 @@ function InventoryPage() {
                       {item.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 font-medium text-foreground">
-                    {item.totalStock}
-                  </td>
+                  <td className="px-6 py-4 font-medium text-foreground">{item.totalStock}</td>
                   <td className="px-6 py-4 font-medium text-foreground">
                     {item.deployedStock ?? "—"}
                   </td>
@@ -133,12 +178,17 @@ function InventoryPage() {
                     {item.estimatedValue ?? "—"}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      item.status === "In Stock" || item.status === "Available" ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
-                      item.status === "Low Stock" ? "bg-orange-500/10 text-orange-600 border border-orange-500/20" :
-                      item.status === "Fully Deployed" ? "bg-blue-500/10 text-blue-600 border border-blue-500/20" :
-                      "bg-gray-500/10 text-gray-600 border border-gray-500/20"
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        item.status === "In Stock" || item.status === "Available"
+                          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                          : item.status === "Low Stock"
+                            ? "bg-orange-500/10 text-orange-600 border border-orange-500/20"
+                            : item.status === "Fully Deployed"
+                              ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                              : "bg-gray-500/10 text-gray-600 border border-gray-500/20"
+                      }`}
+                    >
                       {item.status}
                     </span>
                   </td>

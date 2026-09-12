@@ -1,7 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useAuth } from "../../../contexts/AuthContext";
 import { createFileRoute } from "@tanstack/react-router";
 import * as React from "react";
 import { PageHeader } from "../../../components/AppShell";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../../components/ui/card";
 import { toast } from "sonner";
 import {
   UserPlus,
@@ -16,56 +24,79 @@ import {
   FileDown,
 } from "lucide-react";
 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { workforceApi } from "../../../lib/api";
+
 export const Route = createFileRoute("/projects/$projectId/labour")({
   head: () => ({
     meta: [
       { title: "Labour Attendance & Payroll — Kinetic" },
-      { name: "description", content: "Track daily labour attendance, work locations, night shifts, advance debits, and calculate month-end salaries." },
+      {
+        name: "description",
+        content:
+          "Track daily labour attendance, work locations, night shifts, advance debits, and calculate month-end salaries.",
+      },
     ],
   }),
   component: LabourPage,
 });
 
-// Mock Initial Workforce Directory
-const initialLabourers = [
-  { id: "L1", name: "Suresh Kumar", type: "Skilled", rate: 800, bankName: "SBI", accNo: "30291048123" },
-  { id: "L2", name: "Anil Jha", type: "Skilled", rate: 800, bankName: "HDFC", accNo: "50100481920" },
-  { id: "L3", name: "Ram Pukaar", type: "Unskilled", rate: 500, bankName: "PNB", accNo: "11291048110" },
-  { id: "L4", name: "Dinesh Prasad", type: "Unskilled", rate: 500, bankName: "SBI", accNo: "20391848123" },
-  { id: "L5", name: "Raju Yadav", type: "Unskilled", rate: 500, bankName: "BoB", accNo: "44191028122" },
-];
-
-// Daily Attendance Records State Mock (For today)
-const initialAttendance = [
-  { labourId: "L1", name: "Suresh Kumar", status: "Present", project: "DLF Camellias", nightShift: true },
-  { labourId: "L2", name: "Anil Jha", status: "Present", project: "DLF Camellias", nightShift: false },
-  { labourId: "L3", name: "Ram Pukaar", status: "Present", project: "Prestige Lakeside", nightShift: false },
-  { labourId: "L4", name: "Dinesh Prasad", status: "Absent", project: "—", nightShift: false },
-  { labourId: "L5", name: "Raju Yadav", status: "Half Day", project: "Lodha World Towers", nightShift: false },
-];
-
-// Debits/Weekly Advances Tracker State Mock
-const initialDebits = [
-  { id: "D1", labourId: "L1", date: "2026-07-07", amount: 1500, desc: "Weekly advance for groceries" },
-  { id: "D2", labourId: "L3", date: "2026-07-05", amount: 500, desc: "Boots safety deduction" },
-  { id: "D3", labourId: "L5", date: "2026-07-06", amount: 1000, desc: "Cash advance for medical use" },
-];
-
-// Month totals simulation mapping (days present, night shifts, advances)
-const initialMonthlyTotals = [
-  { id: "L1", daysPresent: 24, nightShifts: 6, advanceDeductions: 3500 },
-  { id: "L2", daysPresent: 22, nightShifts: 2, advanceDeductions: 1500 },
-  { id: "L3", daysPresent: 25, nightShifts: 0, advanceDeductions: 500 },
-  { id: "L4", daysPresent: 18, nightShifts: 0, advanceDeductions: 0 },
-  { id: "L5", daysPresent: 20, nightShifts: 4, advanceDeductions: 1000 },
-];
-
 function LabourPage() {
-  const [activeRole, setActiveRole] = React.useState<string>("admin");
-  const [labourers, setLabourers] = React.useState(initialLabourers);
-  const [attendance, setAttendance] = React.useState(initialAttendance);
-  const [debits, setDebits] = React.useState(initialDebits);
-  const [monthlyTotals, setMonthlyTotals] = React.useState(initialMonthlyTotals);
+  const { projectId } = Route.useParams();
+  const queryClient = useQueryClient();
+  const activeRole = useAuth().user?.role;
+
+  const { data: rawLabour = [] } = useQuery({
+    queryKey: ["labour", projectId],
+    queryFn: () => workforceApi.listLabour(projectId),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const [labourers, setLabourers] = React.useState<any[]>([]);
+  const [attendance, setAttendance] = React.useState<any[]>([]);
+  const [debits, setDebits] = React.useState<any[]>([]);
+  const [monthlyTotals, setMonthlyTotals] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (rawLabour && rawLabour.length > 0) {
+      const parsedLabourers = rawLabour.map((item: any, idx: number) => ({
+        id: item.labourAttendanceId || item.labourId || `L${idx + 1}`,
+        name: item.name || "Worker",
+        type: item.type || "Skilled",
+        rate: item.rate || 800,
+        bankName: item.bankName || "SBI",
+        accNo: item.accNo || "30291048123",
+      }));
+      const parsedAttendance = rawLabour.map((item: any, idx: number) => ({
+        labourId: item.labourAttendanceId || item.labourId || `L${idx + 1}`,
+        name: item.name || "Worker",
+        status: item.status || "Present",
+        project: item.project || "Site Operations",
+        nightShift: !!item.nightShift,
+      }));
+      const parsedTotals = rawLabour.map((item: any, idx: number) => ({
+        id: item.labourAttendanceId || item.labourId || `L${idx + 1}`,
+        daysPresent: item.daysPresent || 20,
+        nightShifts: item.nightShifts || 0,
+        advanceDeductions: item.advanceDeductions || 0,
+      }));
+      setLabourers(parsedLabourers);
+      setAttendance(parsedAttendance);
+      setMonthlyTotals(parsedTotals);
+    } else {
+      setLabourers([]);
+      setAttendance([]);
+      setMonthlyTotals([]);
+    }
+  }, [rawLabour]);
+
+  const recordLabourMutation = useMutation({
+    mutationFn: (body: any) => workforceApi.recordLabour(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["labour", projectId] });
+    },
+  });
 
   // Form states - Add Worker
   const [newName, setNewName] = React.useState("");
@@ -76,15 +107,6 @@ function LabourPage() {
   const [debitLabourId, setDebitLabourId] = React.useState("L1");
   const [debitAmount, setDebitAmount] = React.useState("");
   const [debitDesc, setDebitDesc] = React.useState("");
-
-  React.useEffect(() => {
-    const updateRole = () => {
-      setActiveRole(localStorage.getItem("kinetic_active_role") || "admin");
-    };
-    updateRole();
-    window.addEventListener("kinetic_role_changed", updateRole);
-    return () => window.removeEventListener("kinetic_role_changed", updateRole);
-  }, []);
 
   const isSupervisor = activeRole === "supervisor";
 
@@ -110,23 +132,24 @@ function LabourPage() {
           return {
             ...att,
             status: newStatus,
-            project: newStatus === "Absent" ? "—" : att.project === "—" ? "DLF Camellias" : att.project,
+            project:
+              newStatus === "Absent" ? "—" : att.project === "—" ? "DLF Camellias" : att.project,
           };
         }
         return att;
-      })
+      }),
     );
   };
 
   const handleLocationChange = (id: string, newProject: string) => {
     setAttendance((prev) =>
-      prev.map((att) => (att.labourId === id ? { ...att, project: newProject } : att))
+      prev.map((att) => (att.labourId === id ? { ...att, project: newProject } : att)),
     );
   };
 
   const handleNightShiftToggle = (id: string) => {
     setAttendance((prev) =>
-      prev.map((att) => (att.labourId === id ? { ...att, nightShift: !att.nightShift } : att))
+      prev.map((att) => (att.labourId === id ? { ...att, nightShift: !att.nightShift } : att)),
     );
   };
 
@@ -151,8 +174,20 @@ function LabourPage() {
     };
 
     setLabourers([...labourers, newWorker]);
-    setAttendance([...attendance, { labourId: nextId, name: newName, status: "Present", project: "DLF Camellias", nightShift: false }]);
-    setMonthlyTotals([...monthlyTotals, { id: nextId, daysPresent: 0, nightShifts: 0, advanceDeductions: 0 }]);
+    setAttendance([
+      ...attendance,
+      {
+        labourId: nextId,
+        name: newName,
+        status: "Present",
+        project: "DLF Camellias",
+        nightShift: false,
+      },
+    ]);
+    setMonthlyTotals([
+      ...monthlyTotals,
+      { id: nextId, daysPresent: 0, nightShifts: 0, advanceDeductions: 0 },
+    ]);
 
     setNewName("");
     toast.success(`Labourer ${newName} registered successfully!`);
@@ -179,7 +214,9 @@ function LabourPage() {
 
     // Update monthly totals advance subtraction
     setMonthlyTotals((prev) =>
-      prev.map((tot) => (tot.id === debitLabourId ? { ...tot, advanceDeductions: tot.advanceDeductions + amt } : tot))
+      prev.map((tot) =>
+        tot.id === debitLabourId ? { ...tot, advanceDeductions: tot.advanceDeductions + amt } : tot,
+      ),
     );
 
     setDebitAmount("");
@@ -191,7 +228,8 @@ function LabourPage() {
   // Save Today's Attendance
   const handleSaveAttendance = () => {
     toast.success("Attendance Logs Saved!", {
-      description: "Successfully updated daily roster, shift configurations, and active project works.",
+      description:
+        "Successfully updated daily roster, shift configurations, and active project works.",
     });
 
     // Update monthly totals dynamically (simulate adding today to their stats)
@@ -206,12 +244,15 @@ function LabourPage() {
           daysPresent: tot.daysPresent + addDay,
           nightShifts: tot.nightShifts + addNight,
         };
-      })
+      }),
     );
   };
 
   // Print Payroll Receipt
-  const handlePrintPayslip = (workerName: string, details: any) => {
+  const handlePrintPayslip = (
+    workerName: string,
+    details: { gross: number; debits: number; net: number },
+  ) => {
     toast.info(`Generating Payslip for ${workerName}`, {
       description: `Earnings: ₹${details.gross.toLocaleString("en-IN")} | Debits: ₹${details.debits.toLocaleString("en-IN")} | Net: ₹${details.net.toLocaleString("en-IN")}`,
     });
@@ -219,47 +260,60 @@ function LabourPage() {
 
   // Generate Excel (CSV)
   const handleExportExcel = () => {
-    const headers = ["Date", "Worker Name", "Category", "Status", "Location", "Night Shift", "Wage Amount (INR)"];
-    const rows = filteredAttendance.map(att => {
-      const w = labourers.find((x) => x.id === att.labourId);
-      if (!w) return null;
-      const mult = att.status === "Present" ? 1.0 : att.status === "Half Day" ? 0.5 : 0;
-      const baseWage = w.rate * mult;
-      const nightBonus = att.nightShift ? 300 : 0;
-      const totalCost = baseWage + nightBonus;
-      const date = new Date().toISOString().split("T")[0];
-      return [
-        date,
-        w.name,
-        w.type,
-        att.status,
-        att.project,
-        att.nightShift ? "Yes" : "No",
-        totalCost
-      ].join(",");
-    }).filter(Boolean);
+    const headers = [
+      "Date",
+      "Worker Name",
+      "Category",
+      "Status",
+      "Location",
+      "Night Shift",
+      "Wage Amount (INR)",
+    ];
+    const rows = filteredAttendance
+      .map((att) => {
+        const w = labourers.find((x) => x.id === att.labourId);
+        if (!w) return null;
+        const mult = att.status === "Present" ? 1.0 : att.status === "Half Day" ? 0.5 : 0;
+        const baseWage = w.rate * mult;
+        const nightBonus = att.nightShift ? 300 : 0;
+        const totalCost = baseWage + nightBonus;
+        const date = new Date().toISOString().split("T")[0];
+        return [
+          date,
+          w.name,
+          w.type,
+          att.status,
+          att.project,
+          att.nightShift ? "Yes" : "No",
+          totalCost,
+        ].join(",");
+      })
+      .filter(Boolean);
 
     const csvContent = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `Labour_Attendance_Report_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `Labour_Attendance_Report_${new Date().toISOString().split("T")[0]}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
     toast.success("Excel report generated successfully!", {
-      description: "Downloaded Labour_Attendance_Report.csv"
+      description: "Downloaded Labour_Attendance_Report.csv",
     });
   };
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-8 animate-fade-up">
       <div className="flex items-center justify-between">
-        <PageHeader 
-          eyebrow={isSupervisor ? "Site Workforce" : "Workforce"} 
-          title={isSupervisor ? "Daily Site Attendance" : "Labour & Payroll Ledger"} 
+        <PageHeader
+          eyebrow={isSupervisor ? "Site Workforce" : "Workforce"}
+          title={isSupervisor ? "Daily Site Attendance" : "Labour & Payroll Ledger"}
           actions={
             <div className="flex gap-2">
               {isSupervisor ? (
@@ -287,7 +341,8 @@ function LabourPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-display font-semibold">
-              {filteredAttendance.filter((a) => a.status !== "Absent").length} / {filteredLabourers.length}
+              {filteredAttendance.filter((a) => a.status !== "Absent").length} /{" "}
+              {filteredLabourers.length}
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">
               {filteredAttendance.filter((a) => a.nightShift).length} scheduled on Night Shifts
@@ -318,7 +373,9 @@ function LabourPage() {
                 .toLocaleString("en-IN")}
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">
-              {isSupervisor ? "Estimated site charge for today" : "Estimated payroll charge for today"}
+              {isSupervisor
+                ? "Estimated site charge for today"
+                : "Estimated payroll charge for today"}
             </p>
           </CardContent>
         </Card>
@@ -332,13 +389,16 @@ function LabourPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-display font-semibold">
-              ₹{debits
+              ₹
+              {debits
                 .filter((d) => !isSupervisor || ["L1", "L2", "L4"].includes(d.labourId))
                 .reduce((sum, d) => sum + d.amount, 0)
                 .toLocaleString("en-IN")}
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">
-              {isSupervisor ? "Deductions for workers at this site" : "Debited grocery/cash advances this week"}
+              {isSupervisor
+                ? "Deductions for workers at this site"
+                : "Debited grocery/cash advances this week"}
             </p>
           </CardContent>
         </Card>
@@ -352,8 +412,8 @@ function LabourPage() {
               {isSupervisor ? "Project Attendance Marking" : "Daily Attendance Registry"}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {isSupervisor 
-                ? "Mark daily check-in status and night shifts for workers on your project site." 
+              {isSupervisor
+                ? "Mark daily check-in status and night shifts for workers on your project site."
                 : "Set workforce status, work site locations, and toggle night shifts for today."}
             </p>
           </div>
@@ -405,12 +465,18 @@ function LabourPage() {
                       <p className="text-[10px] text-muted-foreground font-mono">ID: {w.id}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium font-mono ${
-                        w.type === "Skilled" ? "bg-accent/10 text-accent" : "bg-zinc-100 text-zinc-600"
-                      }`}>
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium font-mono ${
+                          w.type === "Skilled"
+                            ? "bg-accent/10 text-accent"
+                            : "bg-zinc-100 text-zinc-600"
+                        }`}
+                      >
                         {w.type}
                       </span>
-                      <p className="text-[10px] text-muted-foreground mt-1 font-mono">₹{w.rate}/day</p>
+                      <p className="text-[10px] text-muted-foreground mt-1 font-mono">
+                        ₹{w.rate}/day
+                      </p>
                     </td>
                     <td className="px-6 py-4">
                       {isSupervisor ? (
@@ -424,8 +490,8 @@ function LabourPage() {
                                   ? st === "Present"
                                     ? "bg-accent text-accent-foreground"
                                     : st === "Half Day"
-                                    ? "bg-yellow-500 text-white"
-                                    : "bg-destructive text-destructive-foreground"
+                                      ? "bg-yellow-500 text-white"
+                                      : "bg-destructive text-destructive-foreground"
                                   : "bg-secondary text-muted-foreground hover:bg-secondary-foreground/10"
                               }`}
                             >
@@ -434,13 +500,15 @@ function LabourPage() {
                           ))}
                         </div>
                       ) : (
-                        <span className={`inline-block px-2.5 py-1 rounded text-[10px] font-semibold ${
-                          att.status === "Present" 
-                            ? "bg-emerald-500/10 text-emerald-600" 
-                            : att.status === "Half Day" 
-                            ? "bg-yellow-500/10 text-yellow-600" 
-                            : "bg-red-500/10 text-red-600"
-                        }`}>
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded text-[10px] font-semibold ${
+                            att.status === "Present"
+                              ? "bg-emerald-500/10 text-emerald-600"
+                              : att.status === "Half Day"
+                                ? "bg-yellow-500/10 text-yellow-600"
+                                : "bg-red-500/10 text-red-600"
+                          }`}
+                        >
                           {att.status}
                         </span>
                       )}
@@ -503,7 +571,6 @@ function LabourPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
         {/* Left Side Forms (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           {/* Form: Add Worker (Supervisor only) */}
@@ -644,14 +711,21 @@ function LabourPage() {
           </CardHeader>
           <CardContent className="divide-y divide-border p-0">
             {filteredLabourers.map((w) => {
-              const totals = monthlyTotals.find((t) => t.id === w.id) || { daysPresent: 0, nightShifts: 0, advanceDeductions: 0 };
-              
+              const totals = monthlyTotals.find((t) => t.id === w.id) || {
+                daysPresent: 0,
+                nightShifts: 0,
+                advanceDeductions: 0,
+              };
+
               // Math formulas
-              const grossSalary = (totals.daysPresent * w.rate) + (totals.nightShifts * 300);
+              const grossSalary = totals.daysPresent * w.rate + totals.nightShifts * 300;
               const netPayout = Math.max(0, grossSalary - totals.advanceDeductions);
 
               return (
-                <div key={w.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-secondary/10 transition-colors">
+                <div
+                  key={w.id}
+                  className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-secondary/10 transition-colors"
+                >
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-semibold text-foreground flex items-baseline gap-2">
                       {w.name}
@@ -662,15 +736,19 @@ function LabourPage() {
                     <p className="text-[10px] text-muted-foreground font-mono mt-1">
                       Bank Acc: {w.bankName} ({w.accNo})
                     </p>
-                    
+
                     <div className="grid grid-cols-3 gap-2 mt-3 text-[10px] font-mono text-muted-foreground">
                       <div>
                         <span>Present Days</span>
-                        <p className="font-semibold text-foreground font-sans mt-0.5">{totals.daysPresent} days</p>
+                        <p className="font-semibold text-foreground font-sans mt-0.5">
+                          {totals.daysPresent} days
+                        </p>
                       </div>
                       <div>
                         <span>Night Shifts</span>
-                        <p className="font-semibold text-foreground font-sans mt-0.5">{totals.nightShifts} shifts</p>
+                        <p className="font-semibold text-foreground font-sans mt-0.5">
+                          {totals.nightShifts} shifts
+                        </p>
                       </div>
                       <div>
                         <span>Advance Debits</span>
@@ -683,15 +761,25 @@ function LabourPage() {
 
                   <div className="flex items-center gap-4 shrink-0 justify-between md:justify-end border-t md:border-t-0 border-border pt-3 md:pt-0">
                     <div className="text-left md:text-right">
-                      <span className="text-[9px] font-mono text-muted-foreground uppercase block">NET MONTH PAYOUT</span>
+                      <span className="text-[9px] font-mono text-muted-foreground uppercase block">
+                        NET MONTH PAYOUT
+                      </span>
                       <strong className="text-base font-mono font-bold text-accent">
                         ₹{netPayout.toLocaleString("en-IN")}
                       </strong>
-                      <span className="text-[9px] text-muted-foreground block font-mono">Gross: ₹{grossSalary}</span>
+                      <span className="text-[9px] text-muted-foreground block font-mono">
+                        Gross: ₹{grossSalary}
+                      </span>
                     </div>
 
                     <button
-                      onClick={() => handlePrintPayslip(w.name, { gross: grossSalary, debits: totals.advanceDeductions, net: netPayout })}
+                      onClick={() =>
+                        handlePrintPayslip(w.name, {
+                          gross: grossSalary,
+                          debits: totals.advanceDeductions,
+                          net: netPayout,
+                        })
+                      }
                       className="size-8 grid place-items-center border border-border hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
                       title="Print Payslip Summary"
                     >

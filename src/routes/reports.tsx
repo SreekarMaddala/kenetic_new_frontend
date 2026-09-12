@@ -1,6 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../components/AppShell";
-import { BarChart3, Download, FileText, Filter, CalendarDays, LineChart, PieChart, RefreshCcw } from "lucide-react";
+import {
+  BarChart3,
+  Download,
+  FileText,
+  Filter,
+  CalendarDays,
+  LineChart,
+  PieChart,
+  RefreshCcw,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { reportsApi } from "../lib/api";
 
@@ -9,20 +18,69 @@ export const Route = createFileRoute("/reports")({
 });
 
 const REPORT_TYPES = [
-  { id: "RT1", name: "Company Financial Overview", desc: "Consolidated P&L, expenses, and margins across all active projects.", icon: <LineChart className="size-5 text-emerald-600" />, bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-  { id: "RT2", name: "Workforce & Labour Analytics", desc: "Daily attendance averages, subcontractor manpower, and wage distributions.", icon: <PieChart className="size-5 text-blue-600" />, bg: "bg-blue-500/10", border: "border-blue-500/20" },
-  { id: "RT3", name: "Vendor Performance & Compliance", desc: "Rating matrix for subcontractors, active contract values, and SLA breaches.", icon: <BarChart3 className="size-5 text-orange-600" />, bg: "bg-orange-500/10", border: "border-orange-500/20" },
+  {
+    id: "RT1",
+    name: "Company Financial Overview",
+    desc: "Consolidated P&L, expenses, and margins across all active projects.",
+    icon: <LineChart className="size-5 text-emerald-600" />,
+    bg: "bg-emerald-500/10",
+    border: "border-emerald-500/20",
+  },
+  {
+    id: "RT2",
+    name: "Workforce & Labour Analytics",
+    desc: "Daily attendance averages, subcontractor manpower, and wage distributions.",
+    icon: <PieChart className="size-5 text-blue-600" />,
+    bg: "bg-blue-500/10",
+    border: "border-blue-500/20",
+  },
+  {
+    id: "RT3",
+    name: "Vendor Performance & Compliance",
+    desc: "Rating matrix for subcontractors, active contract values, and SLA breaches.",
+    icon: <BarChart3 className="size-5 text-orange-600" />,
+    bg: "bg-orange-500/10",
+    border: "border-orange-500/20",
+  },
 ];
 
 const RECENT_REPORTS = [
-  { id: "REP-992", name: "Q2 2026 Consolidated P&L", type: "Financial", date: "15 Jul 2026, 10:30 AM", author: "Sneha Patel" },
-  { id: "REP-991", name: "June Workforce Attendance", type: "Labour", date: "02 Jul 2026, 09:15 AM", author: "Rajesh Kumar" },
-  { id: "REP-990", name: "Equipment Utilization H1 2026", type: "Assets", date: "28 Jun 2026, 04:45 PM", author: "Rajesh Kumar" },
-  { id: "REP-989", name: "Subcontractor Payouts - May", type: "Financial", date: "05 Jun 2026, 11:20 AM", author: "Sneha Patel" },
+  {
+    id: "REP-992",
+    name: "Q2 2026 Consolidated P&L",
+    type: "Financial",
+    date: "15 Jul 2026, 10:30 AM",
+    author: "Sneha Patel",
+  },
+  {
+    id: "REP-991",
+    name: "June Workforce Attendance",
+    type: "Labour",
+    date: "02 Jul 2026, 09:15 AM",
+    author: "Rajesh Kumar",
+  },
+  {
+    id: "REP-990",
+    name: "Equipment Utilization H1 2026",
+    type: "Assets",
+    date: "28 Jun 2026, 04:45 PM",
+    author: "Rajesh Kumar",
+  },
+  {
+    id: "REP-989",
+    name: "Subcontractor Payouts - May",
+    type: "Financial",
+    date: "05 Jun 2026, 11:20 AM",
+    author: "Sneha Patel",
+  },
 ];
 
 function ReportsPage() {
-  const { data: execReport, refetch, isFetching } = useQuery({
+  const {
+    data: execReport,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ["executive-report"],
     queryFn: () => reportsApi.executive(),
     retry: 1,
@@ -46,12 +104,19 @@ function ReportsPage() {
           <Filter className="size-4 text-primary" /> Report Generators
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {REPORT_TYPES.map(rt => (
-            <div key={rt.id} className="p-5 rounded-xl border border-border bg-[color:var(--surface)] hover:border-primary/40 transition-colors cursor-pointer group">
-              <div className={`size-10 rounded-lg flex items-center justify-center mb-4 border ${rt.bg} ${rt.border}`}>
+          {REPORT_TYPES.map((rt) => (
+            <div
+              key={rt.id}
+              className="p-5 rounded-xl border border-border bg-[color:var(--surface)] hover:border-primary/40 transition-colors cursor-pointer group"
+            >
+              <div
+                className={`size-10 rounded-lg flex items-center justify-center mb-4 border ${rt.bg} ${rt.border}`}
+              >
                 {rt.icon}
               </div>
-              <h4 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">{rt.name}</h4>
+              <h4 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+                {rt.name}
+              </h4>
               <p className="text-xs text-muted-foreground leading-relaxed">{rt.desc}</p>
               <div className="mt-4 flex items-center text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                 Generate Report &rarr;
@@ -90,12 +155,8 @@ function ReportsPage() {
                       {rep.type}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-xs text-muted-foreground">
-                    {rep.date}
-                  </td>
-                  <td className="px-6 py-4 text-xs font-medium text-foreground">
-                    {rep.author}
-                  </td>
+                  <td className="px-6 py-4 text-xs text-muted-foreground">{rep.date}</td>
+                  <td className="px-6 py-4 text-xs font-medium text-foreground">{rep.author}</td>
                   <td className="px-6 py-4 text-right">
                     <button className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-all flex items-center gap-1.5 text-xs font-semibold ml-auto">
                       <Download className="size-3.5" /> PDF

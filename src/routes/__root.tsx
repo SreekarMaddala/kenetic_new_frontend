@@ -13,6 +13,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "../components/AppShell";
 import { ProjectProvider } from "../lib/ProjectContext";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { canAccessRoute, homeForRole } from "../lib/permissions";
+import { Toaster } from "sonner";
 
 // Routes that never need authentication
 const PUBLIC_PATHS = ["/", "/login"];
@@ -21,7 +23,9 @@ function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Error 404</p>
+        <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+          Error 404
+        </p>
         <h1 className="mt-2 text-4xl font-display font-semibold tracking-tight">Page not found</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           The screen you're looking for doesn't exist in this workspace.
@@ -49,7 +53,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">System Error</p>
+        <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+          System Error
+        </p>
         <h1 className="mt-2 text-2xl font-display font-semibold">This page didn't load</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. Try again, or head back to the dashboard.
@@ -84,17 +90,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 /** Redirects to /login when unauthenticated on a protected route */
 function AuthGuard({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isPublic = PUBLIC_PATHS.includes(pathname);
+  const permitted = !!user && canAccessRoute(user.role, pathname.replace(/\/$/, ""));
 
   useEffect(() => {
     if (isLoading) return;
-    const isPublic = PUBLIC_PATHS.includes(pathname);
     if (!isAuthenticated && !isPublic) {
       navigate({ to: "/login" });
+    } else if (user && !isPublic && !permitted) {
+      navigate({ to: homeForRole(user.role), replace: true });
     }
-  }, [isAuthenticated, isLoading, pathname, navigate]);
+  }, [isAuthenticated, isLoading, pathname, navigate, user, isPublic, permitted]);
+
+  // Marketing and login routes must never be held hostage by a stale Cognito
+  // session or a temporarily unreachable identity provider.
+  if (isPublic) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (
@@ -104,7 +119,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return isAuthenticated && permitted ? <>{children}</> : null;
 }
 
 function RootComponent() {
@@ -114,6 +129,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster richColors />
       <AuthProvider>
         <AuthGuard>
           {isPublic ? (

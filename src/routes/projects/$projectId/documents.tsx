@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../../../components/AppShell";
-import { FileText, File, FileQuestion, Upload, Search, Filter, Download, MoreVertical, Calendar } from "lucide-react";
+import {
+  FileText,
+  File,
+  FileQuestion,
+  Upload,
+  Search,
+  Filter,
+  Download,
+  MoreVertical,
+  Calendar,
+} from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { documentControlApi } from "../../../lib/api";
@@ -18,18 +28,21 @@ function DocumentsPage() {
     queryFn: () => documentControlApi.listDocuments(projectId),
   });
   const documents = rawDocuments.map((document) => ({
-    id: String(document.documentId ?? ""), name: String(document.name ?? document.title ?? "Untitled document"),
-    type: String(document.type ?? "Document"), size: String(document.size ?? "—"),
-    date: String(document.createdAt ?? ""), uploader: String(document.uploader ?? document.createdBy ?? "—"),
+    id: String(document.documentId ?? ""),
+    name: String(document.name ?? document.title ?? "Untitled document"),
+    type: String(document.type ?? "Document"),
+    size: String(document.size ?? "—"),
+    date: String(document.createdAt ?? ""),
+    uploader: String(document.uploader ?? document.createdBy ?? "—"),
   }));
 
-  const filteredDocs = documents.filter(doc => {
+  const filteredDocs = documents.filter((doc) => {
     const matchSearch = doc.name.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "All" || doc.type === typeFilter;
     return matchSearch && matchType;
   });
 
-  const types = ["All", ...Array.from(new Set(documents.map(d => d.type)))];
+  const types = ["All", ...Array.from(new Set(documents.map((d) => d.type)))];
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -64,7 +77,11 @@ function DocumentsPage() {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="w-full sm:w-auto h-9 pl-9 pr-8 rounded-md bg-background border border-border text-sm focus:outline-none focus:border-primary/50 appearance-none"
               >
-                {types.map(t => <option key={t} value={t}>{t}</option>)}
+                {types.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -85,7 +102,10 @@ function DocumentsPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {filteredDocs.map((doc) => (
-                <tr key={doc.id} className="hover:bg-secondary/20 transition-colors group cursor-pointer">
+                <tr
+                  key={doc.id}
+                  className="hover:bg-secondary/20 transition-colors group cursor-pointer"
+                >
                   <td className="px-6 py-4">
                     <div className="font-semibold text-foreground flex items-center gap-3">
                       <div className="p-2 bg-secondary rounded-lg">
@@ -99,18 +119,17 @@ function DocumentsPage() {
                       {doc.type}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-muted-foreground text-xs font-mono">
-                    {doc.size}
-                  </td>
-                  <td className="px-6 py-4 text-xs">
-                    {doc.uploader}
-                  </td>
+                  <td className="px-6 py-4 text-muted-foreground text-xs font-mono">{doc.size}</td>
+                  <td className="px-6 py-4 text-xs">{doc.uploader}</td>
                   <td className="px-6 py-4 text-xs text-muted-foreground flex items-center gap-1.5 mt-2">
                     <Calendar className="size-3" /> {doc.date}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-all" title="Download">
+                      <button
+                        className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-all"
+                        title="Download"
+                      >
                         <Download className="size-4" />
                       </button>
                       <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-all">

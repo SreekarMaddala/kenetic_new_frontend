@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import * as React from "react";
 import { toast } from "sonner";
@@ -26,35 +27,68 @@ export const Route = createFileRoute("/projects/$projectId/")({
   component: ProjectDetailsPage,
 });
 
+interface TimelineItem {
+  name: string;
+  phase: string;
+  start: string;
+  end: string;
+  status: string;
+}
+
 function ProjectDetailsPage() {
   const { projectId } = Route.useParams();
   const { project: rawProject } = useProject();
   const queryClient = useQueryClient();
 
-  const selectedProject = rawProject ? {
-    id: rawProject.projectId,
-    name: rawProject.name,
-    location: rawProject.location,
-    phase: (rawProject as any).phase || "Construction",
-    progress: (rawProject as any).progress || (rawProject.budget && rawProject.spent ? Math.min(Math.round((rawProject.spent / rawProject.budget) * 100), 100) : 0),
-    status: rawProject.status || "On Track",
-    budget: typeof rawProject.budget === "number" ? `₹${(rawProject.budget / 10_000_000).toFixed(2)} Cr` : rawProject.budget || "₹0.00 Cr",
-    spent: typeof rawProject.spent === "number" ? `₹${(rawProject.spent / 10_000_000).toFixed(2)} Cr` : rawProject.spent || "₹0.00 Cr",
-    deadline: rawProject.endDate || "Dec 2026",
-    image: (rawProject as any).image || "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80",
-    supervisor: (rawProject as any).supervisor || "Amit Mishra",
-    supervisorsTimeline: (rawProject as any).supervisorsTimeline || [
-      { name: (rawProject as any).supervisor || "Amit Mishra", phase: "General Construction", start: "Jul 2026", end: rawProject.endDate || "Dec 2026", status: "Active" }
-    ],
-    todaysLabour: (rawProject as any).todaysLabour || 0,
-    openIssues: (rawProject as any).openIssues || 0,
-  } : undefined;
+  const selectedProject = React.useMemo(() => {
+    if (!rawProject) return undefined;
+    const item = rawProject as unknown as Record<string, unknown>;
+    const supervisorName = (item.supervisor as string) || "Amit Mishra";
+    return {
+      id: rawProject.projectId,
+      name: rawProject.name,
+      location: rawProject.location,
+      phase: (item.phase as string) || "Construction",
+      progress:
+        (item.progress as number) ||
+        (rawProject.budget && rawProject.spent
+          ? Math.min(Math.round((rawProject.spent / rawProject.budget) * 100), 100)
+          : 0),
+      status: rawProject.status || "On Track",
+      budget:
+        typeof rawProject.budget === "number"
+          ? `₹${(rawProject.budget / 10_000_000).toFixed(2)} Cr`
+          : rawProject.budget || "₹0.00 Cr",
+      spent:
+        typeof rawProject.spent === "number"
+          ? `₹${(rawProject.spent / 10_000_000).toFixed(2)} Cr`
+          : rawProject.spent || "₹0.00 Cr",
+      deadline: rawProject.endDate || "Dec 2026",
+      image:
+        (item.image as string) ||
+        "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80",
+      supervisor: supervisorName,
+      supervisorsTimeline: (item.supervisorsTimeline as TimelineItem[]) || [
+        {
+          name: supervisorName,
+          phase: "General Construction",
+          start: "Jul 2026",
+          end: rawProject.endDate || "Dec 2026",
+          status: "Active",
+        },
+      ],
+      todaysLabour: (item.todaysLabour as number) || 0,
+      openIssues: (item.openIssues as number) || 0,
+    };
+  }, [rawProject]);
 
   // Detail Page active Tab
-  const [detailTab, setDetailTab] = React.useState<"plans" | "materials" | "expenses" | "media" | "supervisors">("plans");
+  const [detailTab, setDetailTab] = React.useState<
+    "plans" | "materials" | "expenses" | "media" | "supervisors"
+  >("plans");
 
   // Authority Mode State (Required for editing expenses)
-  const [isAuthorityMode, setIsAuthorityMode] = React.useState(false);
+  const [isEditingExpenses, setIsEditingExpenses] = React.useState(false);
 
   const { data: rawExpenses = [] } = useQuery({
     queryKey: ["expenses", projectId],
@@ -63,7 +97,7 @@ function ProjectDetailsPage() {
     retry: 1,
   });
 
-  const expenses = rawExpenses.map((e: any) => ({
+  const expenses = rawExpenses.map((e) => ({
     id: e.expenseId,
     project: selectedProject?.name || "Unknown Project",
     date: e.date || new Date().toISOString().split("T")[0],
@@ -90,15 +124,13 @@ function ProjectDetailsPage() {
   const [mediaStartDate, setMediaStartDate] = React.useState("");
   const [mediaEndDate, setMediaEndDate] = React.useState("");
 
-  const [localTimeline, setLocalTimeline] = React.useState<any[]>([]);
+  const [localTimeline, setLocalTimeline] = React.useState<TimelineItem[]>([]);
 
   React.useEffect(() => {
     if (selectedProject?.supervisorsTimeline) {
       setLocalTimeline(selectedProject.supervisorsTimeline);
     }
   }, [selectedProject?.supervisorsTimeline]);
-
-  if (!selectedProject) return null;
 
   const handleAddTimelineItemToProject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +154,8 @@ function ProjectDetailsPage() {
   };
 
   const createExpenseMutation = useMutation({
-    mutationFn: (body: any) => financeApi.createExpense(projectId!, body),
+    mutationFn: (body: Parameters<typeof financeApi.createExpense>[1]) =>
+      financeApi.createExpense(projectId!, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses", projectId] });
       toast.success("Expense transaction logged successfully!");
@@ -135,10 +168,12 @@ function ProjectDetailsPage() {
     },
   });
 
+  if (!selectedProject) return null;
+
   const handleAddExpense = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAuthorityMode) {
-      toast.error("Permission Denied: Expense logging can only be operated by Authority.");
+    if (!isEditingExpenses) {
+      toast.error("Enable editing to add an expense.");
       return;
     }
     if (!expAmount || !expDesc || !expPaidBy) {
@@ -155,11 +190,11 @@ function ProjectDetailsPage() {
     });
   };
 
-  const handleToggleAuthorityMode = () => {
-    setIsAuthorityMode(!isAuthorityMode);
-    toast.success(`Role Switched: ${!isAuthorityMode ? "Authority Level Granted" : "Standard View Enabled"}`, {
-      description: !isAuthorityMode
-        ? "You now have permissions to log and authorize food and site expenses."
+  const handleToggleExpenseEditing = () => {
+    setIsEditingExpenses(!isEditingExpenses);
+    toast.success(`${!isEditingExpenses ? "Expense editing enabled" : "Read-only view enabled"}`, {
+      description: !isEditingExpenses
+        ? "The expense entry form is now available."
         : "Expense logs are now view-only.",
     });
   };
@@ -172,11 +207,13 @@ function ProjectDetailsPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
-
       {/* Project Hero Banner */}
       <div className="relative rounded-2xl overflow-hidden h-64 border border-border shadow-sm flex items-end p-6 shrink-0">
         <img
-          src={selectedProject.image || "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80"}
+          src={
+            selectedProject.image ||
+            "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80"
+          }
           alt={selectedProject.name}
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -184,8 +221,12 @@ function ProjectDetailsPage() {
 
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end w-full gap-4 text-white">
           <div>
-            <p className="text-xs font-mono text-zinc-300 uppercase tracking-widest">{selectedProject.location}</p>
-            <h1 className="text-3xl font-display font-semibold tracking-tight mt-1">{selectedProject.name}</h1>
+            <p className="text-xs font-mono text-zinc-300 uppercase tracking-widest">
+              {selectedProject.location}
+            </p>
+            <h1 className="text-3xl font-display font-semibold tracking-tight mt-1">
+              {selectedProject.name}
+            </h1>
             <div className="flex items-center gap-3 mt-3">
               <span className="text-xs bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded text-white font-medium">
                 Phase: {selectedProject.phase}
@@ -196,35 +237,59 @@ function ProjectDetailsPage() {
 
           <div className="flex flex-wrap gap-4 lg:gap-6 text-xs text-zinc-200 bg-black/40 backdrop-blur-sm p-4 rounded-xl border border-white/10 font-mono items-center">
             <div>
-              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">Total Budget</span>
-              <strong className="text-white text-lg block font-semibold mt-0.5">{selectedProject.budget}</strong>
+              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
+                Total Budget
+              </span>
+              <strong className="text-white text-lg block font-semibold mt-0.5">
+                {selectedProject.budget}
+              </strong>
             </div>
             <div>
-              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">Overall Spent</span>
-              <strong className="text-white text-lg block font-semibold mt-0.5">{selectedProject.spent}</strong>
+              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
+                Overall Spent
+              </span>
+              <strong className="text-white text-lg block font-semibold mt-0.5">
+                {selectedProject.spent}
+              </strong>
             </div>
             <div>
-              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">Target Deadline</span>
-              <strong className="text-white text-lg block font-semibold mt-0.5">{selectedProject.deadline}</strong>
+              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
+                Target Deadline
+              </span>
+              <strong className="text-white text-lg block font-semibold mt-0.5">
+                {selectedProject.deadline}
+              </strong>
             </div>
             {selectedProject.supervisor && (
               <div className="border-l border-white/15 pl-4 lg:pl-6 flex flex-col justify-center">
-                <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">Supervisor</span>
-                <strong className="text-white block font-sans text-xs font-semibold mt-1">{selectedProject.supervisor}</strong>
+                <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
+                  Supervisor
+                </span>
+                <strong className="text-white block font-sans text-xs font-semibold mt-1">
+                  {selectedProject.supervisor}
+                </strong>
               </div>
             )}
             <div className="border-l border-white/15 pl-4 lg:pl-6 flex flex-col justify-center">
-              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">Today's Exp</span>
+              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
+                Today's Exp
+              </span>
               <strong className="text-white text-base block font-semibold mt-0.5">₹21,500</strong>
             </div>
             <div className="border-l border-white/15 pl-4 lg:pl-6 flex flex-col justify-center">
-              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">Open Issues</span>
-              <strong className={`text-base block font-semibold mt-0.5 ${(selectedProject.openIssues ?? 0) > 0 ? "text-red-400" : "text-white"}`}>
+              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
+                Open Issues
+              </span>
+              <strong
+                className={`text-base block font-semibold mt-0.5 ${(selectedProject.openIssues ?? 0) > 0 ? "text-red-400" : "text-white"}`}
+              >
                 {selectedProject.openIssues ?? 0}
               </strong>
             </div>
             <div className="border-l border-white/15 pl-4 lg:pl-6 flex flex-col justify-center">
-              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">Weather</span>
+              <span className="text-zinc-400 block text-[10px] uppercase tracking-wider">
+                Weather
+              </span>
               <strong className="text-white text-base block font-semibold mt-0.5">32°C ☀️</strong>
             </div>
           </div>
@@ -289,7 +354,10 @@ function ProjectDetailsPage() {
       {detailTab === "plans" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {planSheets.map((sheet) => (
-            <div key={sheet.id} className="bg-[color:var(--surface)] border border-border rounded-xl p-5 shadow-sm flex items-center justify-between gap-4">
+            <div
+              key={sheet.id}
+              className="bg-[color:var(--surface)] border border-border rounded-xl p-5 shadow-sm flex items-center justify-between gap-4"
+            >
               <div className="min-w-0">
                 <h3 className="font-semibold text-sm truncate">{sheet.name}</h3>
                 <div className="flex items-center gap-3 mt-2 text-[10px] font-mono text-muted-foreground">
@@ -330,11 +398,19 @@ function ProjectDetailsPage() {
               <span className="text-[10px] font-mono text-muted-foreground">SITE WAREHOUSE</span>
             </div>
             <div className="divide-y divide-border">
-              {(materialAvailability[selectedProject.name as keyof typeof materialAvailability] || []).map((m) => (
-                <div key={m.name} className="p-4 flex items-center justify-between hover:bg-secondary/10 transition-colors">
+              {(
+                materialAvailability[selectedProject.name as keyof typeof materialAvailability] ||
+                []
+              ).map((m) => (
+                <div
+                  key={m.name}
+                  className="p-4 flex items-center justify-between hover:bg-secondary/10 transition-colors"
+                >
                   <div>
                     <h4 className="font-semibold text-xs">{m.name}</h4>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Warehouse stock level</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Warehouse stock level
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <strong className="font-mono text-xs">{m.stock}</strong>
@@ -343,8 +419,8 @@ function ProjectDetailsPage() {
                         m.status === "Healthy"
                           ? "bg-accent/10 text-accent"
                           : m.status === "Warning"
-                          ? "bg-yellow-500/10 text-yellow-700"
-                          : "bg-primary/10 text-primary"
+                            ? "bg-yellow-500/10 text-yellow-700"
+                            : "bg-primary/10 text-primary"
                       }`}
                     >
                       {m.status}
@@ -365,7 +441,10 @@ function ProjectDetailsPage() {
             </div>
             <div className="divide-y divide-border">
               {materialTransportation.map((t, idx) => (
-                <div key={idx} className="p-4 flex items-start justify-between hover:bg-secondary/10 transition-colors">
+                <div
+                  key={idx}
+                  className="p-4 flex items-start justify-between hover:bg-secondary/10 transition-colors"
+                >
                   <div>
                     <h4 className="font-semibold text-xs">{t.material}</h4>
                     <p className="text-[10px] text-muted-foreground mt-0.5">{t.carrier}</p>
@@ -398,15 +477,15 @@ function ProjectDetailsPage() {
 
               {/* Authority Toggle */}
               <button
-                onClick={handleToggleAuthorityMode}
+                onClick={handleToggleExpenseEditing}
                 className={`px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                  isAuthorityMode
+                  isEditingExpenses
                     ? "bg-accent text-accent-foreground border border-accent"
                     : "bg-secondary text-muted-foreground border border-border hover:text-foreground"
                 }`}
               >
                 <ShieldCheck className="size-4" />
-                {isAuthorityMode ? "Authority Mode: ON" : "Enter Authority Mode"}
+                {isEditingExpenses ? "Expense editing: ON" : "Enable expense editing"}
               </button>
             </div>
 
@@ -446,7 +525,7 @@ function ProjectDetailsPage() {
 
           {/* Add Expense form (Authority restricted) (5 cols) */}
           <div className="lg:col-span-5 bg-[color:var(--surface)] border border-border rounded-xl shadow-sm p-6 flex flex-col justify-between">
-            {isAuthorityMode ? (
+            {isEditingExpenses ? (
               <form onSubmit={handleAddExpense} className="space-y-4 text-xs">
                 <div>
                   <h3 className="font-display font-semibold text-sm">Log New Site Expense</h3>
@@ -493,7 +572,8 @@ function ProjectDetailsPage() {
 
                 <div className="space-y-1.5">
                   <label className="font-medium text-muted-foreground flex items-center gap-1">
-                    Paid By (Mandatory Payment Agent) <span className="text-primary font-bold">*</span>
+                    Paid By (Mandatory Payment Agent){" "}
+                    <span className="text-primary font-bold">*</span>
                   </label>
                   <input
                     type="text"
@@ -517,16 +597,19 @@ function ProjectDetailsPage() {
                   <AlertCircle className="size-6" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-foreground text-sm">Logging Restrictive Lock</h4>
+                  <h4 className="font-semibold text-foreground text-sm">
+                    Logging Restrictive Lock
+                  </h4>
                   <p className="mt-1 leading-relaxed">
-                    To add new food or site transactions, you must toggle on **Authority Mode** at the top of the ledger.
+                    To add new food or site transactions, you must toggle on expense editing at the
+                    top of the ledger.
                   </p>
                 </div>
                 <button
-                  onClick={handleToggleAuthorityMode}
+                  onClick={handleToggleExpenseEditing}
                   className="mt-3 px-4 py-2 border border-border hover:bg-secondary text-foreground font-medium rounded transition-colors"
                 >
-                  Grant Authority View
+                  Enable expense editing
                 </button>
               </div>
             )}
@@ -540,7 +623,9 @@ function ProjectDetailsPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h3 className="font-display font-semibold text-sm">Site Progress Gallery</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Geofenced field photos with GPS coordinates and supervisor timestamps.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Geofenced field photos with GPS coordinates and supervisor timestamps.
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 bg-secondary/20 p-1 rounded-lg border border-border">
@@ -591,47 +676,58 @@ function ProjectDetailsPage() {
                 tag: "Materials Registry",
               },
             ]
-            .filter((item) => {
-              if (!mediaStartDate && !mediaEndDate) return true;
-              
-              const itemDate = new Date(item.date);
-              let isValid = true;
-              
-              if (mediaStartDate) {
-                const start = new Date(mediaStartDate);
-                start.setHours(0, 0, 0, 0);
-                if (itemDate < start) isValid = false;
-              }
-              if (mediaEndDate) {
-                const end = new Date(mediaEndDate);
-                end.setHours(23, 59, 59, 999);
-                if (itemDate > end) isValid = false;
-              }
-              return isValid;
-            })
-            .map((item, idx) => (
-              <div key={idx} className="rounded-xl border border-border bg-[color:var(--surface)] overflow-hidden shadow-sm flex flex-col group hover:border-primary/20 transition-all">
-                <div className="relative h-44 w-full bg-secondary overflow-hidden">
-                  <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <span className="absolute top-3 left-3 bg-black/60 text-white text-[9px] font-bold px-2 py-0.5 rounded font-mono uppercase tracking-wide">
-                    {item.tag}
-                  </span>
-                  <span className="absolute bottom-3 right-3 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded font-mono">
-                    GPS VERIFIED
-                  </span>
-                </div>
-                <div className="p-4 flex-1 flex flex-col justify-between gap-3 text-xs">
-                  <div>
-                    <h4 className="font-semibold text-sm leading-tight text-foreground truncate">{item.title}</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1 font-mono">GPS: {item.gps}</p>
+              .filter((item) => {
+                if (!mediaStartDate && !mediaEndDate) return true;
+
+                const itemDate = new Date(item.date);
+                let isValid = true;
+
+                if (mediaStartDate) {
+                  const start = new Date(mediaStartDate);
+                  start.setHours(0, 0, 0, 0);
+                  if (itemDate < start) isValid = false;
+                }
+                if (mediaEndDate) {
+                  const end = new Date(mediaEndDate);
+                  end.setHours(23, 59, 59, 999);
+                  if (itemDate > end) isValid = false;
+                }
+                return isValid;
+              })
+              .map((item, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl border border-border bg-[color:var(--surface)] overflow-hidden shadow-sm flex flex-col group hover:border-primary/20 transition-all"
+                >
+                  <div className="relative h-44 w-full bg-secondary overflow-hidden">
+                    <img
+                      src={item.img}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <span className="absolute top-3 left-3 bg-black/60 text-white text-[9px] font-bold px-2 py-0.5 rounded font-mono uppercase tracking-wide">
+                      {item.tag}
+                    </span>
+                    <span className="absolute bottom-3 right-3 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded font-mono">
+                      GPS VERIFIED
+                    </span>
                   </div>
-                  <div className="pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>By {item.uploader}</span>
-                    <span className="font-mono">{item.date}</span>
+                  <div className="p-4 flex-1 flex flex-col justify-between gap-3 text-xs">
+                    <div>
+                      <h4 className="font-semibold text-sm leading-tight text-foreground truncate">
+                        {item.title}
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground mt-1 font-mono">
+                        GPS: {item.gps}
+                      </p>
+                    </div>
+                    <div className="pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>By {item.uploader}</span>
+                      <span className="font-mono">{item.date}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
@@ -642,31 +738,49 @@ function ProjectDetailsPage() {
           {/* Timeline chart visual */}
           <div className="lg:col-span-8 bg-[color:var(--surface)] border border-border rounded-xl p-6 space-y-6">
             <div>
-              <h3 className="font-display font-semibold text-sm">Project Supervisor Lifecycle Timeline</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Phased supervisor timelines across core construction stages.</p>
+              <h3 className="font-display font-semibold text-sm">
+                Project Supervisor Lifecycle Timeline
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Phased supervisor timelines across core construction stages.
+              </p>
             </div>
 
             <div className="space-y-4">
               {localTimeline && localTimeline.length > 0 ? (
-                localTimeline.map((item: any, idx: number) => {
+                localTimeline.map((item, idx: number) => {
                   const isActive = item.status === "Active";
                   const isCompleted = item.status === "Completed";
                   const statusColor = isActive
                     ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
                     : isCompleted
-                    ? "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20"
-                    : "bg-blue-500/10 text-blue-600 border border-blue-500/20";
-                  const progressWidth = isActive ? "w-full animate-pulse bg-emerald-500" : isCompleted ? "w-full bg-zinc-400" : "w-full bg-blue-500";
+                      ? "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20"
+                      : "bg-blue-500/10 text-blue-600 border border-blue-500/20";
+                  const progressWidth = isActive
+                    ? "w-full animate-pulse bg-emerald-500"
+                    : isCompleted
+                      ? "w-full bg-zinc-400"
+                      : "w-full bg-blue-500";
 
                   return (
-                    <div key={idx} className="bg-secondary/10 border border-border/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div
+                      key={idx}
+                      className="bg-secondary/10 border border-border/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="size-9 rounded-full bg-primary/10 grid place-items-center text-primary font-mono text-xs font-semibold shrink-0">
-                          {item.name.split(" ").map((n: string) => n[0]).join("")}
+                          {item.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="font-bold text-xs text-foreground truncate">{item.name}</h4>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider font-mono">{item.phase}</p>
+                          <h4 className="font-bold text-xs text-foreground truncate">
+                            {item.name}
+                          </h4>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider font-mono">
+                            {item.phase}
+                          </p>
                         </div>
                       </div>
 
@@ -681,7 +795,9 @@ function ProjectDetailsPage() {
                       </div>
 
                       <div className="shrink-0 sm:text-right">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${statusColor}`}>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${statusColor}`}
+                        >
                           {item.status}
                         </span>
                       </div>
@@ -690,7 +806,8 @@ function ProjectDetailsPage() {
                 })
               ) : (
                 <div className="text-center py-12 border border-dashed border-border rounded-xl text-xs text-muted-foreground bg-secondary/15">
-                  No custom phase timelines allocated to this project. Allocation defaults to the main supervisor.
+                  No custom phase timelines allocated to this project. Allocation defaults to the
+                  main supervisor.
                 </div>
               )}
             </div>
@@ -700,7 +817,9 @@ function ProjectDetailsPage() {
           <div className="lg:col-span-4 bg-[color:var(--surface)] border border-border rounded-xl p-6 space-y-4">
             <div>
               <h3 className="font-display font-semibold text-sm">Allocate Phase Supervisor</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Assign site supervisors to specific dates and operational scopes.</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Assign site supervisors to specific dates and operational scopes.
+              </p>
             </div>
 
             <form onSubmit={handleAddTimelineItemToProject} className="space-y-4 text-xs">
@@ -721,7 +840,9 @@ function ProjectDetailsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-medium text-muted-foreground">Responsibility Phase / Scope</label>
+                <label className="font-medium text-muted-foreground">
+                  Responsibility Phase / Scope
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Structure Pouring, Plastering"
@@ -789,10 +910,14 @@ function StatusChip({ status }: { status: string }) {
     status === "Delayed"
       ? "bg-primary/10 text-primary"
       : status === "At Risk"
-      ? "bg-yellow-500/10 text-yellow-700"
-      : "bg-accent/10 text-accent";
+        ? "bg-yellow-500/10 text-yellow-700"
+        : "bg-accent/10 text-accent";
   return (
-    <span className={"shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded " + tone}>
+    <span
+      className={
+        "shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded " + tone
+      }
+    >
       {status}
     </span>
   );

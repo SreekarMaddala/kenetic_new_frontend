@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../../../components/AppShell";
-import { ClipboardCheck, Search, Filter, Plus, FileSignature, AlertCircle, CalendarClock } from "lucide-react";
+import {
+  ClipboardCheck,
+  Search,
+  Filter,
+  Plus,
+  FileSignature,
+  AlertCircle,
+  CalendarClock,
+} from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { siteControlApi } from "../../../lib/api";
@@ -13,14 +21,21 @@ function InspectionsPage() {
   const { projectId } = Route.useParams();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
-  const { data: rawInspections = [] } = useQuery({ queryKey: ["inspections", projectId], queryFn: () => siteControlApi.listInspections(projectId) });
+  const { data: rawInspections = [] } = useQuery({
+    queryKey: ["inspections", projectId],
+    queryFn: () => siteControlApi.listInspections(projectId),
+  });
   const inspections = rawInspections.map((inspection) => ({
-    id: String(inspection.inspectionId ?? ""), title: String(inspection.title ?? "Untitled inspection"),
-    type: String(inspection.type ?? "QA/QC"), status: String(inspection.status ?? "Pending"),
-    date: String(inspection.createdAt ?? ""), inspector: String(inspection.inspector ?? "—"), score: String(inspection.score ?? "—"),
+    id: String(inspection.inspectionId ?? ""),
+    title: String(inspection.title ?? "Untitled inspection"),
+    type: String(inspection.type ?? "QA/QC"),
+    status: String(inspection.status ?? "Pending"),
+    date: String(inspection.createdAt ?? ""),
+    inspector: String(inspection.inspector ?? "—"),
+    score: String(inspection.score ?? "—"),
   }));
 
-  const filteredInspections = inspections.filter(insp => {
+  const filteredInspections = inspections.filter((insp) => {
     const matchSearch = insp.title.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "All" || insp.type === typeFilter;
     return matchSearch && matchType;
@@ -80,11 +95,20 @@ function InspectionsPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {filteredInspections.map((insp) => (
-                <tr key={insp.id} className="hover:bg-secondary/20 transition-colors group cursor-pointer">
+                <tr
+                  key={insp.id}
+                  className="hover:bg-secondary/20 transition-colors group cursor-pointer"
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${insp.type === "Safety" ? "bg-orange-500/10 text-orange-600" : "bg-blue-500/10 text-blue-600"}`}>
-                        {insp.type === "Safety" ? <AlertCircle className="size-4" /> : <ClipboardCheck className="size-4" />}
+                      <div
+                        className={`p-2 rounded-lg ${insp.type === "Safety" ? "bg-orange-500/10 text-orange-600" : "bg-blue-500/10 text-blue-600"}`}
+                      >
+                        {insp.type === "Safety" ? (
+                          <AlertCircle className="size-4" />
+                        ) : (
+                          <ClipboardCheck className="size-4" />
+                        )}
                       </div>
                       <div>
                         <div className="font-semibold text-foreground">{insp.title}</div>
@@ -103,16 +127,19 @@ function InspectionsPage() {
                   <td className="px-6 py-4 text-xs text-muted-foreground flex items-center gap-1.5 mt-2">
                     <CalendarClock className="size-3" /> {insp.date}
                   </td>
-                  <td className="px-6 py-4 font-mono font-bold text-foreground">
-                    {insp.score}
-                  </td>
+                  <td className="px-6 py-4 font-mono font-bold text-foreground">{insp.score}</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      insp.status === "Passed" ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
-                      insp.status === "Failed" ? "bg-red-500/10 text-red-600 border border-red-500/20" :
-                      insp.status === "Conditional Pass" ? "bg-amber-500/10 text-amber-600 border border-amber-500/20" :
-                      "bg-gray-500/10 text-gray-600 border border-gray-500/20"
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        insp.status === "Passed"
+                          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                          : insp.status === "Failed"
+                            ? "bg-red-500/10 text-red-600 border border-red-500/20"
+                            : insp.status === "Conditional Pass"
+                              ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                              : "bg-gray-500/10 text-gray-600 border border-gray-500/20"
+                      }`}
+                    >
                       {insp.status}
                     </span>
                   </td>

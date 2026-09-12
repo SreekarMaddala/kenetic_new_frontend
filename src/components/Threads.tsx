@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { Renderer, Program, Mesh, Triangle, Color } from 'ogl';
-import './Threads.css';
+import { useEffect, useRef } from "react";
+import { Renderer, Program, Mesh, Triangle, Color } from "ogl";
+import "./Threads.css";
 
 const vertexShader = `
 attribute vec2 position;
@@ -99,7 +99,7 @@ void main() {
   mainImage(gl_FragColor, gl_FragCoord.xy);
 }`;
 
-interface ThreadsProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ThreadsProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "color"> {
   color?: [number, number, number];
   amplitude?: number;
   distance?: number;
@@ -119,8 +119,9 @@ const Threads = ({
   propsRef.current = { color, amplitude, distance, enableMouseInteraction };
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const currentContainer = containerRef.current;
+    if (!currentContainer) return;
+    const container: HTMLDivElement = currentContainer;
 
     const renderer = new Renderer({ alpha: true });
     const gl = renderer.gl;
@@ -162,7 +163,7 @@ const Threads = ({
 
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
-    window.addEventListener('resize', resize);
+    window.addEventListener("resize", resize);
     resize();
 
     const currentMouse = [0.5, 0.5];
@@ -179,13 +180,15 @@ const Threads = ({
       targetMouse = [0.5, 0.5];
     }
 
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('mouseleave', handleMouseLeave);
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("mouseleave", handleMouseLeave);
 
     let isVisible = true;
     const intersectionObserver = new IntersectionObserver(
-      (entries) => { isVisible = entries[0].isIntersecting; },
-      { threshold: 0 }
+      (entries) => {
+        isVisible = entries[0].isIntersecting;
+      },
+      { threshold: 0 },
     );
     intersectionObserver.observe(container);
 
@@ -219,11 +222,11 @@ const Threads = ({
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
-      window.removeEventListener('resize', resize);
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener("resize", resize);
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mouseleave", handleMouseLeave);
       if (container.contains(gl.canvas)) container.removeChild(gl.canvas);
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
     };
   }, []);
 

@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../components/AppShell";
-import { Wallet, Search, Filter, Plus, Receipt, IndianRupee, Clock, MoreHorizontal, Building2 } from "lucide-react";
+import {
+  Wallet,
+  Search,
+  Filter,
+  Plus,
+  Receipt,
+  IndianRupee,
+  Clock,
+  MoreHorizontal,
+  Building2,
+} from "lucide-react";
 import { useState } from "react";
 
 import { useQuery, useQueries } from "@tanstack/react-query";
@@ -10,15 +20,27 @@ export const Route = createFileRoute("/expenses")({
   component: GlobalExpensesPage,
 });
 
-function MetricCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
+function MetricCard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: string;
+}) {
   return (
-    <div className={`p-4 rounded-xl border border-border bg-[color:var(--surface)] flex items-center gap-4`}>
-      <div className={`size-10 rounded-lg flex items-center justify-center ${color}`}>
-        {icon}
-      </div>
+    <div
+      className={`p-4 rounded-xl border border-border bg-[color:var(--surface)] flex items-center gap-4`}
+    >
+      <div className={`size-10 rounded-lg flex items-center justify-center ${color}`}>{icon}</div>
       <div>
         <div className="text-2xl font-display font-bold text-foreground">{value}</div>
-        <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
       </div>
     </div>
   );
@@ -53,20 +75,25 @@ function GlobalExpensesPage() {
       category: e.category,
       desc: e.description,
       amount: typeof e.amount === "number" ? `₹${e.amount.toLocaleString()}` : e.amount,
-      amountRaw: typeof e.amount === "number" ? e.amount : parseFloat(String(e.amount).replace(/[^\d.]/g, "")) || 0,
+      amountRaw:
+        typeof e.amount === "number"
+          ? e.amount
+          : parseFloat(String(e.amount).replace(/[^\d.]/g, "")) || 0,
       date: e.date || new Date().toISOString().split("T")[0],
       submittedBy: e.submittedBy || "Supervisor",
       status: e.status || "Pending",
     }));
   });
 
-  const filteredExpenses = expenses.filter(exp => {
-    const matchSearch = exp.desc.toLowerCase().includes(search.toLowerCase()) || exp.id.toLowerCase().includes(search.toLowerCase());
+  const filteredExpenses = expenses.filter((exp) => {
+    const matchSearch =
+      exp.desc.toLowerCase().includes(search.toLowerCase()) ||
+      exp.id.toLowerCase().includes(search.toLowerCase());
     const matchProj = projectFilter === "All" || exp.project === projectFilter;
     return matchSearch && matchProj;
   });
 
-  const projectsList = ["All", ...rawProjects.map(p => p.name)];
+  const projectsList = ["All", ...rawProjects.map((p) => p.name)];
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -81,9 +108,27 @@ function GlobalExpensesPage() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <MetricCard label="Consolidated Spent" value={`₹${expenses.reduce((sum, e) => sum + e.amountRaw, 0).toLocaleString()}`} icon={<IndianRupee className="size-5" />} color="bg-emerald-500/10 text-emerald-600" />
-        <MetricCard label="Pending Global Approvals" value={`₹${expenses.filter(e => e.status === "Pending").reduce((sum, e) => sum + e.amountRaw, 0).toLocaleString()}`} icon={<Clock className="size-5" />} color="bg-amber-500/10 text-amber-600" />
-        <MetricCard label="Active Cost Centers" value={rawProjects.length} icon={<Building2 className="size-5" />} color="bg-blue-500/10 text-blue-600" />
+        <MetricCard
+          label="Consolidated Spent"
+          value={`₹${expenses.reduce((sum, e) => sum + e.amountRaw, 0).toLocaleString()}`}
+          icon={<IndianRupee className="size-5" />}
+          color="bg-emerald-500/10 text-emerald-600"
+        />
+        <MetricCard
+          label="Pending Global Approvals"
+          value={`₹${expenses
+            .filter((e) => e.status === "Pending")
+            .reduce((sum, e) => sum + e.amountRaw, 0)
+            .toLocaleString()}`}
+          icon={<Clock className="size-5" />}
+          color="bg-amber-500/10 text-amber-600"
+        />
+        <MetricCard
+          label="Active Cost Centers"
+          value={rawProjects.length}
+          icon={<Building2 className="size-5" />}
+          color="bg-blue-500/10 text-blue-600"
+        />
       </div>
 
       <div className="bg-[color:var(--surface)] rounded-xl border border-border shadow-sm overflow-hidden flex flex-col">
@@ -106,7 +151,11 @@ function GlobalExpensesPage() {
                 onChange={(e) => setProjectFilter(e.target.value)}
                 className="w-full sm:w-auto h-9 pl-9 pr-8 rounded-md bg-[color:var(--surface)] border border-border text-sm focus:outline-none focus:border-primary/50 appearance-none"
               >
-                {projectsList.map(p => <option key={p} value={p}>{p}</option>)}
+                {projectsList.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -136,13 +185,13 @@ function GlobalExpensesPage() {
                       </div>
                       <div>
                         <div className="font-semibold text-foreground line-clamp-1">{exp.desc}</div>
-                        <div className="text-[11px] font-mono text-muted-foreground mt-0.5">{exp.id}</div>
+                        <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                          {exp.id}
+                        </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-medium text-foreground">
-                    {exp.project}
-                  </td>
+                  <td className="px-6 py-4 font-medium text-foreground">{exp.project}</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-secondary text-muted-foreground">
                       {exp.category}
@@ -151,18 +200,20 @@ function GlobalExpensesPage() {
                   <td className="px-6 py-4 text-xs font-medium text-foreground">
                     {exp.submittedBy}
                   </td>
-                  <td className="px-6 py-4 text-xs text-muted-foreground">
-                    {exp.date}
-                  </td>
+                  <td className="px-6 py-4 text-xs text-muted-foreground">{exp.date}</td>
                   <td className="px-6 py-4 font-mono font-bold text-foreground text-right">
                     {exp.amount}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      exp.status === "Paid" ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
-                      exp.status === "Approved" ? "bg-blue-500/10 text-blue-600 border border-blue-500/20" :
-                      "bg-orange-500/10 text-orange-600 border border-orange-500/20"
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        exp.status === "Paid"
+                          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                          : exp.status === "Approved"
+                            ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                            : "bg-orange-500/10 text-orange-600 border border-orange-500/20"
+                      }`}
+                    >
                       {exp.status}
                     </span>
                   </td>

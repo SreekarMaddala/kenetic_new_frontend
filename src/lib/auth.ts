@@ -1,145 +1,164 @@
-/**
- * src/lib/auth.ts
- * Cognito authentication helpers using amazon-cognito-identity-js.
- * All tokens are stored in localStorage and auto-refreshed by the SDK.
- */
-
 import {
   CognitoUserPool,
   CognitoUser,
   AuthenticationDetails,
-  CognitoUserAttribute,
-  type ISignUpResult,
+  type CognitoUserSession,
 } from "amazon-cognito-identity-js";
+import { parseIdentity, type AppRole } from "./permissions";
 
-// ── Pool configuration ────────────────────────────────────────────────────────
-
-const poolData = {
-  UserPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID as string,
-  ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID as string,
-};
-
-export const userPool = new CognitoUserPool(poolData);
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+const poolId = import.meta.env.VITE_COGNITO_USER_POOL_ID as string;
+const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID as string;
+export const userPool =
+  poolId && clientId ? new CognitoUserPool({ UserPoolId: poolId, ClientId: clientId }) : null;
+let pendingUser: CognitoUser | null = null;
 
 export interface AuthUser {
   email: string;
   name: string;
   sub: string;
+  orgId: string;
+  role: AppRole;
 }
-
-// ── Token helpers ─────────────────────────────────────────────────────────────
-
-export function getIdToken(): string | null {
-  const cognitoUser = userPool.getCurrentUser();
-  if (!cognitoUser) return null;
-  // Token is stored in localStorage by the SDK as:
-  // CognitoIdentityServiceProvider.<clientId>.<username>.idToken
-  const key = `CognitoIdentityServiceProvider.${poolData.ClientId}.${cognitoUser.getUsername()}.idToken`;
-  return localStorage.getItem(key);
+export class NewPasswordRequiredError extends Error {
+  constructor() {
+    super("Choose a permanent password to activate your invitation.");
+  }
 }
-
-export function clearTokens(): void {
-  const cognitoUser = userPool.getCurrentUser();
-  if (cognitoUser) cognitoUser.signOut();
+function pool() {
+  if (!userPool) throw new Error("Authentication is not configured. Contact your administrator.");
+  return userPool;
 }
-
-// ── getCurrentUser ────────────────────────────────────────────────────────────
-
-export function getCurrentUser(): Promise<AuthUser | null> {
-  return new Promise((resolve) => {
-    const cognitoUser = userPool.getCurrentUser();
-    if (!cognitoUser) return resolve(null);
-
-    cognitoUser.getSession((err: Error | null, session: { isValid: () => boolean }) => {
-      if (err || !session?.isValid()) return resolve(null);
-
-      cognitoUser.getUserAttributes((attrErr, attributes) => {
-        if (attrErr || !attributes) return resolve(null);
-        const get = (name: string) => attributes.find((a) => a.getName() === name)?.getValue() ?? "";
-        resolve({ email: get("email"), name: get("name"), sub: get("sub") });
-      });
+async function userFromSession(session: CognitoUserSession): Promise<AuthUser> {
+  const payload = session.getIdToken().decodePayload();
+  const identity = parseIdentity(payload);
+  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/auth/me`, {
+    headers: { Authorization: `Bearer ${session.getIdToken().getJwtToken()}` },
+    signal: AbortSignal.timeout(10_000),
+    cache: "no-store",
+  });
+  const body = await response.json();
+  if (!response.ok)
+    throw new Error(body?.error?.message ?? "Your account cannot access this workspace.");
+  if (
+    body.data.sub !== identity.sub ||
+    body.data.orgId !== identity.orgId ||
+    body.data.role !== identity.role
+  ) {
+    throw new Error("Your account permissions changed. Sign in again.");
+  }
+  return {
+    ...identity,
+    email: String(payload.email ?? ""),
+    name: String(payload.name ?? payload.email ?? ""),
+  };
+}
+function sessionFor(user: CognitoUser): Promise<CognitoUserSession> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(
+      () => reject(new Error("Session refresh timed out. Please try again.")),
+      10_000,
+    );
+    user.getSession((error: Error | null, session: CognitoUserSession) => {
+      window.clearTimeout(timeout);
+      if (error || !session?.isValid()) reject(error ?? new Error("Your session expired."));
+      else resolve(session);
     });
   });
 }
-
-// ── signIn ────────────────────────────────────────────────────────────────────
-
-export function signIn(email: string, password: string): Promise<AuthUser> {
-  return new Promise((resolve, reject) => {
-    const cognitoUser = new CognitoUser({ Username: email, Pool: userPool });
-    const authDetails = new AuthenticationDetails({ Username: email, Password: password });
-
-    cognitoUser.authenticateUser(authDetails, {
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  const user = userPool?.getCurrentUser();
+  if (!user) return null;
+  try {
+    return await userFromSession(await sessionFor(user));
+  } catch (error) {
+    user.signOut();
+    throw error;
+  }
+}
+function authenticate(
+  run: (callbacks: Parameters<CognitoUser["authenticateUser"]>[1]) => void,
+): Promise<AuthUser> {
+  return new Promise((resolve, reject) =>
+    run({
       onSuccess: (session) => {
-        const payload = session.getIdToken().decodePayload();
-        resolve({
-          email: payload["email"] as string,
-          name: (payload["name"] as string) ?? (payload["email"] as string),
-          sub: payload["sub"] as string,
-        });
+        pendingUser = null;
+        userFromSession(session)
+          .then(resolve)
+          .catch((error) => {
+            clearTokens();
+            reject(error);
+          });
       },
-      onFailure: (err) => {
-        if (err.code === "NotAuthorizedException") {
-          reject(new Error("Incorrect email or password."));
-        } else if (err.code === "UserNotConfirmedException") {
-          reject(new Error("Please confirm your email address before logging in."));
-        } else if (err.code === "UserNotFoundException") {
-          reject(new Error("No account found with this email address."));
-        } else {
-          reject(new Error(err.message ?? "Sign in failed."));
-        }
-      },
-      newPasswordRequired: () => {
-        reject(new Error("A new password is required. Please contact your administrator."));
-      },
-    });
-  });
+      onFailure: (error) =>
+        reject(
+          new Error(
+            error.code === "NotAuthorizedException" || error.code === "UserNotFoundException"
+              ? "Incorrect email or password."
+              : (error.message ?? "Sign in failed."),
+          ),
+        ),
+      newPasswordRequired: () => reject(new NewPasswordRequiredError()),
+      mfaRequired: () =>
+        reject(
+          new Error(
+            "This account requires MFA. Contact your administrator for the configured sign-in method.",
+          ),
+        ),
+      totpRequired: () =>
+        reject(
+          new Error(
+            "This account requires MFA. Contact your administrator for the configured sign-in method.",
+          ),
+        ),
+    }),
+  );
 }
-
-// ── signOut ───────────────────────────────────────────────────────────────────
-
-export function signOut(): void {
-  clearTokens();
+export function signIn(email: string, password: string): Promise<AuthUser> {
+  const user = new CognitoUser({ Username: email.trim().toLowerCase(), Pool: pool() });
+  pendingUser = user;
+  return authenticate((callbacks) =>
+    user.authenticateUser(
+      new AuthenticationDetails({ Username: user.getUsername(), Password: password }),
+      callbacks,
+    ),
+  );
 }
-
-// ── signUp ────────────────────────────────────────────────────────────────────
-
-export function signUp(email: string, password: string, name: string): Promise<ISignUpResult> {
-  return new Promise((resolve, reject) => {
-    const attributes = [
-      new CognitoUserAttribute({ Name: "email", Value: email }),
-      new CognitoUserAttribute({ Name: "name", Value: name }),
-    ];
-    userPool.signUp(email, password, attributes, [], (err, result) => {
-      if (err || !result) return reject(new Error(err?.message ?? "Sign-up failed."));
-      resolve(result);
-    });
-  });
+export function completeNewPassword(password: string): Promise<AuthUser> {
+  const user = pendingUser;
+  if (!user)
+    return Promise.reject(
+      new Error("Your invitation session expired. Sign in with your temporary password again."),
+    );
+  return authenticate((callbacks) => user.completeNewPasswordChallenge(password, {}, callbacks));
 }
-
-// ── confirmSignUp ─────────────────────────────────────────────────────────────
-
-export function confirmSignUp(email: string, code: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const cognitoUser = new CognitoUser({ Username: email, Pool: userPool });
-    cognitoUser.confirmRegistration(code, true, (err) => {
-      if (err) return reject(new Error(err.message ?? "Confirmation failed."));
-      resolve();
-    });
-  });
+export function clearTokens(): void {
+  pendingUser = null;
+  userPool?.getCurrentUser()?.signOut();
 }
-
-// ── refreshSession ────────────────────────────────────────────────────────────
-
-export function refreshSession(): Promise<string | null> {
-  return new Promise((resolve) => {
-    const cognitoUser = userPool.getCurrentUser();
-    if (!cognitoUser) return resolve(null);
-    cognitoUser.getSession((err: Error | null, session: { isValid: () => boolean; getIdToken: () => { getJwtToken: () => string } }) => {
-      if (err || !session?.isValid()) return resolve(null);
-      resolve(session.getIdToken().getJwtToken());
-    });
-  });
+export const signOut = clearTokens;
+export async function refreshSession(): Promise<string | null> {
+  const user = userPool?.getCurrentUser();
+  if (!user) return null;
+  try {
+    return (await sessionFor(user)).getIdToken().getJwtToken();
+  } catch {
+    clearTokens();
+    return null;
+  }
+}
+export function forgotPassword(email: string): Promise<void> {
+  const user = new CognitoUser({ Username: email.trim().toLowerCase(), Pool: pool() });
+  return new Promise((resolve, reject) =>
+    user.forgotPassword({
+      onSuccess: () => resolve(),
+      inputVerificationCode: () => resolve(),
+      onFailure: reject,
+    }),
+  );
+}
+export function resetPassword(email: string, code: string, password: string): Promise<void> {
+  const user = new CognitoUser({ Username: email.trim().toLowerCase(), Pool: pool() });
+  return new Promise((resolve, reject) =>
+    user.confirmPassword(code, password, { onSuccess: () => resolve(), onFailure: reject }),
+  );
 }

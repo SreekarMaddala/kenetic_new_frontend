@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../../../components/AppShell";
-import { FileText, Calendar, Download, Search, Filter, Plus, Clock, Users, HardHat } from "lucide-react";
+import {
+  FileText,
+  Calendar,
+  Download,
+  Search,
+  Filter,
+  Plus,
+  Clock,
+  Users,
+  HardHat,
+} from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/projects/$projectId/reports")({
@@ -8,11 +18,56 @@ export const Route = createFileRoute("/projects/$projectId/reports")({
 });
 
 const PROJECT_REPORTS_DATA = [
-  { id: "DPR-715", date: "16 Jul 2026", type: "Daily Progress", author: "Amit Mishra", status: "Approved", labour: 450, weather: "Sunny, 32°C", notes: "Basement slab casting started." },
-  { id: "DPR-714", date: "15 Jul 2026", type: "Daily Progress", author: "Amit Mishra", status: "Approved", labour: 442, weather: "Cloudy, 29°C", notes: "Rebar tying completed for B2." },
-  { id: "WSR-022", date: "12 Jul 2026", type: "Weekly Summary", author: "Priya Sharma", status: "Published", labour: "-", weather: "-", notes: "Week 22 overview and next week look-ahead." },
-  { id: "DPR-713", date: "14 Jul 2026", type: "Daily Progress", author: "Rahul Verma", status: "Pending Review", labour: 430, weather: "Rain, 25°C", notes: "Work delayed by 3 hours due to heavy rain." },
-  { id: "DPR-712", date: "13 Jul 2026", type: "Daily Progress", author: "Amit Mishra", status: "Approved", labour: 435, weather: "Sunny, 34°C", notes: "Excavation completed in Zone A." },
+  {
+    id: "DPR-715",
+    date: "16 Jul 2026",
+    type: "Daily Progress",
+    author: "Amit Mishra",
+    status: "Approved",
+    labour: 450,
+    weather: "Sunny, 32°C",
+    notes: "Basement slab casting started.",
+  },
+  {
+    id: "DPR-714",
+    date: "15 Jul 2026",
+    type: "Daily Progress",
+    author: "Amit Mishra",
+    status: "Approved",
+    labour: 442,
+    weather: "Cloudy, 29°C",
+    notes: "Rebar tying completed for B2.",
+  },
+  {
+    id: "WSR-022",
+    date: "12 Jul 2026",
+    type: "Weekly Summary",
+    author: "Priya Sharma",
+    status: "Published",
+    labour: "-",
+    weather: "-",
+    notes: "Week 22 overview and next week look-ahead.",
+  },
+  {
+    id: "DPR-713",
+    date: "14 Jul 2026",
+    type: "Daily Progress",
+    author: "Rahul Verma",
+    status: "Pending Review",
+    labour: 430,
+    weather: "Rain, 25°C",
+    notes: "Work delayed by 3 hours due to heavy rain.",
+  },
+  {
+    id: "DPR-712",
+    date: "13 Jul 2026",
+    type: "Daily Progress",
+    author: "Amit Mishra",
+    status: "Approved",
+    labour: 435,
+    weather: "Sunny, 34°C",
+    notes: "Excavation completed in Zone A.",
+  },
 ];
 
 function ProjectReportsPage() {
@@ -20,8 +75,10 @@ function ProjectReportsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
 
-  const filteredReports = PROJECT_REPORTS_DATA.filter(rep => {
-    const matchSearch = rep.id.toLowerCase().includes(search.toLowerCase()) || rep.date.toLowerCase().includes(search.toLowerCase());
+  const filteredReports = PROJECT_REPORTS_DATA.filter((rep) => {
+    const matchSearch =
+      rep.id.toLowerCase().includes(search.toLowerCase()) ||
+      rep.date.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "All" || rep.type === typeFilter;
     return matchSearch && matchType;
   });
@@ -68,20 +125,29 @@ function ProjectReportsPage() {
 
         <div className="divide-y divide-border">
           {filteredReports.map((rep) => (
-            <div key={rep.id} className="p-5 hover:bg-secondary/20 transition-colors cursor-pointer group flex flex-col md:flex-row md:items-center gap-4">
-              
+            <div
+              key={rep.id}
+              className="p-5 hover:bg-secondary/20 transition-colors cursor-pointer group flex flex-col md:flex-row md:items-center gap-4"
+            >
               {/* Core Info */}
               <div className="flex-1 min-w-0 flex items-start gap-4">
-                <div className={`p-3 rounded-xl shrink-0 ${rep.type === "Weekly Summary" ? "bg-purple-500/10 text-purple-600" : "bg-blue-500/10 text-blue-600"}`}>
+                <div
+                  className={`p-3 rounded-xl shrink-0 ${rep.type === "Weekly Summary" ? "bg-purple-500/10 text-purple-600" : "bg-blue-500/10 text-blue-600"}`}
+                >
                   <FileText className="size-6" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider bg-secondary px-2 py-0.5 rounded">{rep.id}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                      rep.status === "Approved" || rep.status === "Published" ? "bg-emerald-500/10 text-emerald-600" :
-                      "bg-orange-500/10 text-orange-600"
-                    }`}>
+                    <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider bg-secondary px-2 py-0.5 rounded">
+                      {rep.id}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                        rep.status === "Approved" || rep.status === "Published"
+                          ? "bg-emerald-500/10 text-emerald-600"
+                          : "bg-orange-500/10 text-orange-600"
+                      }`}
+                    >
                       {rep.status}
                     </span>
                   </div>
@@ -96,11 +162,15 @@ function ProjectReportsPage() {
               {rep.type === "Daily Progress" && (
                 <div className="hidden lg:flex items-center gap-6 px-6 border-l border-border h-12">
                   <div className="text-xs">
-                    <div className="text-muted-foreground mb-0.5 flex items-center gap-1"><Users className="size-3" /> Total Labour</div>
+                    <div className="text-muted-foreground mb-0.5 flex items-center gap-1">
+                      <Users className="size-3" /> Total Labour
+                    </div>
                     <div className="font-bold text-foreground">{rep.labour} workers</div>
                   </div>
                   <div className="text-xs">
-                    <div className="text-muted-foreground mb-0.5 flex items-center gap-1"><Clock className="size-3" /> Weather</div>
+                    <div className="text-muted-foreground mb-0.5 flex items-center gap-1">
+                      <Clock className="size-3" /> Weather
+                    </div>
                     <div className="font-semibold text-foreground">{rep.weather}</div>
                   </div>
                 </div>

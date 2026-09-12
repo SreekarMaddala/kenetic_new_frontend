@@ -1,59 +1,107 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useAuth } from "../../../contexts/AuthContext";
 import { createFileRoute } from "@tanstack/react-router";
 import * as React from "react";
 import { PageHeader } from "../../../components/AppShell";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import { toast } from "sonner";
 import {
-  Car,
-  Fuel,
-  Truck,
-  Plus,
-  Calendar,
-  DollarSign,
-  Users,
-  Compass,
-} from "lucide-react";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../../components/ui/card";
+import { toast } from "sonner";
+import { Car, Fuel, Truck, Plus, Calendar, DollarSign, Users, Compass } from "lucide-react";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fieldOperationsApi } from "../../../lib/api";
 
 export const Route = createFileRoute("/projects/$projectId/logistics")({
   head: () => ({
     meta: [
       { title: "Logistics & Transport — Kinetic" },
-      { name: "description", content: "Track owned vehicle runs, fuel invoices, and rental auto logs for construction material transit." },
+      {
+        name: "description",
+        content:
+          "Track owned vehicle runs, fuel invoices, and rental auto logs for construction material transit.",
+      },
     ],
   }),
   component: LogisticsPage,
 });
 
-// Mock Initial Data
-const initialVehicles = [
-  { id: "V1", date: "2026-07-09", name: "Mahindra Bolero (KA-03-MJ-2401)", driver: "Ramesh Naik", startKm: 12450, endKm: 12585, distance: 135 },
-  { id: "V2", date: "2026-07-08", name: "Tata Ace (KA-53-E-8812)", driver: "Anand Gowda", startKm: 34120, endKm: 34215, distance: 95 },
-  { id: "V3", date: "2026-07-08", name: "Mahindra Bolero (KA-03-MJ-2401)", driver: "Ramesh Naik", startKm: 12310, endKm: 12450, distance: 140 },
-];
-
-const initialFuelLogs = [
-  { id: "F1", date: "2026-07-09", vehicle: "Mahindra Bolero (KA-03-MJ-2401)", liters: 45, rate: 98.4, total: 4428 },
-  { id: "F2", date: "2026-07-07", vehicle: "Tata Ace (KA-53-E-8812)", liters: 35, rate: 98.4, total: 3444 },
-];
-
-const initialRentalLogs = [
-  { id: "R1", date: "2026-07-09", vendor: "Sri Laxmi Transports", project: "DLF Camellias", material: "Fine M-Sand", rate: 4500, helper: 500, total: 5000 },
-  { id: "R2", date: "2026-07-09", vendor: "Sri Laxmi Transports", project: "Prestige Lakeside", material: "Cover blocks & wire", rate: 2500, helper: 0, total: 2500 },
-  { id: "R3", date: "2026-07-08", vendor: "Balaji Mini-trucks", project: "Lodha World Towers", material: "Vitrified Tiles", rate: 6000, helper: 1000, total: 7000 },
-];
-
 function LogisticsPage() {
-  const [activeRole, setActiveRole] = React.useState<string>("admin");
+  const { projectId } = Route.useParams();
+  const queryClient = useQueryClient();
+  const activeRole = useAuth().user?.role;
   const [activeTab, setActiveTab] = React.useState<"vehicles" | "fuel" | "rental">("vehicles");
 
-  // State managers
-  const [vehicles, setVehicles] = React.useState(initialVehicles);
-  const [fuelLogs, setFuelLogs] = React.useState(initialFuelLogs);
-  const [rentalLogs, setRentalLogs] = React.useState(initialRentalLogs);
+  const { data: rawLogistics = [] } = useQuery({
+    queryKey: ["logistics", projectId],
+    queryFn: () => fieldOperationsApi.listLogistics(projectId),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const [vehicles, setVehicles] = React.useState<any[]>([]);
+  const [fuelLogs, setFuelLogs] = React.useState<any[]>([]);
+  const [rentalLogs, setRentalLogs] = React.useState<any[]>([]);
   const [registeredVehicles, setRegisteredVehicles] = React.useState([
     "Mahindra Bolero (KA-03-MJ-2401)",
     "Tata Ace (KA-53-E-8812)",
   ]);
+
+  React.useEffect(() => {
+    if (rawLogistics && rawLogistics.length > 0) {
+      const parsedVehicles = rawLogistics
+        .filter((item: any) => item.tripType === "vehicle" || item.startKm)
+        .map((item: any, idx: number) => ({
+          id: item.tripId || `V${idx + 1}`,
+          date: item.date || new Date().toISOString().split("T")[0],
+          name: item.vehicle || item.name || "Mahindra Bolero",
+          driver: item.driver || "Driver",
+          startKm: item.startKm || 10000,
+          endKm: item.endKm || 10100,
+          distance: (item.endKm || 10100) - (item.startKm || 10000),
+        }));
+      const parsedFuel = rawLogistics
+        .filter((item: any) => item.tripType === "fuel" || item.liters)
+        .map((item: any, idx: number) => ({
+          id: item.tripId || `F${idx + 1}`,
+          date: item.date || new Date().toISOString().split("T")[0],
+          vehicle: item.vehicle || "Mahindra Bolero",
+          liters: item.liters || 40,
+          rate: item.rate || 98.4,
+          total: item.total || 3936,
+        }));
+      const parsedRental = rawLogistics
+        .filter((item: any) => item.tripType === "rental" || item.vendor)
+        .map((item: any, idx: number) => ({
+          id: item.tripId || `R${idx + 1}`,
+          date: item.date || new Date().toISOString().split("T")[0],
+          vendor: item.vendor || "Transport Vendor",
+          project: item.project || "Site Operations",
+          material: item.material || "Materials",
+          rate: item.rate || 4500,
+          helper: item.helper || 500,
+          total: item.total || 5000,
+        }));
+      setVehicles(parsedVehicles);
+      setFuelLogs(parsedFuel);
+      setRentalLogs(parsedRental);
+    } else {
+      setVehicles([]);
+      setFuelLogs([]);
+      setRentalLogs([]);
+    }
+  }, [rawLogistics]);
+
+  const createLogisticsMutation = useMutation({
+    mutationFn: (body: any) => fieldOperationsApi.createLogistics({ projectId, ...body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["logistics", projectId] });
+    },
+  });
 
   // Form states - Vehicles
   const [vehName, setVehName] = React.useState("Mahindra Bolero (KA-03-MJ-2401)");
@@ -88,15 +136,6 @@ function LogisticsPage() {
       }
     }
   }, [registeredVehicles, vehName, fuelVeh]);
-
-  React.useEffect(() => {
-    const updateRole = () => {
-      setActiveRole(localStorage.getItem("kinetic_active_role") || "admin");
-    };
-    updateRole();
-    window.addEventListener("kinetic_role_changed", updateRole);
-    return () => window.removeEventListener("kinetic_role_changed", updateRole);
-  }, []);
 
   const isSupervisor = activeRole === "supervisor";
 
@@ -227,9 +266,9 @@ function LogisticsPage() {
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-8 animate-fade-up">
       <div className="flex items-center justify-between">
-        <PageHeader 
-          eyebrow={isSupervisor ? "Site Logistics" : "Logistics"} 
-          title={isSupervisor ? "Site Transit Logs" : "Transit & Fleet Ledger"} 
+        <PageHeader
+          eyebrow={isSupervisor ? "Site Logistics" : "Logistics"}
+          title={isSupervisor ? "Site Transit Logs" : "Transit & Fleet Ledger"}
           actions={
             <div className="flex gap-2">
               {isSupervisor ? (
@@ -269,7 +308,9 @@ function LogisticsPage() {
             <Fuel className="size-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-display font-semibold">₹{totalFuelCost.toLocaleString("en-IN")}</div>
+            <div className="text-3xl font-display font-semibold">
+              ₹{totalFuelCost.toLocaleString("en-IN")}
+            </div>
             <p className="text-[11px] text-muted-foreground mt-1">Accumulated owned fleet fills</p>
           </CardContent>
         </Card>
@@ -282,8 +323,12 @@ function LogisticsPage() {
             <Truck className="size-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-display font-semibold">₹{totalRentalCost.toLocaleString("en-IN")}</div>
-            <p className="text-[11px] text-muted-foreground mt-1">Daily rental auto and helper sums</p>
+            <div className="text-3xl font-display font-semibold">
+              ₹{totalRentalCost.toLocaleString("en-IN")}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Daily rental auto and helper sums
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -323,20 +368,21 @@ function LogisticsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
         {/* Tab contents list */}
-        <div className={`${
-          isSupervisor || (activeTab === "vehicles" && !isSupervisor)
-            ? "lg:col-span-8" 
-            : "lg:col-span-12"
-        } bg-[color:var(--surface)] border border-border rounded-xl shadow-sm overflow-hidden flex flex-col`}>
+        <div
+          className={`${
+            isSupervisor || (activeTab === "vehicles" && !isSupervisor)
+              ? "lg:col-span-8"
+              : "lg:col-span-12"
+          } bg-[color:var(--surface)] border border-border rounded-xl shadow-sm overflow-hidden flex flex-col`}
+        >
           <div className="px-6 py-4 border-b border-border bg-secondary/10 flex justify-between items-center">
             <h3 className="font-display font-semibold uppercase text-xs tracking-wider font-mono text-muted-foreground">
               {activeTab === "vehicles"
                 ? "Owned Vehicle Daily Log"
                 : activeTab === "fuel"
-                ? "Refueling Purchases Register"
-                : "Rental Transit Daily Billing"}
+                  ? "Refueling Purchases Register"
+                  : "Rental Transit Daily Billing"}
             </h3>
             <span className="text-[10px] font-mono text-muted-foreground">LIVE REGISTER</span>
           </div>
@@ -434,64 +480,228 @@ function LogisticsPage() {
         {/* Tab Forms panel (4 cols) */}
         {(isSupervisor || (activeTab === "vehicles" && !isSupervisor)) && (
           <div className="lg:col-span-4 bg-[color:var(--surface)] border border-border rounded-xl shadow-sm p-6 flex flex-col gap-4 animate-fade-in">
-          <div>
-            <h3 className="font-display font-semibold text-sm">
-              {activeTab === "vehicles" && (isSupervisor ? "Log Daily Mileage" : "Register New Vehicle")}
-              {activeTab === "fuel" && "Log Refueling Bill"}
-              {activeTab === "rental" && "Log Rental Auto Expense"}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              {activeTab === "vehicles" && !isSupervisor 
-                ? "Register a new vehicle into the company fleet." 
-                : "Add new operational records directly to the platform."}
-            </p>
-          </div>
+            <div>
+              <h3 className="font-display font-semibold text-sm">
+                {activeTab === "vehicles" &&
+                  (isSupervisor ? "Log Daily Mileage" : "Register New Vehicle")}
+                {activeTab === "fuel" && "Log Refueling Bill"}
+                {activeTab === "rental" && "Log Rental Auto Expense"}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {activeTab === "vehicles" && !isSupervisor
+                  ? "Register a new vehicle into the company fleet."
+                  : "Add new operational records directly to the platform."}
+              </p>
+            </div>
 
-          {activeTab === "vehicles" && (
-            isSupervisor ? (
-              <form onSubmit={handleAddVehicleLog} className="space-y-4 text-xs">
+            {activeTab === "vehicles" &&
+              (isSupervisor ? (
+                <form onSubmit={handleAddVehicleLog} className="space-y-4 text-xs">
+                  <div className="space-y-1.5">
+                    <label className="font-medium text-muted-foreground">Owned Vehicle</label>
+                    <select
+                      value={vehName}
+                      onChange={(e) => setVehName(e.target.value)}
+                      className="w-full p-2 bg-background border border-border rounded-md animate-fade-in"
+                    >
+                      {registeredVehicles.map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-medium text-muted-foreground">Driver Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ramesh Naik"
+                      value={vehDriver}
+                      onChange={(e) => setVehDriver(e.target.value)}
+                      className="w-full p-2 bg-background border border-border rounded-md"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="font-medium text-muted-foreground">Start Odo (KM)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 12450"
+                        value={vehStart}
+                        onChange={(e) => setVehStart(e.target.value)}
+                        className="w-full p-2 bg-background border border-border rounded-md font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-medium text-muted-foreground">End Odo (KM)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 12585"
+                        value={vehEnd}
+                        onChange={(e) => setVehEnd(e.target.value)}
+                        className="w-full p-2 bg-background border border-border rounded-md font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 mt-2"
+                  >
+                    <Plus className="size-4" /> Save Reading
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleRegisterVehicle} className="space-y-4 text-xs">
+                  <div className="space-y-1.5">
+                    <label className="font-medium text-muted-foreground">
+                      Vehicle Make & Model
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Mahindra Bolero, Tata Ace, Tata 407"
+                      value={newVehModel}
+                      onChange={(e) => setNewVehModel(e.target.value)}
+                      className="w-full p-2 bg-background border border-border rounded-md"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-medium text-muted-foreground">
+                      License Plate / Registration No.
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. KA-03-MJ-2401"
+                      value={newVehPlate}
+                      onChange={(e) => setNewVehPlate(e.target.value)}
+                      className="w-full p-2 bg-background border border-border rounded-md font-mono uppercase"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 mt-2"
+                  >
+                    <Plus className="size-4" /> Register Vehicle
+                  </button>
+                </form>
+              ))}
+
+            {activeTab === "fuel" && (
+              <form onSubmit={handleAddFuelLog} className="space-y-4 text-xs">
                 <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Owned Vehicle</label>
+                  <label className="font-medium text-muted-foreground">Vehicle Filled</label>
                   <select
-                    value={vehName}
-                    onChange={(e) => setVehName(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md animate-fade-in"
+                    value={fuelVeh}
+                    onChange={(e) => setFuelVeh(e.target.value)}
+                    className="w-full p-2 bg-background border border-border rounded-md"
                   >
                     {registeredVehicles.map((v) => (
-                      <option key={v} value={v}>{v}</option>
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Driver Name</label>
+                  <label className="font-medium text-muted-foreground">Fuel Volume (Liters)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 45"
+                    value={fuelLiters}
+                    onChange={(e) => setFuelLiters(e.target.value)}
+                    className="w-full p-2 bg-background border border-border rounded-md font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-medium text-muted-foreground">Fuel Rate (₹/Liter)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 98.40"
+                    value={fuelRate}
+                    onChange={(e) => setFuelRate(e.target.value)}
+                    className="w-full p-2 bg-background border border-border rounded-md font-mono"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 mt-2"
+                >
+                  <Plus className="size-4" /> Log Fuel Bill
+                </button>
+              </form>
+            )}
+
+            {activeTab === "rental" && (
+              <form onSubmit={handleAddRentalLog} className="space-y-4 text-xs">
+                <div className="space-y-1.5">
+                  <label className="font-medium text-muted-foreground">Rental Vendor Name</label>
                   <input
                     type="text"
-                    placeholder="e.g. Ramesh Naik"
-                    value={vehDriver}
-                    onChange={(e) => setVehDriver(e.target.value)}
+                    placeholder="e.g. Sri Laxmi Transports"
+                    value={rentVendor}
+                    onChange={(e) => setRentVendor(e.target.value)}
+                    className="w-full p-2 bg-background border border-border rounded-md"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-medium text-muted-foreground">
+                    Delivery Site (Project)
+                  </label>
+                  <select
+                    value={rentProj}
+                    onChange={(e) => setRentProj(e.target.value)}
+                    className="w-full p-2 bg-background border border-border rounded-md"
+                  >
+                    <option value="DLF Camellias">DLF Camellias</option>
+                    <option value="Prestige Lakeside">Prestige Lakeside</option>
+                    <option value="Lodha World Towers">Lodha World Towers</option>
+                    <option value="Brigade Cornerstone">Brigade Cornerstone</option>
+                    <option value="Godrej Reflections">Godrej Reflections</option>
+                    <option value="Sobha City Phase IV">Sobha City Phase IV</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-medium text-muted-foreground">Material Carried</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 10 Tons Aggregate"
+                    value={rentMaterial}
+                    onChange={(e) => setRentMaterial(e.target.value)}
                     className="w-full p-2 bg-background border border-border rounded-md"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="font-medium text-muted-foreground">Start Odo (KM)</label>
+                    <label className="font-medium text-muted-foreground">Hire Rate (₹)</label>
                     <input
                       type="number"
-                      placeholder="e.g. 12450"
-                      value={vehStart}
-                      onChange={(e) => setVehStart(e.target.value)}
+                      placeholder="e.g. 4500"
+                      value={rentRate}
+                      onChange={(e) => setRentRate(e.target.value)}
                       className="w-full p-2 bg-background border border-border rounded-md font-mono"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="font-medium text-muted-foreground">End Odo (KM)</label>
+                    <label className="font-medium text-muted-foreground">Helper Charges (₹)</label>
                     <input
                       type="number"
-                      placeholder="e.g. 12585"
-                      value={vehEnd}
-                      onChange={(e) => setVehEnd(e.target.value)}
+                      placeholder="e.g. 500"
+                      value={rentHelper}
+                      onChange={(e) => setRentHelper(e.target.value)}
                       className="w-full p-2 bg-background border border-border rounded-md font-mono"
                     />
                   </div>
@@ -501,164 +711,10 @@ function LogisticsPage() {
                   type="submit"
                   className="w-full py-2.5 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 mt-2"
                 >
-                  <Plus className="size-4" /> Save Reading
+                  <Plus className="size-4" /> Save Rental Booking
                 </button>
               </form>
-            ) : (
-              <form onSubmit={handleRegisterVehicle} className="space-y-4 text-xs">
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Vehicle Make & Model</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Mahindra Bolero, Tata Ace, Tata 407"
-                    value={newVehModel}
-                    onChange={(e) => setNewVehModel(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">License Plate / Registration No.</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. KA-03-MJ-2401"
-                    value={newVehPlate}
-                    onChange={(e) => setNewVehPlate(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md font-mono uppercase"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 mt-2"
-                >
-                  <Plus className="size-4" /> Register Vehicle
-                </button>
-              </form>
-            )
-          )}
-
-          {activeTab === "fuel" && (
-            <form onSubmit={handleAddFuelLog} className="space-y-4 text-xs">
-              <div className="space-y-1.5">
-                <label className="font-medium text-muted-foreground">Vehicle Filled</label>
-                <select
-                  value={fuelVeh}
-                  onChange={(e) => setFuelVeh(e.target.value)}
-                  className="w-full p-2 bg-background border border-border rounded-md"
-                >
-                  {registeredVehicles.map((v) => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-medium text-muted-foreground">Fuel Volume (Liters)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="e.g. 45"
-                  value={fuelLiters}
-                  onChange={(e) => setFuelLiters(e.target.value)}
-                  className="w-full p-2 bg-background border border-border rounded-md font-mono"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-medium text-muted-foreground">Fuel Rate (₹/Liter)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="e.g. 98.40"
-                  value={fuelRate}
-                  onChange={(e) => setFuelRate(e.target.value)}
-                  className="w-full p-2 bg-background border border-border rounded-md font-mono"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 mt-2"
-              >
-                <Plus className="size-4" /> Log Fuel Bill
-              </button>
-            </form>
-          )}
-
-          {activeTab === "rental" && (
-            <form onSubmit={handleAddRentalLog} className="space-y-4 text-xs">
-              <div className="space-y-1.5">
-                <label className="font-medium text-muted-foreground">Rental Vendor Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sri Laxmi Transports"
-                  value={rentVendor}
-                  onChange={(e) => setRentVendor(e.target.value)}
-                  className="w-full p-2 bg-background border border-border rounded-md"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-medium text-muted-foreground">Delivery Site (Project)</label>
-                <select
-                  value={rentProj}
-                  onChange={(e) => setRentProj(e.target.value)}
-                  className="w-full p-2 bg-background border border-border rounded-md"
-                >
-                  <option value="DLF Camellias">DLF Camellias</option>
-                  <option value="Prestige Lakeside">Prestige Lakeside</option>
-                  <option value="Lodha World Towers">Lodha World Towers</option>
-                  <option value="Brigade Cornerstone">Brigade Cornerstone</option>
-                  <option value="Godrej Reflections">Godrej Reflections</option>
-                  <option value="Sobha City Phase IV">Sobha City Phase IV</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-medium text-muted-foreground">Material Carried</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 10 Tons Aggregate"
-                  value={rentMaterial}
-                  onChange={(e) => setRentMaterial(e.target.value)}
-                  className="w-full p-2 bg-background border border-border rounded-md"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Hire Rate (₹)</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 4500"
-                    value={rentRate}
-                    onChange={(e) => setRentRate(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md font-mono"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Helper Charges (₹)</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 500"
-                    value={rentHelper}
-                    onChange={(e) => setRentHelper(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md font-mono"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 mt-2"
-              >
-                <Plus className="size-4" /> Save Rental Booking
-              </button>
-            </form>
-          )}
+            )}
           </div>
         )}
       </div>

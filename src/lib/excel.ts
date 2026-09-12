@@ -17,7 +17,7 @@ export function exportToExcel(
   rows: Record<string, unknown>[],
   filename: string,
   columns?: ExcelColumn[],
-  sheetTitle?: string
+  sheetTitle?: string,
 ): void {
   if (!rows.length) {
     console.warn("exportToExcel: no rows to export");

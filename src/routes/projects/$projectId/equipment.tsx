@@ -13,20 +13,30 @@ function EquipmentPage() {
   const { projectId } = Route.useParams();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
-  const { data: rawEquipment = [] } = useQuery({ queryKey: ["equipment", projectId], queryFn: () => siteControlApi.listEquipment(projectId) });
+  const { data: rawEquipment = [] } = useQuery({
+    queryKey: ["equipment", projectId],
+    queryFn: () => siteControlApi.listEquipment(projectId),
+  });
   const equipment = rawEquipment.map((item) => ({
-    id: String(item.equipmentId ?? ""), name: String(item.name ?? "Unnamed equipment"), type: String(item.type ?? "Other"),
-    status: String(item.status ?? "Active"), operator: String(item.operator ?? "—"), fuelLevel: String(item.fuelLevel ?? "—"),
-    hours: String(item.hours ?? "—"), nextService: String(item.nextService ?? "—"),
+    id: String(item.equipmentId ?? ""),
+    name: String(item.name ?? "Unnamed equipment"),
+    type: String(item.type ?? "Other"),
+    status: String(item.status ?? "Active"),
+    operator: String(item.operator ?? "—"),
+    fuelLevel: String(item.fuelLevel ?? "—"),
+    hours: String(item.hours ?? "—"),
+    nextService: String(item.nextService ?? "—"),
   }));
 
-  const filteredEquipment = equipment.filter(eq => {
-    const matchSearch = eq.name.toLowerCase().includes(search.toLowerCase()) || eq.id.toLowerCase().includes(search.toLowerCase());
+  const filteredEquipment = equipment.filter((eq) => {
+    const matchSearch =
+      eq.name.toLowerCase().includes(search.toLowerCase()) ||
+      eq.id.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "All" || eq.type === typeFilter;
     return matchSearch && matchType;
   });
 
-  const types = ["All", ...Array.from(new Set(equipment.map(e => e.type)))];
+  const types = ["All", ...Array.from(new Set(equipment.map((e) => e.type)))];
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -42,18 +52,43 @@ function EquipmentPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Active on Site", value: equipment.filter(e => e.status === "Active").length, icon: <Cog className="size-5" />, color: "bg-emerald-500/10 text-emerald-600" },
-          { label: "In Maintenance", value: equipment.filter(e => e.status === "In Maintenance").length, icon: <Wrench className="size-5" />, color: "bg-orange-500/10 text-orange-600" },
-          { label: "Idle / Standby", value: equipment.filter(e => e.status === "Idle").length, icon: <Settings className="size-5" />, color: "bg-blue-500/10 text-blue-600" },
-          { label: "Total Assets", value: equipment.length, icon: <Cog className="size-5" />, color: "bg-purple-500/10 text-purple-600" },
-        ].map(stat => (
-          <div key={stat.label} className="p-4 rounded-xl border border-border bg-[color:var(--surface)] flex items-center gap-4">
+          {
+            label: "Active on Site",
+            value: equipment.filter((e) => e.status === "Active").length,
+            icon: <Cog className="size-5" />,
+            color: "bg-emerald-500/10 text-emerald-600",
+          },
+          {
+            label: "In Maintenance",
+            value: equipment.filter((e) => e.status === "In Maintenance").length,
+            icon: <Wrench className="size-5" />,
+            color: "bg-orange-500/10 text-orange-600",
+          },
+          {
+            label: "Idle / Standby",
+            value: equipment.filter((e) => e.status === "Idle").length,
+            icon: <Settings className="size-5" />,
+            color: "bg-blue-500/10 text-blue-600",
+          },
+          {
+            label: "Total Assets",
+            value: equipment.length,
+            icon: <Cog className="size-5" />,
+            color: "bg-purple-500/10 text-purple-600",
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="p-4 rounded-xl border border-border bg-[color:var(--surface)] flex items-center gap-4"
+          >
             <div className={`size-10 rounded-lg flex items-center justify-center ${stat.color}`}>
               {stat.icon}
             </div>
             <div>
               <div className="text-2xl font-display font-bold text-foreground">{stat.value}</div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">{stat.label}</div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+                {stat.label}
+              </div>
             </div>
           </div>
         ))}
@@ -79,7 +114,11 @@ function EquipmentPage() {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="w-full sm:w-auto h-9 pl-9 pr-8 rounded-md bg-background border border-border text-sm focus:outline-none focus:border-primary/50 appearance-none"
               >
-                {types.map(t => <option key={t} value={t}>{t}</option>)}
+                {types.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -100,7 +139,10 @@ function EquipmentPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {filteredEquipment.map((eq) => (
-                <tr key={eq.id} className="hover:bg-secondary/20 transition-colors group cursor-pointer">
+                <tr
+                  key={eq.id}
+                  className="hover:bg-secondary/20 transition-colors group cursor-pointer"
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-secondary text-muted-foreground shrink-0 border border-border/50">
@@ -108,7 +150,9 @@ function EquipmentPage() {
                       </div>
                       <div>
                         <div className="font-semibold text-foreground line-clamp-1">{eq.name}</div>
-                        <div className="text-[11px] font-mono text-muted-foreground mt-0.5">{eq.id}</div>
+                        <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                          {eq.id}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -117,21 +161,21 @@ function EquipmentPage() {
                       {eq.type}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-xs font-medium text-foreground">
-                    {eq.operator}
-                  </td>
-                  <td className="px-6 py-4 text-xs font-mono text-muted-foreground">
-                    {eq.hours}
-                  </td>
+                  <td className="px-6 py-4 text-xs font-medium text-foreground">{eq.operator}</td>
+                  <td className="px-6 py-4 text-xs font-mono text-muted-foreground">{eq.hours}</td>
                   <td className="px-6 py-4 text-xs font-medium text-foreground">
                     {eq.nextService}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      eq.status === "Active" ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
-                      eq.status === "In Maintenance" ? "bg-orange-500/10 text-orange-600 border border-orange-500/20" :
-                      "bg-blue-500/10 text-blue-600 border border-blue-500/20"
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        eq.status === "Active"
+                          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                          : eq.status === "In Maintenance"
+                            ? "bg-orange-500/10 text-orange-600 border border-orange-500/20"
+                            : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                      }`}
+                    >
                       {eq.status}
                     </span>
                   </td>
