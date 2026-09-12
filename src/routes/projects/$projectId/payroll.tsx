@@ -97,11 +97,11 @@ function Page() {
       if (items.length > 0) return items;
     }
 
-    // Default reference data matching reference screenshot when backend cycle is fresh
+    // Default reference data when workers are registered for this project
     if (rawWorkers.length > 0) {
       return rawWorkers.map((w, idx) => {
         const rate = Number(w.rate ?? 800);
-        const days = Number(w.daysPresent ?? 20);
+        const days = Number(w.daysPresent ?? 0);
         const basic = days * rate;
         const hra = Math.round(basic * 0.3);
         const gross = basic + hra;
@@ -122,42 +122,13 @@ function Page() {
           esi,
           tds,
           netPay,
-          status: idx === 0 ? "Paid" : "Pending",
+          status: (w.status as "Paid" | "Pending" | "On Hold") || "Pending",
         };
       });
     }
 
-    // Fallback reference data matching screenshot 2
-    return [
-      {
-        id: "LAB-001",
-        name: "Raju Yadav",
-        code: "LAB-001",
-        category: "Skilled Labour",
-        basic: 15000,
-        hra: 5000,
-        gross: 20000,
-        pf: 0,
-        esi: 0,
-        tds: 0,
-        netPay: 20000,
-        status: "Paid",
-      },
-      {
-        id: "LAB-002",
-        name: "Dinesh Prasad",
-        code: "LAB-002",
-        category: "Unskilled Labour",
-        basic: 12000,
-        hra: 3000,
-        gross: 15000,
-        pf: 0,
-        esi: 0,
-        tds: 0,
-        netPay: 15000,
-        status: "Pending",
-      },
-    ];
+    // Empty state when no workers or backend cycles exist for this project
+    return [];
   }, [backendPayroll, rawWorkers]);
 
   const filteredItems = useMemo(() => {
@@ -426,50 +397,58 @@ function Page() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-secondary/20 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-foreground">{item.name}</div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {item.code} • {item.category}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs">
-                      ₹{item.basic.toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs">
-                      ₹{item.hra.toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs font-semibold text-foreground">
-                      ₹{item.gross.toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs text-muted-foreground">
-                      {item.pf > 0 ? `-₹${item.pf}` : "-"}
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs text-muted-foreground">
-                      {item.esi > 0 ? `-₹${item.esi}` : "-"}
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs text-muted-foreground">
-                      {item.tds > 0 ? `-₹${item.tds}` : "-"}
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-foreground">
-                      ₹{item.netPay.toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
-                          item.status === "Paid"
-                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                            : item.status === "Pending"
-                            ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                            : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                        }`}
-                      >
-                        {item.status}
-                      </span>
+                {filteredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                      No payroll records found for this project yet. Register workers or run payroll to generate records.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-foreground">{item.name}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {item.code} • {item.category}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs">
+                        ₹{item.basic.toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs">
+                        ₹{item.hra.toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs font-semibold text-foreground">
+                        ₹{item.gross.toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs text-muted-foreground">
+                        {item.pf > 0 ? `-₹${item.pf}` : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs text-muted-foreground">
+                        {item.esi > 0 ? `-₹${item.esi}` : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-right text-xs text-muted-foreground">
+                        {item.tds > 0 ? `-₹${item.tds}` : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-foreground">
+                        ₹{item.netPay.toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                            item.status === "Paid"
+                              ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                              : item.status === "Pending"
+                              ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                              : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
               <tfoot className="bg-secondary/40 font-bold border-t border-border">
                 <tr>

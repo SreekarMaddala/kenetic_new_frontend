@@ -186,12 +186,12 @@ function Page() {
       rows.length ? rows : [{ Note: "No attendance data" }],
       `Daily_Site_Attendance_${day}`,
       undefined,
-      `Daily Site Attendance — ${project?.name || "DLF Camellias"}`
+      `Daily Site Attendance — ${project?.name || "Project Site"}`
     );
   };
 
-  const projectName = String(project?.name || "DLF Camellias");
-  const supervisorName = String(user?.name || user?.email?.split("@")[0] || "Amit Mishra");
+  const projectName = String(project?.name || "Project Site");
+  const supervisorName = String(user?.name || user?.email?.split("@")[0] || "Supervisor");
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -233,7 +233,7 @@ function Page() {
               SITE WORKERS PRESENT
             </div>
             <div className="text-2xl font-black text-foreground">
-              {presentCount} / {totalWorkers || 3}
+              {presentCount} / {totalWorkers}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               {nightShiftCount} Workers on Night Shift
