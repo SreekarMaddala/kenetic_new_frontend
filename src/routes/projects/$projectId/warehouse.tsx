@@ -662,16 +662,7 @@ function WarehousePage() {
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">
                     Project
                   </label>
-                  <select className={inputCls}>
-                    {[
-                      "DLF Camellias",
-                      "Lodha World Towers",
-                      "Prestige Lakeside",
-                      "Brigade Cornerstone",
-                    ].map((p) => (
-                      <option key={p}>{p}</option>
-                    ))}
-                  </select>
+                  <input type="text" className={inputCls} placeholder="Destination Project / Site" />
                 </div>
               </div>
               <div>

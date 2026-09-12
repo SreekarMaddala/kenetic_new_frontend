@@ -46,10 +46,7 @@ function LogisticsPage() {
   const [vehicles, setVehicles] = React.useState<any[]>([]);
   const [fuelLogs, setFuelLogs] = React.useState<any[]>([]);
   const [rentalLogs, setRentalLogs] = React.useState<any[]>([]);
-  const [registeredVehicles, setRegisteredVehicles] = React.useState([
-    "Mahindra Bolero (KA-03-MJ-2401)",
-    "Tata Ace (KA-53-E-8812)",
-  ]);
+  const [registeredVehicles, setRegisteredVehicles] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     if (rawLogistics && rawLogistics.length > 0) {
@@ -104,19 +101,19 @@ function LogisticsPage() {
   });
 
   // Form states - Vehicles
-  const [vehName, setVehName] = React.useState("Mahindra Bolero (KA-03-MJ-2401)");
+  const [vehName, setVehName] = React.useState("");
   const [vehDriver, setVehDriver] = React.useState("");
   const [vehStart, setVehStart] = React.useState("");
   const [vehEnd, setVehEnd] = React.useState("");
 
   // Form states - Fuel
-  const [fuelVeh, setFuelVeh] = React.useState("Mahindra Bolero (KA-03-MJ-2401)");
+  const [fuelVeh, setFuelVeh] = React.useState("");
   const [fuelLiters, setFuelLiters] = React.useState("");
-  const [fuelRate, setFuelRate] = React.useState("98.40");
+  const [fuelRate, setFuelRate] = React.useState("");
 
   // Form states - Rental Auto
   const [rentVendor, setRentVendor] = React.useState("");
-  const [rentProj, setRentProj] = React.useState("DLF Camellias");
+  const [rentProj, setRentProj] = React.useState("");
   const [rentMaterial, setRentMaterial] = React.useState("");
   const [rentRate, setRentRate] = React.useState("");
   const [rentHelper, setRentHelper] = React.useState("0");
@@ -139,26 +136,10 @@ function LogisticsPage() {
 
   const isSupervisor = activeRole === "supervisor";
 
-  const filteredVehicles = vehicles.filter((v) => {
-    if (isSupervisor) {
-      return v.driver === "Ramesh Naik";
-    }
-    return true;
-  });
-
-  const filteredFuelLogs = fuelLogs.filter((f) => {
-    if (isSupervisor) {
-      return f.vehicle.includes("Mahindra Bolero");
-    }
-    return true;
-  });
-
-  const filteredRentalLogs = rentalLogs.filter((r) => {
-    if (isSupervisor) {
-      return r.project === "DLF Camellias";
-    }
-    return true;
-  });
+  // Backend already scopes records to this projectId; no client-side name-based filtering.
+  const filteredVehicles = vehicles;
+  const filteredFuelLogs = fuelLogs;
+  const filteredRentalLogs = rentalLogs;
 
   // Global calculations
   const totalKmRun = filteredVehicles.reduce((sum, item) => sum + item.distance, 0);
@@ -273,7 +254,7 @@ function LogisticsPage() {
             <div className="flex gap-2">
               {isSupervisor ? (
                 <div className="text-xs bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 font-mono text-primary font-semibold">
-                  Site: DLF Camellias (Amit Mishra)
+                  Supervisor View
                 </div>
               ) : (
                 <div className="text-xs bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 font-mono text-emerald-600 font-semibold">
@@ -659,18 +640,13 @@ function LogisticsPage() {
                   <label className="font-medium text-muted-foreground">
                     Delivery Site (Project)
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={rentProj}
                     onChange={(e) => setRentProj(e.target.value)}
+                    placeholder="Enter delivery site / project name"
                     className="w-full p-2 bg-background border border-border rounded-md"
-                  >
-                    <option value="DLF Camellias">DLF Camellias</option>
-                    <option value="Prestige Lakeside">Prestige Lakeside</option>
-                    <option value="Lodha World Towers">Lodha World Towers</option>
-                    <option value="Brigade Cornerstone">Brigade Cornerstone</option>
-                    <option value="Godrej Reflections">Godrej Reflections</option>
-                    <option value="Sobha City Phase IV">Sobha City Phase IV</option>
-                  </select>
+                  />
                 </div>
 
                 <div className="space-y-1.5">

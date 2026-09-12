@@ -15,6 +15,8 @@ import {
   X,
 } from "lucide-react";
 import { exportToExcel } from "../../../lib/excel";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { projectCommercialApi, financeApi, type DomainRecord } from "../../../lib/api";
 
 export const Route = createFileRoute("/projects/$projectId/boq")({
   head: () => ({
@@ -55,198 +57,6 @@ interface RaBill {
   items: { description: string; qty: number; rate: number; amount: number }[];
 }
 
-// ── Mock Data ──────────────────────────────────────────────────────────────────
-
-const PROJECTS = [
-  "DLF Camellias",
-  "Lodha World Towers",
-  "Prestige Lakeside",
-  "Brigade Cornerstone",
-];
-
-const BOQ_DATA: BoqItem[] = [
-  {
-    id: "B01",
-    code: "CW-001",
-    description: "Excavation in all types of soil",
-    unit: "Cum",
-    budgetedQty: 1200,
-    rate: 380,
-    amount: 456000,
-    category: "Civil Works",
-    billedQty: 850,
-  },
-  {
-    id: "B02",
-    code: "CW-002",
-    description: "PCC M15 grade (1:2:4)",
-    unit: "Cum",
-    budgetedQty: 240,
-    rate: 4200,
-    amount: 1008000,
-    category: "Civil Works",
-    billedQty: 200,
-  },
-  {
-    id: "B03",
-    code: "CW-003",
-    description: "RCC M30 grade columns & slabs",
-    unit: "Cum",
-    budgetedQty: 820,
-    rate: 7500,
-    amount: 6150000,
-    category: "Civil Works",
-    billedQty: 480,
-  },
-  {
-    id: "B04",
-    code: "CW-004",
-    description: "TMT Fe-500 reinforcement steel",
-    unit: "MT",
-    budgetedQty: 95,
-    rate: 72000,
-    amount: 6840000,
-    category: "Civil Works",
-    billedQty: 58,
-  },
-  {
-    id: "B05",
-    code: "CW-005",
-    description: "Brick masonry in cement mortar 1:6",
-    unit: "Cum",
-    budgetedQty: 640,
-    rate: 3800,
-    amount: 2432000,
-    category: "Civil Works",
-    billedQty: 320,
-  },
-  {
-    id: "B06",
-    code: "FW-001",
-    description: "Internal wall plastering 12mm thk",
-    unit: "Sqm",
-    budgetedQty: 8400,
-    rate: 185,
-    amount: 1554000,
-    category: "Finishing Works",
-    billedQty: 2100,
-  },
-  {
-    id: "B07",
-    code: "FW-002",
-    description: "External wall plastering 20mm thk",
-    unit: "Sqm",
-    budgetedQty: 3200,
-    rate: 220,
-    amount: 704000,
-    category: "Finishing Works",
-    billedQty: 0,
-  },
-  {
-    id: "B08",
-    code: "FW-003",
-    description: "Vitrified floor tiles 600x600mm",
-    unit: "Sqm",
-    budgetedQty: 4800,
-    rate: 650,
-    amount: 3120000,
-    category: "Finishing Works",
-    billedQty: 800,
-  },
-  {
-    id: "B09",
-    code: "FW-004",
-    description: "OBD paint 2 coats internal",
-    unit: "Sqm",
-    budgetedQty: 9200,
-    rate: 95,
-    amount: 874000,
-    category: "Finishing Works",
-    billedQty: 0,
-  },
-  {
-    id: "B10",
-    code: "EP-001",
-    description: "PVC conduit 25mm concealed wiring",
-    unit: "Rmt",
-    budgetedQty: 12000,
-    rate: 82,
-    amount: 984000,
-    category: "Electrical",
-    billedQty: 6200,
-  },
-  {
-    id: "B11",
-    code: "EP-002",
-    description: "MCB Distribution board 8-way",
-    unit: "Nos",
-    budgetedQty: 120,
-    rate: 2200,
-    amount: 264000,
-    category: "Electrical",
-    billedQty: 45,
-  },
-  {
-    id: "B12",
-    code: "PL-001",
-    description: "CPVC hot/cold plumbing 25mm",
-    unit: "Rmt",
-    budgetedQty: 8500,
-    rate: 145,
-    amount: 1232500,
-    category: "Plumbing",
-    billedQty: 3200,
-  },
-];
-
-const RA_BILLS: RaBill[] = [
-  {
-    id: "RA1",
-    project: "DLF Camellias",
-    billNo: "RA/DLF/001",
-    date: "30 Jun 2026",
-    from: "01 Apr 2026",
-    to: "30 Jun 2026",
-    amount: 4820000,
-    status: "Certified",
-    items: [
-      { description: "Excavation in all types of soil", qty: 850, rate: 380, amount: 323000 },
-      { description: "PCC M15 grade", qty: 200, rate: 4200, amount: 840000 },
-      { description: "RCC M30 grade", qty: 480, rate: 7500, amount: 3600000 },
-      { description: "TMT Fe-500 steel", qty: 15, rate: 72000, amount: 1080000 },
-    ],
-  },
-  {
-    id: "RA2",
-    project: "Lodha World Towers",
-    billNo: "RA/LWT/002",
-    date: "30 Jun 2026",
-    from: "01 May 2026",
-    to: "30 Jun 2026",
-    amount: 2950000,
-    status: "Submitted",
-    items: [
-      { description: "PVC conduit wiring 25mm", qty: 6200, rate: 82, amount: 508400 },
-      { description: "CPVC plumbing 25mm", qty: 3200, rate: 145, amount: 464000 },
-      { description: "MCB DB 8-way", qty: 45, rate: 2200, amount: 99000 },
-    ],
-  },
-  {
-    id: "RA3",
-    project: "Prestige Lakeside",
-    billNo: "RA/PL/001",
-    date: "15 Jul 2026",
-    from: "01 Jun 2026",
-    to: "14 Jul 2026",
-    amount: 1840000,
-    status: "Draft",
-    items: [
-      { description: "Brick masonry 1:6", qty: 320, rate: 3800, amount: 1216000 },
-      { description: "Internal plastering 12mm", qty: 2100, rate: 185, amount: 388500 },
-    ],
-  },
-];
-
 // ── Status helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_STYLE: Record<RaBill["status"], { color: string; bg: string; border: string }> = {
@@ -273,11 +83,62 @@ const fmt = (n: number) => "₹" + n.toLocaleString("en-IN");
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 function BoqPage() {
+  const { projectId } = Route.useParams();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"boq" | "ra">("boq");
-  const [selectedProject, setSelectedProject] = useState("DLF Camellias");
   const [expandedCategory, setExpandedCategory] = useState<string | null>("Civil Works");
   const [expandedRa, setExpandedRa] = useState<string | null>(null);
   const [showNewRa, setShowNewRa] = useState(false);
+
+  const { data: rawBoq = [], isLoading: boqLoading } = useQuery({
+    queryKey: ["boq", projectId],
+    queryFn: () => projectCommercialApi.listBoq(projectId),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const { data: rawBills = [], isLoading: billsLoading } = useQuery({
+    queryKey: ["bills", projectId],
+    queryFn: () => financeApi.listBills(projectId),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const createBoqMutation = useMutation({
+    mutationFn: (body: DomainRecord) => projectCommercialApi.createBoq(projectId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boq", projectId] });
+      toast.success("BOQ item added.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  void createBoqMutation;
+
+  const BOQ_DATA: BoqItem[] = rawBoq.map((item: DomainRecord, idx: number) => ({
+    id: (item.boqId as string) ?? `B${String(idx + 1).padStart(2, "0")}`,
+    code: (item.code as string) ?? `ITEM-${idx + 1}`,
+    description: (item.description as string) ?? (item.name as string) ?? "Item",
+    unit: (item.unit as string) ?? "Nos",
+    budgetedQty: typeof item.budgetedQty === "number" ? (item.budgetedQty as number) : 0,
+    rate: typeof item.rate === "number" ? (item.rate as number) : 0,
+    amount: typeof item.amount === "number" ? (item.amount as number) : (typeof item.budgetedQty === "number" && typeof item.rate === "number" ? (item.budgetedQty as number) * (item.rate as number) : 0),
+    category: (item.category as string) ?? "General",
+    billedQty: typeof item.billedQty === "number" ? (item.billedQty as number) : 0,
+  }));
+
+  const RA_BILLS: RaBill[] = rawBills.map((item: DomainRecord, idx: number) => ({
+    id: (item.billId as string) ?? `RA${idx + 1}`,
+    project: (item.projectId as string) ?? projectId,
+    billNo: (item.billNumber as string) ?? `RA/${idx + 1}`,
+    date: (item.date as string) ?? (item.createdAt as string)?.split("T")[0] ?? "—",
+    from: (item.periodFrom as string) ?? "—",
+    to: (item.periodTo as string) ?? "—",
+    amount: typeof item.netPayable === "number" ? (item.netPayable as number) : typeof item.grossAmount === "number" ? (item.grossAmount as number) : 0,
+    status: ((item.status as string) ?? "Draft") as RaBill["status"],
+    items: Array.isArray(item.items) ? (item.items as RaBill["items"]) : [],
+  }));
+
+  const isLoading = boqLoading || billsLoading;
 
   const categories = [...new Set(BOQ_DATA.map((b) => b.category))];
   const totalBudget = BOQ_DATA.reduce((s, b) => s + b.amount, 0);

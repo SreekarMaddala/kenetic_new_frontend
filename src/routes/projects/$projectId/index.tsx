@@ -43,7 +43,7 @@ function ProjectDetailsPage() {
   const selectedProject = React.useMemo(() => {
     if (!rawProject) return undefined;
     const item = rawProject as unknown as Record<string, unknown>;
-    const supervisorName = (item.supervisor as string) || "Amit Mishra";
+    const supervisorName = (item.supervisor as string) || "";
     return {
       id: rawProject.projectId,
       name: rawProject.name,
@@ -114,7 +114,7 @@ function ProjectDetailsPage() {
   const [expPaidBy, setExpPaidBy] = React.useState("");
 
   // In-Detail Timeline Allocation State
-  const [detailTimelineName, setDetailTimelineName] = React.useState("Amit Mishra");
+  const [detailTimelineName, setDetailTimelineName] = React.useState("");
   const [detailTimelinePhase, setDetailTimelinePhase] = React.useState("");
   const [detailTimelineStart, setDetailTimelineStart] = React.useState("");
   const [detailTimelineEnd, setDetailTimelineEnd] = React.useState("");
@@ -655,7 +655,7 @@ function ProjectDetailsPage() {
                 title: "Level 17 Pouring Concrete Check",
                 date: "12 Jul 2026, 07:04 AM",
                 gps: "28.459512, 77.026634",
-                uploader: "Amit Mishra (Supervisor)",
+                uploader: "Supervisor",
                 img: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=400&q=80",
                 tag: "Slab Casting",
               },
@@ -824,19 +824,15 @@ function ProjectDetailsPage() {
 
             <form onSubmit={handleAddTimelineItemToProject} className="space-y-4 text-xs">
               <div className="space-y-1.5">
-                <label className="font-medium text-muted-foreground">Select Supervisor</label>
-                <select
+                <label className="font-medium text-muted-foreground">Supervisor Name</label>
+                <input
+                  type="text"
+                  placeholder="Enter supervisor name"
                   value={detailTimelineName}
                   onChange={(e) => setDetailTimelineName(e.target.value)}
                   className="w-full p-2.5 bg-background border border-border rounded-lg text-xs text-foreground"
-                >
-                  <option value="Amit Mishra">Amit Mishra (Structural Concrete)</option>
-                  <option value="Vikram Rao">Vikram Rao (Piling & Foundation)</option>
-                  <option value="Priya Menon">Priya Menon (MEP Systems)</option>
-                  <option value="Suresh Iyer">Suresh Iyer (Safety & Quality Control)</option>
-                  <option value="Rajesh Nair">Rajesh Nair (Finishing Works)</option>
-                  <option value="Ananya Reddy">Ananya Reddy (Excavation Ops)</option>
-                </select>
+                  required
+                />
               </div>
 
               <div className="space-y-1.5">

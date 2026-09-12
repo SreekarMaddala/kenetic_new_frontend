@@ -19,6 +19,8 @@ import {
   Filter,
 } from "lucide-react";
 import { exportToExcel } from "../../../lib/excel";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { projectCommercialApi, type DomainRecord } from "../../../lib/api";
 
 export const Route = createFileRoute("/projects/$projectId/subcontractors")({
   head: () => ({
@@ -67,177 +69,6 @@ interface MaterialProcurementRequest {
   raisedOn: string;
   remark: string;
 }
-
-// ── Mock Data ──────────────────────────────────────────────────────────────────
-
-const CONTRACTORS: SubContractor[] = [
-  {
-    id: "SC1",
-    name: "Ravi Kumar",
-    company: "Kumar Civil Works",
-    initials: "KC",
-    trade: "Civil & Structural",
-    site: "DLF Camellias",
-    phone: "+91 98100 11223",
-    contractValue: "₹2.4Cr",
-    openMprs: 3,
-    status: "Active",
-    color: "hsl(158,64%,38%)",
-  },
-  {
-    id: "SC2",
-    name: "Suresh Mehta",
-    company: "Mehta MEP Solutions",
-    initials: "MM",
-    trade: "Mechanical, Electrical & Plumbing",
-    site: "Lodha World Towers",
-    phone: "+91 87654 44321",
-    contractValue: "₹1.8Cr",
-    openMprs: 5,
-    status: "Active",
-    color: "hsl(210,80%,55%)",
-  },
-  {
-    id: "SC3",
-    name: "Anita Sharma",
-    company: "Sharma Interiors",
-    initials: "SI",
-    trade: "Interior Finishing & Fit-out",
-    site: "Prestige Lakeside",
-    phone: "+91 99201 77654",
-    contractValue: "₹90L",
-    openMprs: 2,
-    status: "Active",
-    color: "hsl(280,65%,60%)",
-  },
-  {
-    id: "SC4",
-    name: "Mohan Reddy",
-    company: "Reddy Waterproofing Co.",
-    initials: "RW",
-    trade: "Waterproofing & Tiling",
-    site: "Brigade Cornerstone",
-    phone: "+91 90090 55667",
-    contractValue: "₹55L",
-    openMprs: 1,
-    status: "Active",
-    color: "hsl(22,90%,48%)",
-  },
-  {
-    id: "SC5",
-    name: "Deepak Joshi",
-    company: "Joshi Steel Fabricators",
-    initials: "JS",
-    trade: "Steel Fabrication & Erection",
-    site: "Godrej Reflections",
-    phone: "+91 88001 23456",
-    contractValue: "₹3.1Cr",
-    openMprs: 0,
-    status: "Inactive",
-    color: "hsl(40,90%,48%)",
-  },
-];
-
-const INITIAL_MPRS: MaterialProcurementRequest[] = [
-  {
-    id: "MPR-1001",
-    contractorId: "SC1",
-    contractorName: "Kumar Civil Works",
-    site: "DLF Camellias",
-    item: "OPC Cement 53 Grade",
-    quantity: "300",
-    unit: "Bags",
-    estimatedCost: "₹1,32,000",
-    urgency: "Urgent",
-    status: "Pending",
-    raisedOn: "12 Jul 2026",
-    remark: "Required for slab casting on 6th floor, scheduled for 14 Jul",
-  },
-  {
-    id: "MPR-1002",
-    contractorId: "SC2",
-    contractorName: "Mehta MEP Solutions",
-    site: "Lodha World Towers",
-    item: "GI Conduit 25mm",
-    quantity: "800",
-    unit: "Meters",
-    estimatedCost: "₹64,000",
-    urgency: "Normal",
-    status: "Approved",
-    raisedOn: "11 Jul 2026",
-    remark: "For electrical rough-in, Tower B floors 10–14",
-  },
-  {
-    id: "MPR-1003",
-    contractorId: "SC2",
-    contractorName: "Mehta MEP Solutions",
-    site: "Lodha World Towers",
-    item: "CPVC Pipes 1 inch",
-    quantity: "500",
-    unit: "Meters",
-    estimatedCost: "₹45,000",
-    urgency: "Normal",
-    status: "Dispatched",
-    raisedOn: "10 Jul 2026",
-    remark: "Plumbing risers — Tower A",
-  },
-  {
-    id: "MPR-1004",
-    contractorId: "SC3",
-    contractorName: "Sharma Interiors",
-    site: "Prestige Lakeside",
-    item: "Gypsum Board 12mm",
-    quantity: "1200",
-    unit: "Sheets",
-    estimatedCost: "₹2,16,000",
-    urgency: "Normal",
-    status: "Delivered",
-    raisedOn: "8 Jul 2026",
-    remark: "False ceiling for amenity floor",
-  },
-  {
-    id: "MPR-1005",
-    contractorId: "SC1",
-    contractorName: "Kumar Civil Works",
-    site: "DLF Camellias",
-    item: "TMT Steel 16mm",
-    quantity: "8",
-    unit: "Tons",
-    estimatedCost: "₹5,60,000",
-    urgency: "Critical",
-    status: "Pending",
-    raisedOn: "12 Jul 2026",
-    remark: "Column reinforcement — basement to 2nd floor, cannot delay",
-  },
-  {
-    id: "MPR-1006",
-    contractorId: "SC4",
-    contractorName: "Reddy Waterproofing Co.",
-    site: "Brigade Cornerstone",
-    item: "SBR Waterproofing Compound",
-    quantity: "200",
-    unit: "Kgs",
-    estimatedCost: "₹28,000",
-    urgency: "Normal",
-    status: "Approved",
-    raisedOn: "11 Jul 2026",
-    remark: "Terrace waterproofing coat 2",
-  },
-  {
-    id: "MPR-1007",
-    contractorId: "SC2",
-    contractorName: "Mehta MEP Solutions",
-    site: "Lodha World Towers",
-    item: "MCB Distribution Board 8-way",
-    quantity: "20",
-    unit: "Units",
-    estimatedCost: "₹40,000",
-    urgency: "Urgent",
-    status: "Pending",
-    raisedOn: "12 Jul 2026",
-    remark: "Apartment distribution boards — Tower B",
-  },
-];
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
 
@@ -467,7 +298,42 @@ function RaiseMprModal({
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 function SubContractorsPage() {
-  const [mprs, setMprs] = useState<MaterialProcurementRequest[]>(INITIAL_MPRS);
+  const { projectId } = Route.useParams();
+  const queryClient = useQueryClient();
+
+  const { data: rawContractors = [], isLoading: contractorsLoading } = useQuery({
+    queryKey: ["subcontractors", projectId],
+    queryFn: () => projectCommercialApi.listSubcontractors(projectId),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const CONTRACTORS: SubContractor[] = rawContractors.map((item: DomainRecord, idx: number) => ({
+    id: (item.subcontractorId as string) ?? `SC${idx + 1}`,
+    name: (item.contactPerson as string) ?? (item.name as string) ?? "Subcontractor",
+    company: (item.name as string) ?? "Company",
+    initials: ((item.name as string) ?? "SC").substring(0, 2).toUpperCase(),
+    trade: (item.trade as string) ?? (item.type as string) ?? "Construction",
+    site: (item.site as string) ?? "",
+    phone: (item.phone as string) ?? "",
+    contractValue: item.contractValue ? `₹${item.contractValue}` : "—",
+    openMprs: typeof item.openMprs === "number" ? (item.openMprs as number) : 0,
+    status: ((item.status as string) ?? "Active") as SubContractor["status"],
+    color: `hsl(${(idx * 60) % 360},64%,42%)`,
+  }));
+
+  const createSubcontractorMutation = useMutation({
+    mutationFn: (body: DomainRecord) => projectCommercialApi.createSubcontractor(projectId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subcontractors", projectId] });
+      toast.success("Subcontractor added.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  void createSubcontractorMutation; // available for future use
+
+  // MPRs remain as local state (not yet persisted to backend)
+  const [mprs, setMprs] = useState<MaterialProcurementRequest[]>([]);
   const [filterStatus, setFilterStatus] = useState<MprStatus | "All">("All");
   const [selectedContractor, setSelectedContractor] = useState<string>("All");
   const [showRaiseMpr, setShowRaiseMpr] = useState(false);

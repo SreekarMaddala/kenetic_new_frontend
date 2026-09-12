@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { exportToExcel } from "../../../lib/excel";
 import { useProject } from "../../../lib/ProjectContext";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { financeApi, type Bill, type Expense } from "../../../lib/api";
 
 export const Route = createFileRoute("/projects/$projectId/payments")({
   head: () => ({
@@ -51,154 +53,6 @@ interface Voucher {
   remarks: string;
 }
 
-const VOUCHERS: Voucher[] = [
-  {
-    id: "V1",
-    vNo: "PV-2401",
-    date: "12 Jul 2026",
-    type: "Payment",
-    payee: "UltraTech Cement Ltd",
-    project: "DLF Camellias",
-    category: "Material Payment",
-    amount: 352000,
-    mode: "NEFT",
-    status: "Approved",
-    reference: "INV/UTC/2026/0441",
-    remarks: "Against PO-1041 GRN-0421",
-  },
-  {
-    id: "V2",
-    vNo: "EV-1201",
-    date: "12 Jul 2026",
-    type: "Expense",
-    payee: "Vikas Kulkarni",
-    project: "Head Office",
-    category: "Travel & Conveyance",
-    amount: 8500,
-    mode: "Cash",
-    status: "Approved",
-    reference: "EXP/VK/1201",
-    remarks: "Site visit Pune & Bangalore",
-  },
-  {
-    id: "V3",
-    vNo: "PV-2402",
-    date: "11 Jul 2026",
-    type: "Payment",
-    payee: "SK Builders (Sub-con)",
-    project: "Lodha World Towers",
-    category: "Sub-contractor Bill",
-    amount: 485000,
-    mode: "RTGS",
-    status: "Approved",
-    reference: "SKB/RA/002",
-    remarks: "RA Bill 2 — Plastering work",
-  },
-  {
-    id: "V4",
-    vNo: "EV-1202",
-    date: "11 Jul 2026",
-    type: "Expense",
-    payee: "Site Canteen",
-    project: "DLF Camellias",
-    category: "Site Welfare",
-    amount: 12000,
-    mode: "UPI",
-    status: "Pending",
-    reference: "CNTN/JUL/11",
-    remarks: "Monthly canteen subsidy",
-  },
-  {
-    id: "V5",
-    vNo: "PV-2403",
-    date: "10 Jul 2026",
-    type: "Payment",
-    payee: "Liebherr Cranes India",
-    project: "DLF Camellias",
-    category: "Equipment Rental",
-    amount: 900000,
-    mode: "NEFT",
-    status: "Approved",
-    reference: "LC/INV/0621",
-    remarks: "Monthly crane hire — June",
-  },
-  {
-    id: "V6",
-    vNo: "EV-1203",
-    date: "10 Jul 2026",
-    type: "Expense",
-    payee: "Amazon Business",
-    project: "Head Office",
-    category: "Office Supplies",
-    amount: 4200,
-    mode: "Cheque",
-    status: "Approved",
-    reference: "AMZ/ORD/8821",
-    remarks: "Stationery & printing",
-  },
-  {
-    id: "V7",
-    vNo: "PV-2404",
-    date: "09 Jul 2026",
-    type: "Payment",
-    payee: "Kajaria Ceramics",
-    project: "Prestige Lakeside",
-    category: "Material Payment",
-    amount: 840000,
-    mode: "RTGS",
-    status: "Approved",
-    reference: "KAJ/INV/0990",
-    remarks: "Part payment against PO-1040",
-  },
-  {
-    id: "V8",
-    vNo: "EV-1204",
-    date: "08 Jul 2026",
-    type: "Expense",
-    payee: "Diesel — Indian Oil",
-    project: "Brigade Cornerstone",
-    category: "Fuel",
-    amount: 25500,
-    mode: "Cash",
-    status: "Approved",
-    reference: "FUEL/BC/0812",
-    remarks: "Excavator + dewatering pump",
-  },
-  {
-    id: "V9",
-    vNo: "PV-2405",
-    date: "07 Jul 2026",
-    type: "Payment",
-    payee: "Wipro Infrastructure",
-    project: "Lodha World Towers",
-    category: "MEP Contract",
-    amount: 750000,
-    mode: "NEFT",
-    status: "Pending",
-    reference: "WIP/RA/003",
-    remarks: "Electrical work RA-3",
-  },
-  {
-    id: "V10",
-    vNo: "PV-2406",
-    date: "05 Jul 2026",
-    type: "Payment",
-    payee: "HDFC Bank — EMI",
-    project: "Head Office",
-    category: "Loan Repayment",
-    amount: 185000,
-    mode: "NEFT",
-    status: "Approved",
-    reference: "HDFC/LON/EMI7",
-    remarks: "Equipment loan EMI",
-  },
-];
-
-const STATUS_COLOR: Record<VStatus, string> = {
-  Approved: "hsl(158,64%,42%)",
-  Pending: "hsl(40,90%,52%)",
-  Rejected: "hsl(0,72%,55%)",
-};
 const MODE_COLOR: Record<PayMode, string> = {
   NEFT: "hsl(210,80%,58%)",
   RTGS: "hsl(280,65%,60%)",
@@ -207,31 +61,87 @@ const MODE_COLOR: Record<PayMode, string> = {
   UPI: "hsl(158,64%,42%)",
 };
 
-const PROJECT_PHOTOS: Record<string, string> = {
-  "DLF Camellias":
-    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
-  "Lodha World Towers":
-    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80",
-  "Prestige Lakeside":
-    "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80",
-  "Brigade Cornerstone":
-    "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&w=800&q=80",
-  "Head Office":
-    "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80",
-};
-
 export function PaymentsPage() {
+  const { projectId } = Route.useParams();
   const { project } = useProject();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<"vouchers" | "summary">("vouchers");
   const [filterType, setFilterType] = useState<VoucherType | "All">("All");
   const [showModal, setShowModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<string>("All");
 
-  const projectFilteredVouchers = project
-    ? VOUCHERS.filter((v) => v.project === project.name)
-    : VOUCHERS;
-  const allVendors = Array.from(new Set(projectFilteredVouchers.map((v) => v.payee)));
-  const globalFilteredVouchers = projectFilteredVouchers.filter(
+  // Form state for new voucher
+  const [newType, setNewType] = useState<VoucherType>("Payment");
+  const [newDate, setNewDate] = useState(new Date().toISOString().split("T")[0]);
+  const [newPayee, setNewPayee] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+  const [newMode, setNewMode] = useState<PayMode>("NEFT");
+  const [newRemarks, setNewRemarks] = useState("");
+
+  const { data: bills = [], isLoading: billsLoading } = useQuery({
+    queryKey: ["bills", projectId],
+    queryFn: () => financeApi.listBills(projectId),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const { data: expenses = [], isLoading: expensesLoading } = useQuery({
+    queryKey: ["payments-expenses", projectId],
+    queryFn: () => financeApi.listExpenses(projectId),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const createBillMutation = useMutation({
+    mutationFn: (body: Parameters<typeof financeApi.createBill>[1]) =>
+      financeApi.createBill(projectId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bills", projectId] });
+      toast.success("Voucher created & sent for approval");
+      setShowModal(false);
+      setNewPayee("");
+      setNewAmount("");
+      setNewRemarks("");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Combine bills + expenses into a unified Voucher[] display shape
+  const VOUCHERS: Voucher[] = [
+    ...bills.map((b: Bill, idx: number): Voucher => ({
+      id: b.billId,
+      vNo: b.billNumber ?? `PV-${String(idx + 1).padStart(4, "0")}`,
+      date: b.date ?? b.createdAt?.split("T")[0] ?? "—",
+      type: "Payment",
+      payee: b.clientOrContractor,
+      project: project?.name ?? projectId,
+      category: b.type ?? "Bill",
+      amount: b.netPayable ?? b.grossAmount,
+      mode: "NEFT",
+      status: (b.status as VStatus) ?? "Pending",
+      reference: b.billNumber ?? "",
+      remarks: "",
+    })),
+    ...expenses.map((e: Expense, idx: number): Voucher => ({
+      id: e.expenseId ?? `EXP-${idx}`,
+      vNo: e.expenseId ?? `EV-${String(idx + 1).padStart(4, "0")}`,
+      date: e.date ?? e.createdAt?.split("T")[0] ?? "—",
+      type: "Expense",
+      payee: e.submittedBy ?? "—",
+      project: project?.name ?? projectId,
+      category: e.category,
+      amount: e.amount,
+      mode: "Cash",
+      status: (e.status as VStatus) ?? "Pending",
+      reference: "",
+      remarks: e.description,
+    })),
+  ].sort((a, b) => (a.date > b.date ? -1 : 1));
+
+  const isLoading = billsLoading || expensesLoading;
+
+  const allVendors = Array.from(new Set(VOUCHERS.map((v) => v.payee)));
+  const globalFilteredVouchers = VOUCHERS.filter(
     (v) => selectedVendor === "All" || v.payee === selectedVendor,
   );
 
@@ -296,7 +206,7 @@ export function PaymentsPage() {
                     Status: v.status,
                     Reference: v.reference,
                   })),
-                  "Kinetic_Payments_July2026",
+                  `Kinetic_Payments_${project?.name ?? projectId}`,
                   undefined,
                   "Payments & Expenses",
                 );
@@ -422,6 +332,12 @@ export function PaymentsPage() {
             ))}
           </div>
 
+          {isLoading && (
+            <div className="py-12 text-center text-muted-foreground text-sm">
+              Loading vouchers…
+            </div>
+          )}
+
           <div className="space-y-3">
             {filtered.map((v) => {
               const accentColor =
@@ -432,14 +348,14 @@ export function PaymentsPage() {
                 v.type === "Payment"
                   ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
                   : "bg-orange-500/10 text-orange-600 dark:text-orange-400";
-              const statusColors = {
+              const statusColors: Record<VStatus, string> = {
                 Approved:
                   "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
                 Pending:
                   "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20 animate-pulse",
                 Rejected: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
               };
-              const statusIcons = {
+              const statusIcons: Record<VStatus, React.ReactNode> = {
                 Approved: <CheckCircle2 className="size-3.5 shrink-0" />,
                 Pending: <Clock className="size-3.5 shrink-0" />,
                 Rejected: <XCircle className="size-3.5 shrink-0" />,
@@ -455,9 +371,9 @@ export function PaymentsPage() {
                       className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${typeLabelColor} shadow-sm group-hover:scale-105 transition-transform`}
                     >
                       {v.type === "Payment" ? (
-                        <CreditCard className="size-4.5" />
+                        <CreditCard className="size-4" />
                       ) : (
-                        <Receipt className="size-4.5" />
+                        <Receipt className="size-4" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -488,7 +404,7 @@ export function PaymentsPage() {
                               className="italic text-[11px] truncate max-w-[280px]"
                               title={v.remarks}
                             >
-                              "{v.remarks}"
+                              &ldquo;{v.remarks}&rdquo;
                             </span>
                           </>
                         )}
@@ -536,17 +452,20 @@ export function PaymentsPage() {
               );
             })}
           </div>
+
+          {!isLoading && filtered.length === 0 && (
+            <div className="py-12 text-center text-muted-foreground text-sm">
+              No vouchers found for this project.
+            </div>
+          )}
         </div>
       )}
 
       {tab === "summary" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up">
-          {projectSummary.map((p, idx) => {
+          {projectSummary.map((p) => {
             const total = totalPayments + totalExpenses;
             const pct = total > 0 ? Math.round((p.payments / total) * 100) : 0;
-            const photo =
-              PROJECT_PHOTOS[p.project] ||
-              "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80";
             const projectVouchers = globalFilteredVouchers.filter((v) => v.project === p.project);
 
             return (
@@ -555,12 +474,7 @@ export function PaymentsPage() {
                 className="bg-[color:var(--surface)] border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col hover:border-border-hover group"
               >
                 {/* Visual Header */}
-                <div className="relative h-28 w-full overflow-hidden shrink-0">
-                  <img
-                    src={photo}
-                    alt={p.project}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
+                <div className="relative h-28 w-full overflow-hidden shrink-0 bg-gradient-to-br from-primary/20 to-primary/5">
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                   <div className="absolute bottom-4 left-5 text-white">
                     <h3 className="font-display font-semibold text-lg drop-shadow-md">
@@ -625,6 +539,12 @@ export function PaymentsPage() {
               </div>
             );
           })}
+
+          {projectSummary.length === 0 && (
+            <div className="col-span-2 py-12 text-center text-muted-foreground text-sm">
+              No payment data available for this project.
+            </div>
+          )}
         </div>
       )}
 
@@ -656,16 +576,25 @@ export function PaymentsPage() {
                   <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                     Voucher Type
                   </label>
-                  <select className={inputCls}>
-                    <option>Payment</option>
-                    <option>Expense</option>
+                  <select
+                    className={inputCls}
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value as VoucherType)}
+                  >
+                    <option value="Payment">Payment</option>
+                    <option value="Expense">Expense</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                     Date
                   </label>
-                  <input type="date" className={inputCls} />
+                  <input
+                    type="date"
+                    className={inputCls}
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                  />
                 </div>
               </div>
 
@@ -673,7 +602,12 @@ export function PaymentsPage() {
                 <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                   Payee / Vendor *
                 </label>
-                <input className={inputCls} placeholder="e.g. UltraTech Cement Ltd" />
+                <input
+                  className={inputCls}
+                  placeholder="Enter payee or vendor name"
+                  value={newPayee}
+                  onChange={(e) => setNewPayee(e.target.value)}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -681,35 +615,28 @@ export function PaymentsPage() {
                   <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                     Amount (₹) *
                   </label>
-                  <input type="number" className={inputCls} placeholder="e.g. 150000" />
+                  <input
+                    type="number"
+                    className={inputCls}
+                    placeholder="0"
+                    value={newAmount}
+                    onChange={(e) => setNewAmount(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                     Payment Mode
                   </label>
-                  <select className={inputCls}>
-                    {["NEFT", "RTGS", "Cheque", "Cash", "UPI"].map((m) => (
+                  <select
+                    className={inputCls}
+                    value={newMode}
+                    onChange={(e) => setNewMode(e.target.value as PayMode)}
+                  >
+                    {(["NEFT", "RTGS", "Cheque", "Cash", "UPI"] as PayMode[]).map((m) => (
                       <option key={m}>{m}</option>
                     ))}
                   </select>
                 </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
-                  Allocated Project
-                </label>
-                <select className={inputCls} defaultValue={project?.name}>
-                  {[
-                    "DLF Camellias",
-                    "Lodha World Towers",
-                    "Prestige Lakeside",
-                    "Brigade Cornerstone",
-                    "Head Office",
-                  ].map((p) => (
-                    <option key={p}>{p}</option>
-                  ))}
-                </select>
               </div>
 
               <div>
@@ -720,6 +647,8 @@ export function PaymentsPage() {
                   rows={2}
                   className="w-full px-3 py-2 border border-border rounded-lg bg-[color:var(--surface)] text-sm resize-none focus:ring-1 focus:ring-primary outline-none transition-shadow"
                   placeholder="Invoice ref, bill number, work order allocation..."
+                  value={newRemarks}
+                  onChange={(e) => setNewRemarks(e.target.value)}
                 />
               </div>
             </div>
@@ -733,12 +662,23 @@ export function PaymentsPage() {
               </button>
               <button
                 onClick={() => {
-                  toast.success("Voucher created & sent for approval");
-                  setShowModal(false);
+                  if (!newPayee || !newAmount) {
+                    toast.error("Payee and Amount are required.");
+                    return;
+                  }
+                  createBillMutation.mutate({
+                    billNumber: `PV-${Date.now()}`,
+                    clientOrContractor: newPayee,
+                    grossAmount: parseFloat(newAmount),
+                    netPayable: parseFloat(newAmount),
+                    type: newType,
+                    date: newDate,
+                  });
                 }}
-                className="flex-1 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                disabled={createBillMutation.isPending}
+                className="flex-1 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                Create Voucher
+                {createBillMutation.isPending ? "Creating…" : "Create Voucher"}
               </button>
             </div>
           </div>

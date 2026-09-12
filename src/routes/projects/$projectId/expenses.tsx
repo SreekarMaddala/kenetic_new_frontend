@@ -7,63 +7,29 @@ import {
   Plus,
   Receipt,
   IndianRupee,
-  TrendingUp,
   MoreHorizontal,
   Clock,
+  X,
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { financeApi, type Expense } from "../../../lib/api";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/projects/$projectId/expenses")({
+  head: () => ({
+    meta: [
+      { title: "Site Expenses — Kinetic" },
+      {
+        name: "description",
+        content: "Project expense claims, petty cash, and overheads.",
+      },
+    ],
+  }),
   component: ExpensesPage,
 });
 
-const EXPENSES_DATA = [
-  {
-    id: "EXP-1045",
-    category: "Petty Cash",
-    desc: "Site office tea/snacks",
-    amount: "₹4,500",
-    date: "16 Jul 2026",
-    submittedBy: "Amit Mishra",
-    status: "Approved",
-  },
-  {
-    id: "EXP-1044",
-    category: "Logistics",
-    desc: "Emergency diesel for generator",
-    amount: "₹18,200",
-    date: "15 Jul 2026",
-    submittedBy: "Rajesh Kumar",
-    status: "Paid",
-  },
-  {
-    id: "EXP-1043",
-    category: "Materials",
-    desc: "Local hardware purchase (screws/nails)",
-    amount: "₹3,450",
-    date: "14 Jul 2026",
-    submittedBy: "Amit Mishra",
-    status: "Pending",
-  },
-  {
-    id: "EXP-1042",
-    category: "Overheads",
-    desc: "Internet & electricity bill for site office",
-    amount: "₹12,000",
-    date: "10 Jul 2026",
-    submittedBy: "Priya Sharma",
-    status: "Paid",
-  },
-  {
-    id: "EXP-1041",
-    category: "Travel",
-    desc: "Taxi fare for architect site visit",
-    amount: "₹1,200",
-    date: "05 Jul 2026",
-    submittedBy: "Amit Mishra",
-    status: "Approved",
-  },
-];
+const fmt = (n: number) => "₹" + n.toLocaleString("en-IN");
 
 function MetricCard({
   label,
@@ -93,18 +59,53 @@ function MetricCard({
 
 function ExpensesPage() {
   const { projectId } = Route.useParams();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [showModal, setShowModal] = useState(false);
 
-  const filteredExpenses = EXPENSES_DATA.filter((exp) => {
+  // Form state
+  const [newCategory, setNewCategory] = useState("Petty Cash");
+  const [newDesc, setNewDesc] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+  const [newDate, setNewDate] = useState(new Date().toISOString().split("T")[0]);
+
+  const { data: expenses = [], isLoading } = useQuery({
+    queryKey: ["expenses", projectId],
+    queryFn: () => financeApi.listExpenses(projectId),
+    enabled: !!projectId,
+    retry: 1,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (body: Parameters<typeof financeApi.createExpense>[1]) =>
+      financeApi.createExpense(projectId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expenses", projectId] });
+      toast.success("Expense submitted.");
+      setShowModal(false);
+      setNewDesc("");
+      setNewAmount("");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const filteredExpenses = expenses.filter((exp: Expense) => {
     const matchSearch =
-      exp.desc.toLowerCase().includes(search.toLowerCase()) ||
-      exp.id.toLowerCase().includes(search.toLowerCase());
+      (exp.description ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (exp.expenseId ?? "").toLowerCase().includes(search.toLowerCase());
     const matchCat = categoryFilter === "All" || exp.category === categoryFilter;
     return matchSearch && matchCat;
   });
 
-  const categories = ["All", ...Array.from(new Set(EXPENSES_DATA.map((e) => e.category)))];
+  const categories = ["All", ...Array.from(new Set(expenses.map((e: Expense) => e.category)))];
+  const totalSpent = expenses.reduce((s: number, e: Expense) => s + e.amount, 0);
+  const totalPending = expenses
+    .filter((e: Expense) => e.status === "Pending")
+    .reduce((s: number, e: Expense) => s + e.amount, 0);
+
+  const inputCls =
+    "w-full h-10 px-3 border border-border rounded-lg bg-[color:var(--surface)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -112,7 +113,10 @@ function ExpensesPage() {
         title="Weekly Site Expenses"
         eyebrow="Finance & Overheads"
         actions={
-          <button className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2">
+          <button
+            onClick={() => setShowModal(true)}
+            className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
+          >
             <Plus className="size-4" /> Add Expense
           </button>
         }
@@ -120,20 +124,20 @@ function ExpensesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
-          label="Total Spent (This Month)"
-          value="₹39,350"
+          label="Total Expenses (This Project)"
+          value={fmt(totalSpent)}
           icon={<IndianRupee className="size-5" />}
           color="bg-emerald-500/10 text-emerald-600"
         />
         <MetricCard
           label="Pending Approval"
-          value="₹3,450"
+          value={fmt(totalPending)}
           icon={<Clock className="size-5" />}
           color="bg-amber-500/10 text-amber-600"
         />
         <MetricCard
-          label="Petty Cash Balance"
-          value="₹10,650"
+          label="Total Entries"
+          value={expenses.length}
           icon={<Wallet className="size-5" />}
           color="bg-blue-500/10 text-blue-600"
         />
@@ -183,57 +187,69 @@ function ExpensesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredExpenses.map((exp) => (
-                <tr key={exp.id} className="hover:bg-secondary/20 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-secondary text-muted-foreground shrink-0 border border-border/50">
-                        <Receipt className="size-4" />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-foreground line-clamp-1">{exp.desc}</div>
-                        <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
-                          {exp.id}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-secondary text-muted-foreground">
-                      {exp.category}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs font-medium text-foreground">
-                    {exp.submittedBy}
-                  </td>
-                  <td className="px-6 py-4 text-xs text-muted-foreground">{exp.date}</td>
-                  <td className="px-6 py-4 font-mono font-bold text-foreground text-right">
-                    {exp.amount}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        exp.status === "Paid"
-                          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                          : exp.status === "Approved"
-                            ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
-                            : "bg-orange-500/10 text-orange-600 border border-orange-500/20"
-                      }`}
-                    >
-                      {exp.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md opacity-0 group-hover:opacity-100 transition-all">
-                      <MoreHorizontal className="size-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredExpenses.length === 0 && (
+              {isLoading && (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
-                    No expenses found matching the criteria.
+                    Loading expenses…
+                  </td>
+                </tr>
+              )}
+              {!isLoading &&
+                filteredExpenses.map((exp: Expense) => (
+                  <tr key={exp.expenseId} className="hover:bg-secondary/20 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-secondary text-muted-foreground shrink-0 border border-border/50">
+                          <Receipt className="size-4" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground line-clamp-1">
+                            {exp.description}
+                          </div>
+                          <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                            {exp.expenseId}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-secondary text-muted-foreground">
+                        {exp.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-medium text-foreground">
+                      {exp.submittedBy ?? "—"}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-muted-foreground">
+                      {exp.date ?? exp.createdAt?.split("T")[0] ?? "—"}
+                    </td>
+                    <td className="px-6 py-4 font-mono font-bold text-foreground text-right">
+                      {fmt(exp.amount)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          exp.status === "Paid"
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                            : exp.status === "Approved"
+                              ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                              : "bg-orange-500/10 text-orange-600 border border-orange-500/20"
+                        }`}
+                      >
+                        {exp.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md opacity-0 group-hover:opacity-100 transition-all">
+                        <MoreHorizontal className="size-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              {!isLoading && filteredExpenses.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                    No expenses found for this project.
                   </td>
                 </tr>
               )}
@@ -241,6 +257,96 @@ function ExpensesPage() {
           </table>
         </div>
       </div>
+
+      {/* Add Expense Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[color:var(--surface)] w-full max-w-md rounded-2xl shadow-2xl border border-border p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-display font-bold text-lg">Submit Expense</h2>
+              <button onClick={() => setShowModal(false)}>
+                <X className="size-5 text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newDesc || !newAmount) {
+                  toast.error("Please fill in description and amount.");
+                  return;
+                }
+                createMutation.mutate({
+                  category: newCategory,
+                  description: newDesc,
+                  amount: parseFloat(newAmount),
+                  date: newDate,
+                  projectId,
+                });
+              }}
+            >
+              <div>
+                <label className="text-xs font-mono text-muted-foreground mb-1 block">
+                  Category
+                </label>
+                <select
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className={inputCls}
+                >
+                  {["Petty Cash", "Logistics", "Materials", "Travel", "Overheads", "Other"].map(
+                    (c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-mono text-muted-foreground mb-1 block">
+                  Description
+                </label>
+                <input
+                  className={inputCls}
+                  placeholder="What was this expense for?"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono text-muted-foreground mb-1 block">
+                  Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  className={inputCls}
+                  placeholder="0"
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono text-muted-foreground mb-1 block">Date</label>
+                <input
+                  type="date"
+                  className={inputCls}
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="w-full h-10 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {createMutation.isPending ? "Submitting…" : "Submit Expense"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

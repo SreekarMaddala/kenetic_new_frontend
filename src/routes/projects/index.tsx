@@ -50,7 +50,7 @@ function ProjectsPage() {
     image:
       (p as any).image ||
       "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80",
-    supervisor: (p as any).supervisor || "Amit Mishra",
+    supervisor: (p as any).supervisor || "",
     todaysLabour: (p as any).todaysLabour || 0,
     openIssues: (p as any).openIssues || 0,
   }));
@@ -66,7 +66,7 @@ function ProjectsPage() {
   const [newProjSpent, setNewProjSpent] = React.useState("");
   const [newProjDeadline, setNewProjDeadline] = React.useState("");
   const [customImageUrl, setCustomImageUrl] = React.useState("");
-  const [newProjSupervisor, setNewProjSupervisor] = React.useState("Amit Mishra");
+  const [newProjSupervisor, setNewProjSupervisor] = React.useState("");
 
   const presetImages = [
     {
@@ -323,13 +323,7 @@ function ProjectsPage() {
                     onChange={(e) => setNewProjSupervisor(e.target.value)}
                     className="w-full p-2.5 bg-background border border-border rounded-lg text-sm text-foreground"
                   >
-                    <option value="None">None (Unassigned)</option>
-                    <option value="Amit Mishra">Amit Mishra (Structural Concrete)</option>
-                    <option value="Vikram Rao">Vikram Rao (Piling & Foundation)</option>
-                    <option value="Priya Menon">Priya Menon (MEP Systems)</option>
-                    <option value="Suresh Iyer">Suresh Iyer (Safety & Quality Control)</option>
-                    <option value="Rajesh Nair">Rajesh Nair (Finishing Works)</option>
-                    <option value="Ananya Reddy">Ananya Reddy (Excavation Ops)</option>
+                    <option value="">None (Unassigned)</option>
                   </select>
                 </div>
               </div>

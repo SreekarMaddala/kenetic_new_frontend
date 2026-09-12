@@ -797,7 +797,7 @@ const BENTO_CARDS = [
   {
     label: "LIVE STOCK",
     headline: "Reorder Alert",
-    sub: "Cement OPC 53G — DLF Camellias",
+    sub: "Cement OPC 53G — Main Site",
     value: "240 / 500 Bags",
     color: "hsl(22,90%,44%)",
     icon: "◉",

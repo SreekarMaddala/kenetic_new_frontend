@@ -177,6 +177,14 @@ export const projectCommercialApi = {
     api.post<DomainRecord>(`/projects/${projectId}/subcontractors`, body),
   updateSubcontractor: (projectId: string, id: string, body: DomainRecord) =>
     api.put<DomainRecord>(`/projects/${projectId}/subcontractors/${id}`, body),
+  listMilestones: (projectId: string) =>
+    api.get<DomainRecord[]>(`/projects/${projectId}/milestones`),
+  createMilestone: (projectId: string, body: DomainRecord) =>
+    api.post<DomainRecord>(`/projects/${projectId}/milestones`, body),
+  updateMilestone: (projectId: string, id: string, body: DomainRecord) =>
+    api.put<DomainRecord>(`/projects/${projectId}/milestones/${id}`, body),
+  deleteMilestone: (projectId: string, id: string) =>
+    api.delete(`/projects/${projectId}/milestones/${id}`),
 };
 
 export const workforceApi = {

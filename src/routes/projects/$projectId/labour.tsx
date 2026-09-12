@@ -110,19 +110,9 @@ function LabourPage() {
 
   const isSupervisor = activeRole === "supervisor";
 
-  const filteredAttendance = attendance.filter((att) => {
-    if (isSupervisor) {
-      return att.project === "DLF Camellias" || ["L1", "L2", "L4"].includes(att.labourId);
-    }
-    return true;
-  });
-
-  const filteredLabourers = labourers.filter((w) => {
-    if (isSupervisor) {
-      return ["L1", "L2", "L4"].includes(w.id);
-    }
-    return true;
-  });
+  // Backend already scopes records to this projectId; no client-side ID-based filtering.
+  const filteredAttendance = attendance;
+  const filteredLabourers = labourers;
 
   // Attendance controls
   const handleStatusChange = (id: string, newStatus: string) => {
@@ -133,7 +123,7 @@ function LabourPage() {
             ...att,
             status: newStatus,
             project:
-              newStatus === "Absent" ? "—" : att.project === "—" ? "DLF Camellias" : att.project,
+              newStatus === "Absent" ? "—" : att.project === "—" ? "" : att.project,
           };
         }
         return att;
@@ -180,7 +170,7 @@ function LabourPage() {
         labourId: nextId,
         name: newName,
         status: "Present",
-        project: "DLF Camellias",
+        project: "",
         nightShift: false,
       },
     ]);
@@ -318,7 +308,7 @@ function LabourPage() {
             <div className="flex gap-2">
               {isSupervisor ? (
                 <div className="text-xs bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 font-mono text-primary font-semibold">
-                  Site: DLF Camellias (Amit Mishra)
+                  Supervisor View
                 </div>
               ) : (
                 <div className="text-xs bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 font-mono text-emerald-600 font-semibold">
@@ -517,18 +507,13 @@ function LabourPage() {
                       {att.status === "Absent" ? (
                         <span className="text-muted-foreground italic">Off Work</span>
                       ) : isSupervisor ? (
-                        <select
-                          value={att.project}
+                        <input
+                          type="text"
+                          value={att.project === "—" ? "" : att.project}
                           onChange={(e) => handleLocationChange(att.labourId, e.target.value)}
-                          className="p-1 border border-border rounded bg-background"
-                        >
-                          <option value="DLF Camellias">DLF Camellias</option>
-                          <option value="Prestige Lakeside">Prestige Lakeside</option>
-                          <option value="Lodha World Towers">Lodha World Towers</option>
-                          <option value="Brigade Cornerstone">Brigade Cornerstone</option>
-                          <option value="Godrej Reflections">Godrej Reflections</option>
-                          <option value="Sobha City Phase IV">Sobha City Phase IV</option>
-                        </select>
+                          placeholder="Enter location"
+                          className="p-1 border border-border rounded bg-background text-xs w-28"
+                        />
                       ) : (
                         <span className="font-medium text-foreground">{att.project}</span>
                       )}
