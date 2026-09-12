@@ -30,12 +30,22 @@ function EmployeesPage() {
     enabled: platform,
   });
   const create = useMutation({
-    mutationFn: employeeApi.create,
+    mutationFn: async (body: CreateEmployeeBody) => {
+      const created = await employeeApi.create(body);
+      if (created?.employeeId) {
+        try {
+          await employeeApi.invite(created.employeeId, created.orgId);
+        } catch (e) {
+          console.warn("Failed to auto-send invitation email:", e);
+        }
+      }
+      return created;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employees"] });
       setOpen(false);
       setForm({ ...form, name: "", email: "" });
-      toast.success("Account created. Send its invitation from the directory.");
+      toast.success("Account created and invitation email sent successfully!");
     },
     onError: (e: Error) => toast.error(e.message),
   });
