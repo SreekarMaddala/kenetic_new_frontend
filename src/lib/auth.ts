@@ -31,7 +31,8 @@ function pool() {
 async function userFromSession(session: CognitoUserSession): Promise<AuthUser> {
   const payload = session.getIdToken().decodePayload();
   const identity = parseIdentity(payload);
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/auth/me`, {
+  const baseUrl = ((import.meta.env.VITE_API_BASE_URL as string) ?? "").replace(/\/+$/, "");
+  const response = await fetch(`${baseUrl}/auth/me`, {
     headers: { Authorization: `Bearer ${session.getIdToken().getJwtToken()}` },
     signal: AbortSignal.timeout(10_000),
     cache: "no-store",
