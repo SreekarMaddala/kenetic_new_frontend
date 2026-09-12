@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import * as React from "react";
 import { PageHeader } from "../components/AppShell";
 import {
   Download,
@@ -9,6 +10,7 @@ import {
   PieChart,
   RefreshCcw,
   Boxes,
+  Trash2,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { reportsApi, projectApi, vendorApi, inventoryApi } from "../lib/api";
@@ -19,9 +21,37 @@ export const Route = createFileRoute("/reports")({
   component: ReportsPage,
 });
 
+interface ExportHistoryItem {
+  id: string;
+  key: "REP-FIN" | "REP-PROJ" | "REP-VEND" | "REP-INV";
+  name: string;
+  type: string;
+  date: string;
+  author: string;
+}
+
+const STORAGE_KEY = "kinetic_reports_export_history";
+
 function ReportsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const [exportHistory, setExportHistory] = React.useState<ExportHistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(exportHistory));
+    } catch {
+      // ignore quota / storage errors
+    }
+  }, [exportHistory]);
 
   const {
     data: execReport,
@@ -54,121 +84,116 @@ function ReportsPage() {
     refetchExec();
   };
 
-  const authorName = user?.name || user?.email?.split("@")[0] || "Operations Admin";
-  const generatedTime = execReport?.generatedAt
-    ? new Date(execReport.generatedAt).toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : new Date().toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+  const authorName = user?.name || user?.email || "Operations Admin";
 
-  const dynamicReports = [
-    {
-      id: "REP-FIN",
-      name: "Executive Financial & P&L Overview",
-      type: "Financial",
-      date: generatedTime,
+  const logExport = (
+    key: "REP-FIN" | "REP-PROJ" | "REP-VEND" | "REP-INV",
+    name: string,
+    type: string
+  ) => {
+    const newEntry: ExportHistoryItem = {
+      id: `REP-${Date.now()}`,
+      key,
+      name,
+      type,
+      date: new Date().toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
       author: authorName,
-      downloadFn: () => {
-        const rows = (execReport?.projectSummaries || projects).map((p) => ({
-          "Project ID": p.projectId,
-          "Project Name": p.name,
-          "Budget (INR)": p.budget,
-          "Spent (INR)": p.spent,
-          "Variance / Margin (INR)": (p.budget ?? 0) - (p.spent ?? 0),
-          Status: p.status,
-        }));
-        exportToExcel(
-          rows.length ? rows : [{ Note: "No project financial records available" }],
-          "Consolidated_Financial_Report",
-          undefined,
-          "Executive Financial Overview"
-        );
-      },
-    },
-    {
-      id: "REP-PROJ",
-      name: "Global Projects & Operations Summary",
-      type: "Operations",
-      date: generatedTime,
-      author: authorName,
-      downloadFn: () => {
-        const rows = projects.map((p) => ({
-          "Project ID": p.projectId,
-          "Project Name": p.name,
-          Location: p.location,
-          Status: p.status,
-          "Start Date": p.startDate,
-          "End Date": p.endDate,
-          "Budget (INR)": p.budget,
-          "Spent (INR)": p.spent,
-        }));
-        exportToExcel(
-          rows.length ? rows : [{ Note: "No project records available" }],
-          "Projects_Operations_Summary",
-          undefined,
-          "Global Projects & Operations Summary"
-        );
-      },
-    },
-    {
-      id: "REP-VEND",
-      name: "Vendor Performance & Contract Matrix",
-      type: "Vendors",
-      date: generatedTime,
-      author: authorName,
-      downloadFn: () => {
-        const rows = vendors.map((v) => ({
-          "Vendor ID": v.vendorId,
-          "Vendor Name": v.name,
-          Category: v.type,
-          Status: v.status,
-          Rating: v.rating ?? "N/A",
-          Email: v.email,
-          Phone: v.phone,
-          "Active Contracts": v.activeContracts ?? 0,
-        }));
-        exportToExcel(
-          rows.length ? rows : [{ Note: "No vendor records available" }],
-          "Vendor_Performance_Report",
-          undefined,
-          "Vendor Performance & Contract Matrix"
-        );
-      },
-    },
-    {
-      id: "REP-INV",
-      name: "Global Equipment & Inventory Utilization",
-      type: "Assets",
-      date: generatedTime,
-      author: authorName,
-      downloadFn: () => {
-        const rows = inventory.map((i) => ({
-          "Item ID": i.itemId,
-          "Item Name": i.name,
-          Category: i.category,
-          "Total Stock": i.totalStock,
-          Unit: i.unit || "units",
-          Status: i.status,
-        }));
-        exportToExcel(
-          rows.length ? rows : [{ Note: "No inventory items available" }],
-          "Inventory_Utilization_Report",
-          undefined,
-          "Global Equipment & Inventory Utilization"
-        );
-      },
-    },
-  ];
+    };
+    setExportHistory((prev) => [newEntry, ...prev]);
+  };
+
+  const handleExportFinances = () => {
+    const rows = (execReport?.projectSummaries || projects).map((p) => ({
+      "Project ID": p.projectId,
+      "Project Name": p.name,
+      "Budget (INR)": p.budget,
+      "Spent (INR)": p.spent,
+      "Variance / Margin (INR)": (p.budget ?? 0) - (p.spent ?? 0),
+      Status: p.status,
+    }));
+    exportToExcel(
+      rows.length ? rows : [{ Note: "No project financial records available" }],
+      "Consolidated_Financial_Report",
+      undefined,
+      "Executive Financial Overview"
+    );
+    logExport("REP-FIN", "Executive Financial & P&L Overview", "Financial");
+  };
+
+  const handleExportProjects = () => {
+    const rows = projects.map((p) => ({
+      "Project ID": p.projectId,
+      "Project Name": p.name,
+      Location: p.location,
+      Status: p.status,
+      "Start Date": p.startDate,
+      "End Date": p.endDate,
+      "Budget (INR)": p.budget,
+      "Spent (INR)": p.spent,
+    }));
+    exportToExcel(
+      rows.length ? rows : [{ Note: "No project records available" }],
+      "Projects_Operations_Summary",
+      undefined,
+      "Global Projects & Operations Summary"
+    );
+    logExport("REP-PROJ", "Global Projects & Operations Summary", "Operations");
+  };
+
+  const handleExportVendors = () => {
+    const rows = vendors.map((v) => ({
+      "Vendor ID": v.vendorId,
+      "Vendor Name": v.name,
+      Category: v.type,
+      Status: v.status,
+      Rating: v.rating ?? "N/A",
+      Email: v.email,
+      Phone: v.phone,
+      "Active Contracts": v.activeContracts ?? 0,
+    }));
+    exportToExcel(
+      rows.length ? rows : [{ Note: "No vendor records available" }],
+      "Vendor_Performance_Report",
+      undefined,
+      "Vendor Performance & Contract Matrix"
+    );
+    logExport("REP-VEND", "Vendor Performance & Contract Matrix", "Vendors");
+  };
+
+  const handleExportInventory = () => {
+    const rows = inventory.map((i) => ({
+      "Item ID": i.itemId,
+      "Item Name": i.name,
+      Category: i.category,
+      "Total Stock": i.totalStock,
+      Unit: i.unit || "units",
+      Status: i.status,
+    }));
+    exportToExcel(
+      rows.length ? rows : [{ Note: "No inventory items available" }],
+      "Inventory_Utilization_Report",
+      undefined,
+      "Global Equipment & Inventory Utilization"
+    );
+    logExport("REP-INV", "Global Equipment & Inventory Utilization", "Assets");
+  };
+
+  const handleReExport = (key: "REP-FIN" | "REP-PROJ" | "REP-VEND" | "REP-INV") => {
+    if (key === "REP-FIN") handleExportFinances();
+    else if (key === "REP-PROJ") handleExportProjects();
+    else if (key === "REP-VEND") handleExportVendors();
+    else if (key === "REP-INV") handleExportInventory();
+  };
+
+  const clearHistory = () => {
+    setExportHistory([]);
+  };
 
   const REPORT_TYPES = [
     {
@@ -180,7 +205,7 @@ function ReportsPage() {
       icon: <LineChart className="size-5 text-emerald-600" />,
       bg: "bg-emerald-500/10",
       border: "border-emerald-500/20",
-      action: dynamicReports[0].downloadFn,
+      action: handleExportFinances,
     },
     {
       id: "RT2",
@@ -189,7 +214,7 @@ function ReportsPage() {
       icon: <PieChart className="size-5 text-blue-600" />,
       bg: "bg-blue-500/10",
       border: "border-blue-500/20",
-      action: dynamicReports[2].downloadFn,
+      action: handleExportVendors,
     },
     {
       id: "RT3",
@@ -198,7 +223,7 @@ function ReportsPage() {
       icon: <Boxes className="size-5 text-orange-600" />,
       bg: "bg-orange-500/10",
       border: "border-orange-500/20",
-      action: dynamicReports[3].downloadFn,
+      action: handleExportInventory,
     },
   ];
 
@@ -249,51 +274,73 @@ function ReportsPage() {
       </div>
 
       <div className="space-y-4 pt-4">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <CalendarDays className="size-4 text-primary" /> Recent Generated Reports
-        </h3>
-        <div className="bg-[color:var(--surface)] rounded-xl border border-border shadow-sm overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground bg-secondary/30">
-              <tr>
-                <th className="px-6 py-4 font-medium">Report Name</th>
-                <th className="px-6 py-4 font-medium">Category</th>
-                <th className="px-6 py-4 font-medium">Generated On</th>
-                <th className="px-6 py-4 font-medium">Author</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {dynamicReports.map((rep) => (
-                <tr key={rep.id} className="hover:bg-secondary/20 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-foreground flex items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground" />
-                      {rep.name}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-secondary text-muted-foreground">
-                      {rep.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs text-muted-foreground">{rep.date}</td>
-                  <td className="px-6 py-4 text-xs font-medium text-foreground">{rep.author}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={rep.downloadFn}
-                      className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-all flex items-center gap-1.5 text-xs font-semibold ml-auto"
-                    >
-                      <Download className="size-3.5" /> Export
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <CalendarDays className="size-4 text-primary" /> Recent Generated Reports
+          </h3>
+          {exportHistory.length > 0 && (
+            <button
+              onClick={clearHistory}
+              className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
+            >
+              <Trash2 className="size-3.5" /> Clear History
+            </button>
+          )}
         </div>
+
+        {exportHistory.length === 0 ? (
+          <div className="p-8 text-center bg-[color:var(--surface)] rounded-xl border border-border shadow-sm">
+            <FileText className="size-8 mx-auto text-muted-foreground/40 mb-2" />
+            <p className="text-sm font-semibold text-foreground">No reports generated yet</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Click &quot;Generate &amp; Export&quot; on any report generator above to download and log a report.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-[color:var(--surface)] rounded-xl border border-border shadow-sm overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground bg-secondary/30">
+                <tr>
+                  <th className="px-6 py-4 font-medium">Report Name</th>
+                  <th className="px-6 py-4 font-medium">Category</th>
+                  <th className="px-6 py-4 font-medium">Generated On</th>
+                  <th className="px-6 py-4 font-medium">Author</th>
+                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {exportHistory.map((rep) => (
+                  <tr key={rep.id} className="hover:bg-secondary/20 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-foreground flex items-center gap-2">
+                        <FileText className="size-4 text-muted-foreground" />
+                        {rep.name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-secondary text-muted-foreground">
+                        {rep.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-muted-foreground">{rep.date}</td>
+                    <td className="px-6 py-4 text-xs font-medium text-foreground">{rep.author}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => handleReExport(rep.key)}
+                        className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-all flex items-center gap-1.5 text-xs font-semibold ml-auto"
+                      >
+                        <Download className="size-3.5" /> Re-Export
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
 
