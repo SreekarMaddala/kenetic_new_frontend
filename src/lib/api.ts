@@ -309,6 +309,8 @@ export interface CreateOrgBody {
   taxId?: string;
   contactEmail?: string;
   contactPhone?: string;
+  adminEmail?: string;
+  adminName?: string;
 }
 
 export interface Employee {
@@ -447,6 +449,7 @@ export interface CreateBillBody {
   billNumber: string;
   clientOrContractor: string;
   grossAmount: number;
+  netPayable?: number;
   type?: string;
   date?: string;
   retentionDeduction?: number;

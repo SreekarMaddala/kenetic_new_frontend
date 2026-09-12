@@ -104,11 +104,14 @@ function EmployeesPage() {
             Role
             <select
               className={input}
+              disabled
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
             >
-              {platform && <option value="operations_admin">Operations Admin</option>}
-              <option value="supervisor">Supervisor</option>
+              {platform ? (
+                <option value="operations_admin">Operations Admin</option>
+              ) : (
+                <option value="supervisor">Supervisor</option>
+              )}
             </select>
           </label>
           {platform && (

@@ -126,7 +126,7 @@ function BoqPage() {
     billedQty: typeof item.billedQty === "number" ? (item.billedQty as number) : 0,
   }));
 
-  const RA_BILLS: RaBill[] = rawBills.map((item: DomainRecord, idx: number) => ({
+  const RA_BILLS: RaBill[] = (rawBills as unknown as DomainRecord[]).map((item: DomainRecord, idx: number) => ({
     id: (item.billId as string) ?? `RA${idx + 1}`,
     project: (item.projectId as string) ?? projectId,
     billNo: (item.billNumber as string) ?? `RA/${idx + 1}`,
@@ -160,7 +160,7 @@ function BoqPage() {
         "Balance (₹)": b.amount - b.billedQty * b.rate,
         "% Complete": Math.round((b.billedQty / b.budgetedQty) * 100) + "%",
       })),
-      `Kinetic_BOQ_${selectedProject.replace(/ /g, "_")}`,
+      `Kinetic_BOQ_${projectId.replace(/ /g, "_")}`,
       undefined,
       "Bill of Quantities",
     );
@@ -192,15 +192,6 @@ function BoqPage() {
         title="BOQ & RA Bills"
         actions={
           <div className="flex gap-3">
-            <select
-              className="h-10 px-3 text-sm border border-border rounded-lg bg-[color:var(--surface)]"
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-            >
-              {PROJECTS.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
             <button
               onClick={activeTab === "boq" ? handleExportBoq : handleExportRa}
               className="h-10 px-4 border border-border rounded-lg text-sm font-medium hover:bg-secondary flex items-center gap-2"
@@ -533,11 +524,12 @@ function BoqPage() {
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">
                   Project
                 </label>
-                <select className="w-full h-10 px-3 border border-border rounded-lg bg-[color:var(--surface)] text-sm">
-                  {PROJECTS.map((p) => (
-                    <option key={p}>{p}</option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  readOnly
+                  value={projectId}
+                  className="w-full h-10 px-3 border border-border rounded-lg bg-[color:var(--surface)] text-sm opacity-70"
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

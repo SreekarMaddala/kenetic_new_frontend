@@ -37,6 +37,8 @@ function OrganizationsPage() {
     type: "Enterprise Developer",
     plan: "Enterprise Plan",
     taxId: "",
+    adminName: "",
+    adminEmail: "",
   });
 
   const {
@@ -60,13 +62,13 @@ function OrganizationsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (body: { name: string; type: string; plan: string; taxId?: string }) =>
+    mutationFn: (body: { name: string; type: string; plan: string; taxId?: string; adminName?: string; adminEmail?: string }) =>
       orgApi.create(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["organizations"] });
-      toast.success("Organization registered successfully.");
+      toast.success("Organization & Operations Admin registered successfully.");
       setShowAddModal(false);
-      setNewOrg({ name: "", type: "Enterprise Developer", plan: "Enterprise Plan", taxId: "" });
+      setNewOrg({ name: "", type: "Enterprise Developer", plan: "Enterprise Plan", taxId: "", adminName: "", adminEmail: "" });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -80,12 +82,17 @@ function OrganizationsPage() {
 
   const handleAddOrg = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newOrg.name) return;
+    if (!newOrg.name || !newOrg.adminEmail) {
+      toast.error("Organization Name and Admin Email are required.");
+      return;
+    }
     createMutation.mutate({
       name: newOrg.name,
       type: newOrg.type,
       plan: newOrg.plan,
       taxId: newOrg.taxId || undefined,
+      adminName: newOrg.adminName || undefined,
+      adminEmail: newOrg.adminEmail || undefined,
     });
   };
 
@@ -258,6 +265,33 @@ function OrganizationsPage() {
                   onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
                   className="w-full h-10 px-3 bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:border-primary/50"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">
+                    Operations Admin Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Rajesh Sharma"
+                    value={newOrg.adminName}
+                    onChange={(e) => setNewOrg({ ...newOrg, adminName: e.target.value })}
+                    className="w-full h-10 px-3 bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-muted-foreground uppercase mb-1.5">
+                    Operations Admin Email *
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    placeholder="admin@company.com"
+                    value={newOrg.adminEmail}
+                    onChange={(e) => setNewOrg({ ...newOrg, adminEmail: e.target.value })}
+                    className="w-full h-10 px-3 bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:border-primary/50"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
