@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api, employeeApi, projectApi, siteControlApi, type DomainRecord } from "../../../lib/api";
 import { toast } from "sonner";
+import { captureLocation, attendanceMapUrl } from "../../../lib/location";
 import {
   Users,
   Activity,
@@ -98,8 +99,10 @@ function SupervisorsPage() {
 
   // Check-In / Check-Out mutation
   const checkMutation = useMutation({
-    mutationFn: (action: "check-in" | "check-out") =>
-      api.post(`/supervisor/attendance/${action}`, { projectId }),
+    mutationFn: async (action: "check-in" | "check-out") => {
+      const location = await captureLocation();
+      return api.post(`/supervisor/attendance/${action}`, { projectId, location });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["attendance", projectId] });
       toast.success("Attendance updated successfully.");
@@ -169,7 +172,11 @@ function SupervisorsPage() {
     // Include active logged-in supervisor if not already listed
     if (user && user.role === "supervisor") {
       const userDisplayName = String(user.name || user.email?.split("@")[0] || "Site Supervisor");
-      if (!list.some((s) => s.id === user.sub || s.name.toLowerCase() === userDisplayName.toLowerCase())) {
+      if (
+        !list.some(
+          (s) => s.id === user.sub || s.name.toLowerCase() === userDisplayName.toLowerCase(),
+        )
+      ) {
         const names = userDisplayName.split(" ");
         const initials =
           names.length > 1
@@ -261,9 +268,7 @@ function SupervisorsPage() {
             FIELD MANAGEMENT
           </div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Supervisor Portal
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Supervisor Portal</h1>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
               <span className="size-2 rounded-full bg-emerald-500" />
               Owner Overview (Company Admin)
@@ -382,8 +387,8 @@ function SupervisorsPage() {
                         s.status === "Submitted"
                           ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
                           : s.status === "Approved"
-                          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                          : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                            : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
                       }`}
                     >
                       {s.status}
@@ -421,9 +426,7 @@ function SupervisorsPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-foreground">
-                      {selectedSupervisor.name}
-                    </h2>
+                    <h2 className="text-xl font-bold text-foreground">{selectedSupervisor.name}</h2>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                       Active
                     </span>
@@ -456,8 +459,8 @@ function SupervisorsPage() {
                 {ownAttendance?.checkOut
                   ? "Shift Completed"
                   : ownAttendance
-                  ? "Checked In (Active)"
-                  : "Not Checked In Today"}
+                    ? "Checked In (Active)"
+                    : "Not Checked In Today"}
               </div>
 
               <div className="flex items-center gap-2">
@@ -471,17 +474,32 @@ function SupervisorsPage() {
                   onClick={() => checkMutation.mutate("check-in")}
                   className="h-8 px-3.5 bg-emerald-600 text-white font-semibold text-xs rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1.5"
                 >
-                  <CheckCircle className="size-3.5" /> Check In
+                  <CheckCircle className="size-3.5" />{" "}
+                  {checkMutation.isPending && checkMutation.variables === "check-in"
+                    ? "Locating & saving..."
+                    : "Check In"}
                 </button>
                 <button
                   disabled={checkMutation.isPending || !ownAttendance || !!ownAttendance.checkOut}
                   onClick={() => checkMutation.mutate("check-out")}
                   className="h-8 px-3.5 border border-border text-foreground font-semibold text-xs rounded-lg hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1.5"
                 >
-                  <Clock className="size-3.5" /> Check Out
+                  <Clock className="size-3.5" />{" "}
+                  {checkMutation.isPending && checkMutation.variables === "check-out"
+                    ? "Locating & saving..."
+                    : "Check Out"}
                 </button>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Check-in and check-out save your current location with attendance. Allow location
+              access when prompted. Your admin can view these locations on a map.
+            </p>
+            {checkMutation.error && (
+              <p role="alert" className="text-xs text-red-600">
+                {checkMutation.error.message}
+              </p>
+            )}
           </div>
 
           {/* Sub-Tabs Bar */}
@@ -564,7 +582,9 @@ function SupervisorsPage() {
                         <div className="text-xl font-bold text-foreground">
                           {selectedSupervisor.taskCompletion}%
                         </div>
-                        <div className="text-[10px] text-muted-foreground">0 of 0 tasks finished</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          0 of 0 tasks finished
+                        </div>
                       </div>
                       <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden">
                         <div
@@ -604,7 +624,7 @@ function SupervisorsPage() {
                         </div>
                       </div>
                       <div className="text-[10px] text-muted-foreground">
-                        Based on biometric/GPS logs
+                        Check-in / check-out records
                       </div>
                       <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden">
                         <div
@@ -681,7 +701,9 @@ function SupervisorsPage() {
                         <div className="text-[10px] text-muted-foreground font-mono">
                           {String(r.date ?? r.createdAt)}
                         </div>
-                        <p className="text-foreground whitespace-pre-wrap">{String(r.summary ?? "")}</p>
+                        <p className="text-foreground whitespace-pre-wrap">
+                          {String(r.summary ?? "")}
+                        </p>
                       </div>
                     ))
                   )}
@@ -713,6 +735,34 @@ function SupervisorsPage() {
                       <div className="text-[10px] text-muted-foreground">
                         In: {new Date(String(a.checkIn)).toLocaleTimeString()} | Out:{" "}
                         {a.checkOut ? new Date(String(a.checkOut)).toLocaleTimeString() : "Open"}
+                        <div className="mt-2 flex flex-wrap gap-3">
+                          {(["checkInLocation", "checkOutLocation"] as const).map((key) => {
+                            const url = attendanceMapUrl(a[key]);
+                            const label = key === "checkInLocation" ? "Check-in" : "Check-out";
+                            const location = a[key] as { accuracy?: number } | undefined;
+                            return url ? (
+                              <a
+                                key={key}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary underline"
+                              >
+                                {label} map
+                                {typeof location?.accuracy === "number"
+                                  ? ` (±${Math.round(location.accuracy)} m)`
+                                  : ""}
+                              </a>
+                            ) : (
+                              <span key={key}>
+                                {label}:{" "}
+                                {key === "checkOutLocation" && !a.checkOut
+                                  ? "Pending"
+                                  : "Location not recorded"}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   ))
@@ -732,4 +782,3 @@ function SupervisorsPage() {
     </div>
   );
 }
-

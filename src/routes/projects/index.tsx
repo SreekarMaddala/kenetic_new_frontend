@@ -11,7 +11,7 @@ import { projectApi, employeeApi, type Project } from "../../lib/api";
 export const Route = createFileRoute("/projects/")({
   head: () => ({
     meta: [
-      { title: "Projects — Kinetic" },
+      { title: "Projects — Kenetic" },
       { name: "description", content: "Detailed view of active construction projects." },
     ],
   }),

@@ -31,11 +31,11 @@ import { dashboardApi, projectApi, api, type DomainRecord } from "../lib/api";
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Kinetic" },
+      { title: "Dashboard — Kenetic" },
       {
         name: "description",
         content:
-          "Kinetic construction operations control center. Track projects, budgets, materials, and approvals.",
+          "Kenetic construction operations control center. Track projects, budgets, materials, and approvals.",
       },
     ],
   }),

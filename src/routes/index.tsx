@@ -85,8 +85,8 @@ const FEATURES = [
     icon: "◈",
     title: "Live Project Pipeline",
     desc: "Real-time visibility into every site's phase, budget utilization, and team performance.",
-    color: "hsl(158,64%,40%)",
-    glow: "rgba(0,185,120,0.2)",
+    color: "hsl(38,92%,50%)",
+    glow: "rgba(249,115,22,0.2)",
     tag: "Tracking",
     img: siteCranes,
   },
@@ -372,7 +372,7 @@ function VideoPlayer() {
                 inset: 0,
                 borderRadius: "50%",
                 border: "2px solid transparent",
-                borderTopColor: "hsl(158,64%,44%)",
+                borderTopColor: "#f59e0b",
                 animation: "spinSlow 3s linear infinite",
               }}
             />
@@ -381,11 +381,11 @@ function VideoPlayer() {
                 position: "absolute",
                 inset: 8,
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, hsl(158,64%,40%), hsl(158,64%,26%))",
+                background: "linear-gradient(135deg, #f97316, #ea580c)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 8px 32px rgba(0,180,100,0.45)",
+                boxShadow: "0 8px 32px rgba(249,115,22,0.45)",
                 transition: "transform .2s",
               }}
               className="hover:scale-110"
@@ -538,7 +538,7 @@ const BENTO_CARDS = [
     headline: "98.2% confidence",
     sub: "Vendor: UltraTech Cement Ltd.",
     value: "₹12,42,000",
-    color: "hsl(158,64%,36%)",
+    color: "hsl(38,92%,50%)",
     icon: "⬡",
   },
   {
@@ -599,12 +599,12 @@ function DemoRequestForm() {
             width: 72,
             height: 72,
             borderRadius: "50%",
-            background: "linear-gradient(135deg, hsl(158,64%,38%), hsl(158,64%,24%))",
+            background: "linear-gradient(135deg, #f97316, #ea580c)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             margin: "0 auto 24px",
-            boxShadow: "0 8px 32px rgba(0,180,100,0.4)",
+            boxShadow: "0 8px 32px rgba(249,115,22,0.4)",
           }}
         >
           <svg
@@ -660,7 +660,7 @@ function DemoRequestForm() {
             placeholder="Rajesh Kumar"
             style={fieldStyle}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "hsl(158,64%,44%)";
+              e.currentTarget.style.borderColor = "#f97316";
               e.currentTarget.style.background = "rgba(255,255,255,0.07)";
             }}
             onBlur={(e) => {
@@ -693,7 +693,7 @@ function DemoRequestForm() {
             placeholder="Lodha Group"
             style={fieldStyle}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "hsl(158,64%,44%)";
+              e.currentTarget.style.borderColor = "#f97316";
               e.currentTarget.style.background = "rgba(255,255,255,0.07)";
             }}
             onBlur={(e) => {
@@ -729,7 +729,7 @@ function DemoRequestForm() {
           type="tel"
           style={fieldStyle}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = "hsl(158,64%,44%)";
+            e.currentTarget.style.borderColor = "#f97316";
             e.currentTarget.style.background = "rgba(255,255,255,0.07)";
           }}
           onBlur={(e) => {
@@ -763,7 +763,7 @@ function DemoRequestForm() {
           placeholder="e.g. We manage 8 active sites across Mumbai, looking for materials + billing automation..."
           style={{ ...fieldStyle, resize: "none" as const, lineHeight: 1.65 }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = "hsl(158,64%,44%)";
+            e.currentTarget.style.borderColor = "#f97316";
             e.currentTarget.style.background = "rgba(255,255,255,0.07)";
           }}
           onBlur={(e) => {
@@ -804,14 +804,14 @@ function DemoRequestForm() {
             padding: "15px 40px",
             borderRadius: 14,
             background: loading
-              ? "rgba(0,180,100,0.3)"
-              : "linear-gradient(135deg, hsl(158,64%,42%), hsl(158,64%,26%))",
+              ? "rgba(249,115,22,0.3)"
+              : "linear-gradient(135deg, #f97316, #d97706)",
             color: "white",
             fontWeight: 700,
             fontSize: 14,
             border: "none",
             cursor: loading ? "not-allowed" : "pointer",
-            boxShadow: loading ? "none" : "0 0 48px rgba(0,180,100,0.28)",
+            boxShadow: loading ? "none" : "0 0 48px rgba(249,115,22,0.28)",
             transition: "transform .2s, box-shadow .2s, background .3s",
             transform: loading ? "scale(1)" : undefined,
           }}
@@ -890,25 +890,12 @@ function LandingPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 9,
-              background: "linear-gradient(135deg, hsl(158,64%,38%), hsl(158,64%,24%))",
-              display: "grid",
-              placeItems: "center",
-              boxShadow: "0 2px 12px rgba(0,180,100,0.35)",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="white">
-              <rect x="2" y="2" width="5" height="5" rx="1" />
-              <rect x="9" y="2" width="5" height="5" rx="1" opacity=".5" />
-              <rect x="2" y="9" width="5" height="5" rx="1" opacity=".5" />
-              <rect x="9" y="9" width="5" height="5" rx="1" />
-            </svg>
-          </div>
-          <span style={{ fontWeight: 700, letterSpacing: "-0.025em", fontSize: 15 }}>KINETIC</span>
+          <img
+            src="/logo.png"
+            alt="Kenetic Logo"
+            style={{ width: 32, height: 32, borderRadius: 9, objectFit: "cover" }}
+          />
+          <span style={{ fontWeight: 700, letterSpacing: "-0.025em", fontSize: 15 }}>KENETIC</span>
         </div>
         <nav
           style={{
@@ -1001,7 +988,7 @@ function LandingPage() {
                 amplitude={1.5}
                 distance={0.35}
                 enableMouseInteraction
-                color={[0.1, 0.78, 0.48]}
+                color={[0.95, 0.6, 0.15]}
               />
             </Suspense>
           )}
@@ -1023,7 +1010,7 @@ function LandingPage() {
             width: 400,
             height: 400,
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(0,180,100,0.07) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(249,115,22,0.09) 0%, transparent 70%)",
             pointerEvents: "none",
             animation: "float 6s ease-in-out infinite",
           }}
@@ -1052,37 +1039,7 @@ function LandingPage() {
             margin: "0 auto",
           }}
         >
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "5px 16px",
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.1)",
-              background: "rgba(255,255,255,0.04)",
-              backdropFilter: "blur(12px)",
-              fontSize: 11,
-              fontFamily: "monospace",
-              textTransform: "uppercase" as const,
-              letterSpacing: "0.12em",
-              color: "rgba(255,255,255,0.55)",
-              marginBottom: 36,
-              animation: "hFadeUp .8s ease .1s both",
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: "hsl(158,64%,44%)",
-                display: "block",
-                boxShadow: "0 0 6px hsl(158,64%,44%)",
-              }}
-            />
-            AI-Powered Construction Intelligence
-          </div>
+
           <h1
             style={{
               fontSize: "clamp(44px,7.5vw,86px)",
@@ -1098,7 +1055,7 @@ function LandingPage() {
             <span
               style={{
                 backgroundImage:
-                  "linear-gradient(135deg, hsl(158,64%,60%) 0%, hsl(158,64%,38%) 50%, hsl(158,50%,28%) 100%)",
+                  "linear-gradient(135deg, #fbbf24 0%, #f97316 50%, #d97706 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -1117,8 +1074,8 @@ function LandingPage() {
               animation: "hFadeUp .8s ease .35s both",
             }}
           >
-            Kinetic gives Indian construction teams a single command centre for projects, materials,
-            vendor bills, and approvals — with AI doing the heavy lifting.
+            Kenetic gives Indian construction teams a single command centre for projects, materials,
+            vendor bills, and approvals.
           </p>
           <div
             style={{
@@ -1138,11 +1095,11 @@ function LandingPage() {
                 gap: 8,
                 padding: "15px 36px",
                 borderRadius: 14,
-                background: "linear-gradient(135deg, hsl(158,64%,42%), hsl(158,64%,28%))",
+                background: "linear-gradient(135deg, #f97316, #d97706)",
                 color: "white",
                 fontWeight: 700,
                 fontSize: 14,
-                boxShadow: "0 0 48px rgba(0,180,100,0.3)",
+                boxShadow: "0 0 48px rgba(249,115,22,0.35)",
                 transition: "transform .25s, box-shadow .25s",
               }}
               className="hover:scale-[1.04]"
@@ -1416,7 +1373,7 @@ function LandingPage() {
                 fontFamily: "monospace",
                 textTransform: "uppercase" as const,
                 letterSpacing: "0.16em",
-                color: "hsl(158,64%,44%)",
+                color: "#f59e0b",
                 marginBottom: 14,
               }}
             >
@@ -1430,7 +1387,7 @@ function LandingPage() {
                 lineHeight: 1.1,
               }}
             >
-              Watch Kinetic work
+              Watch Kenetic Work
             </h2>
             <p
               style={{
@@ -1441,8 +1398,7 @@ function LandingPage() {
                 lineHeight: 1.7,
               }}
             >
-              See how AI extracts vendor invoices, tracks materials, and routes approvals in real
-              time.
+              Interact directly with the live workspace preview or explore platform capabilities.
             </p>
           </div>
 
@@ -1451,9 +1407,9 @@ function LandingPage() {
               position: "relative",
               borderRadius: 24,
               overflow: "hidden",
-              border: "1px solid rgba(255,255,255,0.1)",
-              boxShadow: "0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
-              background: "#000",
+              border: "1px solid rgba(255,255,255,0.12)",
+              boxShadow: "0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08)",
+              background: "#080809",
             }}
           >
             <div
@@ -1473,7 +1429,7 @@ function LandingPage() {
                 style={{
                   marginLeft: 12,
                   flex: 1,
-                  height: 20,
+                  height: 24,
                   borderRadius: 6,
                   background: "rgba(255,255,255,0.06)",
                   display: "flex",
@@ -1482,13 +1438,19 @@ function LandingPage() {
                 }}
               >
                 <span
-                  style={{ fontSize: 11, fontFamily: "monospace", color: "rgba(255,255,255,0.3)" }}
+                  style={{ fontSize: 11, fontFamily: "monospace", color: "rgba(255,255,255,0.6)", fontWeight: 600 }}
                 >
-                  kinetic.app/dashboard
+                  kenetic.app/dashboard
                 </span>
               </div>
             </div>
-            <VideoPlayer />
+            <div style={{ position: "relative", width: "100%", height: 600, background: "#080809" }}>
+              <iframe
+                src="/dashboard"
+                style={{ width: "100%", height: "100%", border: "none" }}
+                title="Kenetic Live Interactive Workspace"
+              />
+            </div>
           </div>
 
           <div
@@ -1501,7 +1463,7 @@ function LandingPage() {
             }}
           >
             {[
-              { label: "AI Invoice Parsing", color: "hsl(158,64%,44%)" },
+              { label: "Invoice & Expenses Parsing", color: "#f97316" },
               { label: "Live Stock Ledger", color: "hsl(22,90%,52%)" },
               { label: "Approval Workflows", color: "hsl(210,80%,58%)" },
             ].map((item) => (
@@ -1528,6 +1490,180 @@ function LandingPage() {
       </section>
 
 
+
+      {/* FOUNDER & CEO EXECUTIVE SHOWCASE */}
+      <section id="leadership" style={{ padding: "0 40px 120px" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+          <div style={{ marginBottom: 44, textAlign: "center" }}>
+            <p
+              style={{
+                fontSize: 10,
+                fontFamily: "monospace",
+                textTransform: "uppercase" as const,
+                letterSpacing: "0.16em",
+                color: "#f59e0b",
+                marginBottom: 14,
+              }}
+            >
+              Executive Leadership
+            </p>
+            <h2
+              style={{
+                fontSize: "clamp(28px,4vw,48px)",
+                fontWeight: 800,
+                letterSpacing: "-0.04em",
+                lineHeight: 1.1,
+              }}
+            >
+              Built for Builders. Led by Vision.
+            </h2>
+          </div>
+
+          <div
+            style={{
+              position: "relative",
+              borderRadius: 28,
+              border: "1px solid rgba(249,115,22,0.25)",
+              background: "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(249,115,22,0.02) 100%)",
+              backdropFilter: "blur(24px)",
+              padding: "48px 56px",
+              boxShadow: "0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)",
+              display: "flex",
+              flexDirection: "row" as const,
+              gap: 40,
+              alignItems: "center",
+              flexWrap: "wrap" as const,
+            }}
+          >
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <img
+                src="/ceo.jpg"
+                alt="Arun Reddy - Founder & CEO"
+                style={{
+                  width: 170,
+                  height: 170,
+                  borderRadius: 24,
+                  objectFit: "cover",
+                  border: "3px solid rgba(249,115,22,0.6)",
+                  boxShadow: "0 20px 50px rgba(249,115,22,0.25)",
+                }}
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  bottom: -10,
+                  right: -10,
+                  background: "#ea580c",
+                  color: "white",
+                  fontSize: 10,
+                  fontFamily: "monospace",
+                  fontWeight: 800,
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  boxShadow: "0 4px 14px rgba(234,88,12,0.4)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                CEO
+              </span>
+            </div>
+
+            <div style={{ flex: 1, minWidth: 280 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontFamily: "monospace",
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.14em",
+                    color: "#f59e0b",
+                    background: "rgba(245,158,11,0.12)",
+                    border: "1px solid rgba(245,158,11,0.3)",
+                    padding: "4px 12px",
+                    borderRadius: 999,
+                  }}
+                >
+                  FOUNDER & CEO
+                </span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
+                  EXECUTIVE DESK
+                </span>
+              </div>
+
+              <h3 style={{ fontSize: 30, fontWeight: 800, color: "white", letterSpacing: "-0.03em", margin: 0 }}>
+                Arun Reddy
+              </h3>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontFamily: "monospace", marginTop: 4 }}>
+                Chief Executive Officer — Kenetic Construction ERP
+              </p>
+
+              <blockquote
+                style={{
+                  fontSize: 15,
+                  lineHeight: 1.7,
+                  color: "rgba(255,255,255,0.72)",
+                  fontStyle: "italic",
+                  marginTop: 16,
+                  marginBottom: 24,
+                  borderLeft: "2px solid #f97316",
+                  paddingLeft: 16,
+                }}
+              >
+                "Our mission with Kenetic is simple: give Indian construction leaders total clarity, real-time financial control, and seamless site coordination from foundation to handover."
+              </blockquote>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>
+                <a
+                  href="tel:7337338884"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "12px 24px",
+                    borderRadius: 12,
+                    background: "linear-gradient(135deg, #f97316, #d97706)",
+                    color: "white",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    fontFamily: "monospace",
+                    textDecoration: "none",
+                    boxShadow: "0 8px 24px rgba(249,115,22,0.35)",
+                    transition: "transform .2s",
+                  }}
+                  className="hover:scale-105"
+                >
+                  📞 Direct Call: +91 73373 38884
+                </a>
+                <a
+                  href="https://wa.me/917337338884"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "12px 24px",
+                    borderRadius: 12,
+                    background: "rgba(16,185,129,0.12)",
+                    color: "#34d399",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    fontFamily: "monospace",
+                    textDecoration: "none",
+                    border: "1px solid rgba(16,185,129,0.3)",
+                    transition: "transform .2s, background .2s",
+                  }}
+                  className="hover:scale-105 hover:bg-emerald-500/20"
+                >
+                  💬 WhatsApp Direct
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* REQUEST A DEMO */}
       <section id="request-demo" style={{ padding: "0 40px 140px" }}>
@@ -1566,7 +1702,7 @@ function LandingPage() {
               style={{
                 height: 3,
                 background:
-                  "linear-gradient(90deg, hsl(158,64%,38%), hsl(158,64%,56%), hsl(210,85%,60%), transparent)",
+                  "linear-gradient(90deg, #ea580c, #f59e0b, #fbbf24, transparent)",
               }}
             />
 
@@ -1579,7 +1715,7 @@ function LandingPage() {
                     fontFamily: "monospace",
                     textTransform: "uppercase" as const,
                     letterSpacing: "0.16em",
-                    color: "hsl(158,64%,44%)",
+                    color: "#f59e0b",
                     marginBottom: 14,
                   }}
                 >
@@ -1605,7 +1741,7 @@ function LandingPage() {
                     lineHeight: 1.75,
                   }}
                 >
-                  See Kinetic live on your construction workflows. Our team will set up a
+                  See Kenetic live on your construction workflows. Our team will set up a
                   personalised walkthrough for you.
                 </p>
               </div>
@@ -1627,7 +1763,7 @@ function LandingPage() {
               zIndex: -1,
               filter: "blur(90px)",
               opacity: 0.2,
-              background: "radial-gradient(ellipse, hsl(158,64%,32%) 0%, transparent 70%)",
+              background: "radial-gradient(ellipse, rgba(249,115,22,0.4) 0%, transparent 70%)",
               borderRadius: "50%",
             }}
           />
@@ -1637,7 +1773,7 @@ function LandingPage() {
               fontFamily: "monospace",
               textTransform: "uppercase" as const,
               letterSpacing: "0.16em",
-              color: "hsl(158,64%,44%)",
+              color: "#f59e0b",
               marginBottom: 20,
             }}
           >
@@ -1676,11 +1812,11 @@ function LandingPage() {
               gap: 10,
               padding: "17px 44px",
               borderRadius: 16,
-              background: "linear-gradient(135deg, hsl(158,64%,42%), hsl(158,64%,26%))",
+              background: "linear-gradient(135deg, #f97316, #d97706)",
               color: "white",
               fontWeight: 800,
               fontSize: 15,
-              boxShadow: "0 0 64px rgba(0,180,100,0.25)",
+              boxShadow: "0 0 64px rgba(249,115,22,0.35)",
               transition: "transform .25s, box-shadow .25s",
             }}
             className="hover:scale-[1.04]"
@@ -1712,26 +1848,13 @@ function LandingPage() {
             {/* brand col */}
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 9,
-                    background: "linear-gradient(135deg, hsl(158,64%,38%), hsl(158,64%,24%))",
-                    display: "grid",
-                    placeItems: "center",
-                    boxShadow: "0 2px 10px rgba(0,180,100,0.3)",
-                  }}
-                >
-                  <svg viewBox="0 0 16 16" width="12" height="12" fill="white">
-                    <rect x="2" y="2" width="5" height="5" rx="1" />
-                    <rect x="9" y="2" width="5" height="5" rx="1" opacity=".5" />
-                    <rect x="2" y="9" width="5" height="5" rx="1" opacity=".5" />
-                    <rect x="9" y="9" width="5" height="5" rx="1" />
-                  </svg>
-                </div>
+                <img
+                  src="/logo.png"
+                  alt="Kenetic Logo"
+                  style={{ width: 30, height: 30, borderRadius: 8, objectFit: "cover" }}
+                />
                 <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "-0.015em" }}>
-                  KINETIC
+                  KENETIC
                 </span>
               </div>
               <p
@@ -1742,7 +1865,7 @@ function LandingPage() {
                   maxWidth: 280,
                 }}
               >
-                AI-powered construction operations for Indian builders. One platform for projects,
+                Construction operations platform for Indian builders. One platform for projects,
                 materials, vendors, and approvals.
               </p>
               <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
@@ -1878,7 +2001,7 @@ function LandingPage() {
             }}
           >
             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", fontFamily: "monospace" }}>
-              © 2025 Kinetic Operations Pvt. Ltd. All rights reserved.
+              © 2025 Kenetic Operations Pvt. Ltd. All rights reserved.
             </p>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span
@@ -1886,9 +2009,9 @@ function LandingPage() {
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  background: "hsl(158,64%,44%)",
+                  background: "#f59e0b",
                   display: "block",
-                  boxShadow: "0 0 6px hsl(158,64%,44%)",
+                  boxShadow: "0 0 6px #f59e0b",
                 }}
               />
               <span

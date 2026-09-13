@@ -110,7 +110,7 @@ function SettingsPage() {
                   </label>
                   <input
                     type="text"
-                    defaultValue="Kinetic Builders Pvt Ltd."
+                    defaultValue="Kenetic Builders Pvt Ltd."
                     className="w-full p-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-primary/50"
                   />
                 </div>
@@ -130,7 +130,7 @@ function SettingsPage() {
                   </label>
                   <input
                     type="email"
-                    defaultValue="admin@kineticbuilders.com"
+                    defaultValue="admin@keneticbuilders.com"
                     className="w-full p-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-primary/50"
                   />
                 </div>
@@ -162,7 +162,7 @@ function SettingsPage() {
               <div>
                 <h3 className="text-lg font-bold text-foreground">Billing & Subscription Plan</h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Manage your Kinetic ERP subscription and payment methods.
+                  Manage your Kenetic ERP subscription and payment methods.
                 </p>
               </div>
 

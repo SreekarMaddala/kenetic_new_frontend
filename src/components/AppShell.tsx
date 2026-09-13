@@ -320,64 +320,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* ─────── Logo ─────── */}
         <div className="px-4 pt-5 pb-4">
           <Link to={homeForRole(activeRole)} className="flex items-center gap-3 group">
-            <div
-              className="size-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-              style={{
-                background: "linear-gradient(140deg, hsl(22 92% 54%), hsl(22 90% 40%))",
-                boxShadow: "0 3px 10px hsl(22 90% 48% / 0.4)",
-              }}
-            >
-              <svg viewBox="0 0 24 24" className="size-5" fill="none">
-                <rect x="2.5" y="11" width="8" height="10" rx="0.8" fill="white" opacity="0.95" />
-                <rect x="4.5" y="7" width="5" height="4.5" rx="0.6" fill="white" opacity="0.7" />
-                <rect
-                  x="4"
-                  y="13"
-                  width="2"
-                  height="2"
-                  rx="0.3"
-                  fill="hsl(22 90% 44%)"
-                  opacity="0.6"
-                />
-                <rect
-                  x="7"
-                  y="13"
-                  width="2"
-                  height="2"
-                  rx="0.3"
-                  fill="hsl(22 90% 44%)"
-                  opacity="0.6"
-                />
-                <rect x="15" y="4" width="2.2" height="17" rx="0.6" fill="white" opacity="0.9" />
-                <rect x="8" y="4" width="10" height="2" rx="0.5" fill="white" opacity="0.75" />
-                <rect x="18" y="5.5" width="3" height="1.5" rx="0.4" fill="white" opacity="0.45" />
-                <line
-                  x1="10.5"
-                  y1="6"
-                  x2="10.5"
-                  y2="11"
-                  stroke="white"
-                  strokeWidth="0.9"
-                  opacity="0.65"
-                  strokeLinecap="round"
-                  strokeDasharray="1,1"
-                />
-                <path
-                  d="M9.5 11 Q9 13.5 10.8 13.5 Q12 13.5 11.5 11.5"
-                  stroke="white"
-                  strokeWidth="1"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity="0.8"
-                />
-              </svg>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Kenetic Logo"
+              className="size-9 rounded-xl object-cover shrink-0 shadow-sm transition-transform group-hover:scale-105 border border-border/40"
+            />
             <div className="leading-none">
               <div
                 className="font-display font-bold text-[16px] tracking-tight"
                 style={{ letterSpacing: "-0.025em" }}
               >
-                KINETIC
+                KENETIC
               </div>
               <span className="text-[9px] font-mono uppercase tracking-[0.12em] text-muted-foreground block mt-0.5">
                 Construction ERP

@@ -20,7 +20,7 @@ import { useAuth } from "../contexts/AuthContext";
 export const Route = createFileRoute("/organizations")({
   head: () => ({
     meta: [
-      { title: "Organizations — Kinetic" },
+      { title: "Organizations — Kenetic" },
       { name: "description", content: "Platform organization management and governance control." },
     ],
   }),

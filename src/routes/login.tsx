@@ -67,7 +67,14 @@ function LoginPage() {
   return (
     <main className="min-h-screen bg-[#080809] text-white grid place-items-center px-4 py-12">
       <div className="w-full max-w-md">
-        <p className="text-orange-500 font-bold tracking-[0.25em] text-center mb-8">KINETIC ERP</p>
+        <div className="flex flex-col items-center justify-center gap-3 mb-8">
+          <img
+            src="/logo.png"
+            alt="Kenetic Logo"
+            className="size-16 rounded-2xl object-cover shadow-2xl border border-white/20"
+          />
+          <p className="text-orange-500 font-bold tracking-[0.25em] text-center">KENETIC ERP</p>
+        </div>
         <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-8 shadow-2xl">
           <h1 className="text-2xl font-bold mb-2">{title}</h1>
           <p className="text-sm text-white/50 mb-6">
