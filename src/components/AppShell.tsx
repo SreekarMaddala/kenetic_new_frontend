@@ -261,7 +261,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const handleLogout = () => {
     logout();
-    navigate({ to: "/login" });
+    navigate({ to: "/", replace: true });
   };
 
   const activeRole = user?.role ?? "supervisor";
