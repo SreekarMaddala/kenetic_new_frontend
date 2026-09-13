@@ -23,6 +23,7 @@ import {
   siteControlApi,
   fieldOperationsApi,
   documentControlApi,
+  employeeApi,
 } from "../../../lib/api";
 
 export const Route = createFileRoute("/projects/$projectId/")({
@@ -119,6 +120,18 @@ function ProjectDetailsPage() {
     enabled: !!projectId,
     retry: 1,
   });
+
+  const { data: rawEmployees = [] } = useQuery({
+    queryKey: ["employees"],
+    queryFn: () => employeeApi.list(),
+    retry: 1,
+  });
+
+  const supervisorList = React.useMemo(() => {
+    return rawEmployees.filter(
+      (e) => e.role === "supervisor" || e.role === "operations_admin",
+    );
+  }, [rawEmployees]);
 
   const { data: rawMaterials = [] } = useQuery({
     queryKey: ["materials-stock", projectId],
@@ -949,15 +962,21 @@ function ProjectDetailsPage() {
 
             <form onSubmit={handleAddTimelineItemToProject} className="space-y-4 text-xs">
               <div className="space-y-1.5">
-                <label className="font-medium text-muted-foreground">Supervisor Name</label>
-                <input
-                  type="text"
-                  placeholder="Enter supervisor name"
+                <label className="font-medium text-muted-foreground">Select Supervisor</label>
+                <select
                   value={detailTimelineName}
                   onChange={(e) => setDetailTimelineName(e.target.value)}
-                  className="w-full p-2.5 bg-background border border-border rounded-lg text-xs text-foreground"
+                  className="w-full p-2.5 bg-background border border-border rounded-lg text-xs text-foreground font-semibold"
                   required
-                />
+                >
+                  <option value="">Choose an existing supervisor...</option>
+                  {supervisorList.map((s) => (
+                    <option key={s.employeeId} value={s.name}>
+                      {s.name} ({s.email}) {s.department ? `— ${s.department}` : ""}
+                    </option>
+                  ))}
+                  <option value="Site Supervisor">Site Supervisor (Default)</option>
+                </select>
               </div>
 
               <div className="space-y-1.5">

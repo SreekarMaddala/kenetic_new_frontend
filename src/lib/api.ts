@@ -151,7 +151,8 @@ export const financeApi = {
 
 // Reports
 export const reportsApi = {
-  executive: () => api.get<ExecutiveReport>("/reports/executive"),
+  executive: (range?: { startDate: string; endDate: string }) =>
+    api.get<ExecutiveReport>(`/reports/executive${range ? `?${new URLSearchParams(range)}` : ""}`),
 };
 
 // Settings

@@ -19,6 +19,7 @@ import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as EmployeesRouteImport } from './routes/employees'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
@@ -41,6 +42,7 @@ import { Route as ProjectsProjectIdDrawingsRouteImport } from './routes/projects
 import { Route as ProjectsProjectIdDocumentsRouteImport } from './routes/projects/$projectId/documents'
 import { Route as ProjectsProjectIdBoqRouteImport } from './routes/projects/$projectId/boq'
 import { Route as ProjectsProjectIdBillsRouteImport } from './routes/projects/$projectId/bills'
+import { Route as ProjectsProjectIdAnalyticsRouteImport } from './routes/projects/$projectId/analytics'
 
 const VendorsRoute = VendorsRouteImport.update({
   id: '/vendors',
@@ -90,6 +92,11 @@ const EmployeesRoute = EmployeesRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -216,9 +223,16 @@ const ProjectsProjectIdBillsRoute = ProjectsProjectIdBillsRouteImport.update({
   path: '/bills',
   getParentRoute: () => ProjectsProjectIdRoute,
 } as any)
+const ProjectsProjectIdAnalyticsRoute =
+  ProjectsProjectIdAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/expenses': typeof ExpensesRoute
@@ -231,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/vendors': typeof VendorsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
+  '/projects/$projectId/analytics': typeof ProjectsProjectIdAnalyticsRoute
   '/projects/$projectId/bills': typeof ProjectsProjectIdBillsRoute
   '/projects/$projectId/boq': typeof ProjectsProjectIdBoqRoute
   '/projects/$projectId/documents': typeof ProjectsProjectIdDocumentsRoute
@@ -253,6 +268,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/expenses': typeof ExpensesRoute
@@ -264,6 +280,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/vendors': typeof VendorsRoute
   '/projects': typeof ProjectsIndexRoute
+  '/projects/$projectId/analytics': typeof ProjectsProjectIdAnalyticsRoute
   '/projects/$projectId/bills': typeof ProjectsProjectIdBillsRoute
   '/projects/$projectId/boq': typeof ProjectsProjectIdBoqRoute
   '/projects/$projectId/documents': typeof ProjectsProjectIdDocumentsRoute
@@ -287,6 +304,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/employees': typeof EmployeesRoute
   '/expenses': typeof ExpensesRoute
@@ -299,6 +317,7 @@ export interface FileRoutesById {
   '/vendors': typeof VendorsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
+  '/projects/$projectId/analytics': typeof ProjectsProjectIdAnalyticsRoute
   '/projects/$projectId/bills': typeof ProjectsProjectIdBillsRoute
   '/projects/$projectId/boq': typeof ProjectsProjectIdBoqRoute
   '/projects/$projectId/documents': typeof ProjectsProjectIdDocumentsRoute
@@ -323,6 +342,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/analytics'
     | '/dashboard'
     | '/employees'
     | '/expenses'
@@ -335,6 +355,7 @@ export interface FileRouteTypes {
     | '/vendors'
     | '/projects/$projectId'
     | '/projects/'
+    | '/projects/$projectId/analytics'
     | '/projects/$projectId/bills'
     | '/projects/$projectId/boq'
     | '/projects/$projectId/documents'
@@ -357,6 +378,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/analytics'
     | '/dashboard'
     | '/employees'
     | '/expenses'
@@ -368,6 +390,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/vendors'
     | '/projects'
+    | '/projects/$projectId/analytics'
     | '/projects/$projectId/bills'
     | '/projects/$projectId/boq'
     | '/projects/$projectId/documents'
@@ -390,6 +413,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/analytics'
     | '/dashboard'
     | '/employees'
     | '/expenses'
@@ -402,6 +426,7 @@ export interface FileRouteTypes {
     | '/vendors'
     | '/projects/$projectId'
     | '/projects/'
+    | '/projects/$projectId/analytics'
     | '/projects/$projectId/bills'
     | '/projects/$projectId/boq'
     | '/projects/$projectId/documents'
@@ -425,6 +450,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   DashboardRoute: typeof DashboardRoute
   EmployeesRoute: typeof EmployeesRoute
   ExpensesRoute: typeof ExpensesRoute
@@ -509,6 +535,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -665,10 +698,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdBillsRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
+    '/projects/$projectId/analytics': {
+      id: '/projects/$projectId/analytics'
+      path: '/analytics'
+      fullPath: '/projects/$projectId/analytics'
+      preLoaderRoute: typeof ProjectsProjectIdAnalyticsRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
   }
 }
 
 interface ProjectsProjectIdRouteChildren {
+  ProjectsProjectIdAnalyticsRoute: typeof ProjectsProjectIdAnalyticsRoute
   ProjectsProjectIdBillsRoute: typeof ProjectsProjectIdBillsRoute
   ProjectsProjectIdBoqRoute: typeof ProjectsProjectIdBoqRoute
   ProjectsProjectIdDocumentsRoute: typeof ProjectsProjectIdDocumentsRoute
@@ -691,6 +732,7 @@ interface ProjectsProjectIdRouteChildren {
 }
 
 const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
+  ProjectsProjectIdAnalyticsRoute: ProjectsProjectIdAnalyticsRoute,
   ProjectsProjectIdBillsRoute: ProjectsProjectIdBillsRoute,
   ProjectsProjectIdBoqRoute: ProjectsProjectIdBoqRoute,
   ProjectsProjectIdDocumentsRoute: ProjectsProjectIdDocumentsRoute,
@@ -717,6 +759,7 @@ const ProjectsProjectIdRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalyticsRoute: AnalyticsRoute,
   DashboardRoute: DashboardRoute,
   EmployeesRoute: EmployeesRoute,
   ExpensesRoute: ExpensesRoute,

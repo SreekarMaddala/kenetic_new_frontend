@@ -24,6 +24,7 @@ export const Route = createFileRoute("/projects/$projectId/logistics")({
 function LogisticsPage() {
   const { projectId } = Route.useParams();
   const { user } = useAuth();
+  const isAdmin = user?.role === "operations_admin" || user?.role === "super_admin";
   const qc = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<"owned" | "fuel" | "rental">("owned");
@@ -397,26 +398,32 @@ function LogisticsPage() {
             </div>
 
             {mileageLogs.length === 0 ? (
-              <div className="p-12 text-center text-xs text-muted-foreground space-y-2">
-                <Gauge className="size-8 text-muted-foreground mx-auto" />
-                <div className="font-bold text-foreground">No Daily Mileage Runs Recorded</div>
-                <p>Register a vehicle and log daily odometer runs using the form on the right.</p>
+              <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+                <div className="size-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 shadow-sm">
+                  <Gauge className="size-7" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-sm text-foreground">No Daily Mileage Runs Recorded</h4>
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Register a vehicle and log daily odometer runs using the form on the right.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      <th className="py-2.5 px-3">DATE</th>
-                      <th className="py-2.5 px-3">VEHICLE</th>
-                      <th className="py-2.5 px-3">DRIVER</th>
-                      <th className="py-2.5 px-3">ODOMETER READINGS</th>
-                      <th className="py-2.5 px-3 text-right">DISTANCE</th>
+                    <tr className="border-b border-border text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider bg-secondary/30">
+                      <th className="py-3 px-3">DATE</th>
+                      <th className="py-3 px-3">VEHICLE</th>
+                      <th className="py-3 px-3">DRIVER</th>
+                      <th className="py-3 px-3">ODOMETER READINGS</th>
+                      <th className="py-3 px-3 text-right">DISTANCE</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60 text-xs">
                     {mileageLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-secondary/20 transition-colors">
+                      <tr key={log.id} className="hover:bg-secondary/30 transition-colors">
                         <td className="py-3.5 px-3 font-mono text-muted-foreground">{log.date}</td>
                         <td className="py-3.5 px-3 font-bold text-foreground">{log.vehicle}</td>
                         <td className="py-3.5 px-3 text-foreground">{log.driver}</td>
@@ -437,52 +444,54 @@ function LogisticsPage() {
           {/* Right Column: Register Vehicle & Log Mileage Forms (4 cols) */}
           <div className="lg:col-span-4 space-y-6">
             {/* Form 1: Register New Vehicle */}
-            <form
-              onSubmit={handleRegisterVehicle}
-              className="p-5 rounded-xl border border-border bg-[color:var(--surface)] shadow-sm space-y-3"
-            >
-              <div>
-                <h4 className="font-bold text-sm text-foreground">Register New Vehicle</h4>
-                <p className="text-xs text-muted-foreground">
-                  Register a new vehicle into the company fleet.
-                </p>
-              </div>
-
-              <div className="space-y-1.5 pt-1">
-                <label className="text-xs font-semibold text-muted-foreground">
-                  Vehicle Make & Model
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Mahindra Bolero, Tata Ace, Tata 407"
-                  value={vehicleModel}
-                  onChange={(e) => setVehicleModel(e.target.value)}
-                  className="w-full h-9 px-3 text-xs border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">
-                  License Plate / Registration No.
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. KA-03-MJ-2401"
-                  value={licensePlate}
-                  onChange={(e) => setLicensePlate(e.target.value)}
-                  className="w-full h-9 px-3 text-xs border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={createLogisticsMutation.isPending}
-                className="w-full h-9 bg-orange-600 text-white font-bold text-xs rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1.5 shadow-sm"
+            {isAdmin && (
+              <form
+                onSubmit={handleRegisterVehicle}
+                className="p-5 rounded-xl border border-border bg-[color:var(--surface)] shadow-sm space-y-3"
               >
-                <Plus className="size-3.5" /> Register Vehicle
-              </button>
-            </form>
+                <div>
+                  <h4 className="font-bold text-sm text-foreground">Register New Vehicle</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Register a new vehicle into the company fleet.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Vehicle Make & Model
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Mahindra Bolero, Tata Ace, Tata 407"
+                    value={vehicleModel}
+                    onChange={(e) => setVehicleModel(e.target.value)}
+                    className="w-full h-9 px-3 text-xs border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    License Plate / Registration No.
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. KA-03-MJ-2401"
+                    value={licensePlate}
+                    onChange={(e) => setLicensePlate(e.target.value)}
+                    className="w-full h-9 px-3 text-xs border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={createLogisticsMutation.isPending}
+                  className="w-full h-9 bg-orange-600 text-white font-bold text-xs rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <Plus className="size-3.5" /> Register Vehicle
+                </button>
+              </form>
+            )}
 
             {/* Form 2: Log Daily Mileage Run */}
             <form
@@ -590,26 +599,32 @@ function LogisticsPage() {
             </div>
 
             {fuelLogs.length === 0 ? (
-              <div className="p-12 text-center text-xs text-muted-foreground space-y-2">
-                <Fuel className="size-8 text-muted-foreground mx-auto" />
-                <div className="font-bold text-foreground">No Fuel Records Logged</div>
-                <p>Record fuel fills using the form on the right.</p>
+              <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+                <div className="size-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 shadow-sm">
+                  <Fuel className="size-7" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-sm text-foreground">No Fuel Records Logged</h4>
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Record fuel fills and expenditures using the log form on the right.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      <th className="py-2.5 px-3">DATE</th>
-                      <th className="py-2.5 px-3">VEHICLE</th>
-                      <th className="py-2.5 px-3">LITERS</th>
-                      <th className="py-2.5 px-3">RATE / LITER</th>
-                      <th className="py-2.5 px-3 text-right">TOTAL AMOUNT</th>
+                    <tr className="border-b border-border text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider bg-secondary/30">
+                      <th className="py-3 px-3">DATE</th>
+                      <th className="py-3 px-3">VEHICLE</th>
+                      <th className="py-3 px-3">LITERS</th>
+                      <th className="py-3 px-3">RATE / LITER</th>
+                      <th className="py-3 px-3 text-right">TOTAL AMOUNT</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60 text-xs">
                     {fuelLogs.map((f) => (
-                      <tr key={f.id} className="hover:bg-secondary/20 transition-colors">
+                      <tr key={f.id} className="hover:bg-secondary/30 transition-colors">
                         <td className="py-3.5 px-3 font-mono text-muted-foreground">{f.date}</td>
                         <td className="py-3.5 px-3 font-bold text-foreground">{f.vehicle}</td>
                         <td className="py-3.5 px-3 font-semibold text-foreground">
@@ -743,26 +758,32 @@ function LogisticsPage() {
             </div>
 
             {rentalLogs.length === 0 ? (
-              <div className="p-12 text-center text-xs text-muted-foreground space-y-2">
-                <Receipt className="size-8 text-muted-foreground mx-auto" />
-                <div className="font-bold text-foreground">No Rental Trips Recorded</div>
-                <p>Log daily rental auto and helper trips using the form on the right.</p>
+              <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+                <div className="size-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 shadow-sm">
+                  <Receipt className="size-7" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-sm text-foreground">No Rental Trips Recorded</h4>
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Log daily rental auto and helper transportation trips using the form on the right.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      <th className="py-2.5 px-3">DATE</th>
-                      <th className="py-2.5 px-3">OPERATOR / VENDOR</th>
-                      <th className="py-2.5 px-3">MATERIAL CARRIED</th>
-                      <th className="py-2.5 px-3">HIRE CHARGE</th>
-                      <th className="py-2.5 px-3 text-right">TOTAL COST</th>
+                    <tr className="border-b border-border text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider bg-secondary/30">
+                      <th className="py-3 px-3">DATE</th>
+                      <th className="py-3 px-3">OPERATOR / VENDOR</th>
+                      <th className="py-3 px-3">MATERIAL CARRIED</th>
+                      <th className="py-3 px-3">HIRE CHARGE</th>
+                      <th className="py-3 px-3 text-right">TOTAL COST</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60 text-xs">
                     {rentalLogs.map((r) => (
-                      <tr key={r.id} className="hover:bg-secondary/20 transition-colors">
+                      <tr key={r.id} className="hover:bg-secondary/30 transition-colors">
                         <td className="py-3.5 px-3 font-mono text-muted-foreground">{r.date}</td>
                         <td className="py-3.5 px-3 font-bold text-foreground">{r.vendor}</td>
                         <td className="py-3.5 px-3 text-foreground">{r.material}</td>

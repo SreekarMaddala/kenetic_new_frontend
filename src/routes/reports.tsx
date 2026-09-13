@@ -16,6 +16,20 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { reportsApi, projectApi, vendorApi, inventoryApi } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { exportToExcel } from "../lib/excel";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../components/ui/dialog";
+import {
+  reportRange,
+  inReportRange,
+  type ReportPeriod,
+  type ReportRange,
+} from "../lib/reportDates";
 
 export const Route = createFileRoute("/reports")({
   component: ReportsPage,
@@ -28,6 +42,7 @@ interface ExportHistoryItem {
   type: string;
   date: string;
   author: string;
+  range?: ReportRange;
 }
 
 const STORAGE_KEY = "kinetic_reports_export_history";
@@ -84,12 +99,34 @@ function ReportsPage() {
     refetchExec();
   };
 
+  const [selectedReport, setSelectedReport] = React.useState<ExportHistoryItem["key"] | null>(null);
+  const [period, setPeriod] = React.useState<ReportPeriod>("month");
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
+  const [exporting, setExporting] = React.useState(false);
+  const [exportError, setExportError] = React.useState("");
+  const exportLock = React.useRef(false);
+  const reportNames = {
+    "REP-FIN": { name: "Company Financial Overview", type: "Financial" },
+    "REP-PROJ": { name: "Projects & Operations Summary", type: "Operations" },
+    "REP-VEND": { name: "Vendor & Subcontractor Analytics", type: "Vendors" },
+    "REP-INV": { name: "Inventory & Assets Register", type: "Assets" },
+  };
+  function openExport(key: ExportHistoryItem["key"], previous?: ExportHistoryItem) {
+    setSelectedReport(key);
+    setPeriod(previous ? (previous.range ? "custom" : "overall") : "month");
+    setStartDate(previous?.range?.startDate ?? "");
+    setEndDate(previous?.range?.endDate ?? "");
+    setExportError("");
+  }
+
   const authorName = user?.name || user?.email || "Operations Admin";
 
   const logExport = (
     key: "REP-FIN" | "REP-PROJ" | "REP-VEND" | "REP-INV",
     name: string,
-    type: string
+    type: string,
+    range?: ReportRange,
   ) => {
     const newEntry: ExportHistoryItem = {
       id: `REP-${Date.now()}`,
@@ -104,91 +141,89 @@ function ReportsPage() {
         minute: "2-digit",
       }),
       author: authorName,
+      range,
     };
     setExportHistory((prev) => [newEntry, ...prev]);
   };
 
-  const handleExportFinances = () => {
-    const rows = (execReport?.projectSummaries || projects).map((p) => ({
-      "Project ID": p.projectId,
-      "Project Name": p.name,
-      "Budget (INR)": p.budget,
-      "Spent (INR)": p.spent,
-      "Variance / Margin (INR)": (p.budget ?? 0) - (p.spent ?? 0),
-      Status: p.status,
-    }));
-    exportToExcel(
-      rows.length ? rows : [{ Note: "No project financial records available" }],
-      "Consolidated_Financial_Report",
-      undefined,
-      "Executive Financial Overview"
-    );
-    logExport("REP-FIN", "Executive Financial & P&L Overview", "Financial");
-  };
-
-  const handleExportProjects = () => {
-    const rows = projects.map((p) => ({
-      "Project ID": p.projectId,
-      "Project Name": p.name,
-      Location: p.location,
-      Status: p.status,
-      "Start Date": p.startDate,
-      "End Date": p.endDate,
-      "Budget (INR)": p.budget,
-      "Spent (INR)": p.spent,
-    }));
-    exportToExcel(
-      rows.length ? rows : [{ Note: "No project records available" }],
-      "Projects_Operations_Summary",
-      undefined,
-      "Global Projects & Operations Summary"
-    );
-    logExport("REP-PROJ", "Global Projects & Operations Summary", "Operations");
-  };
-
-  const handleExportVendors = () => {
-    const rows = vendors.map((v) => ({
-      "Vendor ID": v.vendorId,
-      "Vendor Name": v.name,
-      Category: v.type,
-      Status: v.status,
-      Rating: v.rating ?? "N/A",
-      Email: v.email,
-      Phone: v.phone,
-      "Active Contracts": v.activeContracts ?? 0,
-    }));
-    exportToExcel(
-      rows.length ? rows : [{ Note: "No vendor records available" }],
-      "Vendor_Performance_Report",
-      undefined,
-      "Vendor Performance & Contract Matrix"
-    );
-    logExport("REP-VEND", "Vendor Performance & Contract Matrix", "Vendors");
-  };
-
-  const handleExportInventory = () => {
-    const rows = inventory.map((i) => ({
-      "Item ID": i.itemId,
-      "Item Name": i.name,
-      Category: i.category,
-      "Total Stock": i.totalStock,
-      Unit: i.unit || "units",
-      Status: i.status,
-    }));
-    exportToExcel(
-      rows.length ? rows : [{ Note: "No inventory items available" }],
-      "Inventory_Utilization_Report",
-      undefined,
-      "Global Equipment & Inventory Utilization"
-    );
-    logExport("REP-INV", "Global Equipment & Inventory Utilization", "Assets");
-  };
-
-  const handleReExport = (key: "REP-FIN" | "REP-PROJ" | "REP-VEND" | "REP-INV") => {
-    if (key === "REP-FIN") handleExportFinances();
-    else if (key === "REP-PROJ") handleExportProjects();
-    else if (key === "REP-VEND") handleExportVendors();
-    else if (key === "REP-INV") handleExportInventory();
+  const generateExport = async () => {
+    if (!selectedReport || exportLock.current) return;
+    exportLock.current = true;
+    setExportError("");
+    setExporting(true);
+    try {
+      const range = reportRange(period, startDate, endDate);
+      const label = range ? `${range.startDate} to ${range.endDate}` : "Overall";
+      let rows: Record<string, unknown>[];
+      if (selectedReport === "REP-FIN") {
+        const report = await reportsApi.executive(range);
+        if (!Array.isArray(report.projectSummaries)) {
+          throw new Error("Financial report data is unavailable. Please sync data and try again.");
+        }
+        rows = report.projectSummaries.map((p) => ({
+          "Project ID": p.projectId,
+          "Project Name": p.name,
+          "Project Budget (INR)": p.budget,
+          "Spend in selected period (INR)": p.spent,
+          Status: p.status,
+        }));
+      } else if (selectedReport === "REP-PROJ") {
+        rows = (await projectApi.list())
+          .filter((p) => inReportRange(p.startDate || p.createdAt, range))
+          .map((p) => ({
+            "Project ID": p.projectId,
+            "Project Name": p.name,
+            Location: p.location,
+            Status: p.status,
+            "Start Date": p.startDate,
+            "End Date": p.endDate,
+            "Budget (INR)": p.budget,
+            "Current Spend (INR)": p.spent,
+          }));
+      } else if (selectedReport === "REP-VEND") {
+        rows = (await vendorApi.list())
+          .filter((v) => inReportRange(v.createdAt, range))
+          .map((v) => ({
+            "Vendor ID": v.vendorId,
+            "Vendor Name": v.name,
+            Category: v.type,
+            Status: v.status,
+            Rating: v.rating ?? "N/A",
+            Email: v.email,
+            Phone: v.phone,
+            "Active Contracts": v.activeContracts ?? 0,
+            "Registered On": v.createdAt ?? "Unknown",
+          }));
+      } else {
+        rows = (await inventoryApi.list())
+          .filter((i) => inReportRange(i.createdAt, range))
+          .map((i) => ({
+            "Item ID": i.itemId,
+            "Item Name": i.name,
+            Category: i.category,
+            "Current Total Stock": i.totalStock,
+            Unit: i.unit || "units",
+            Status: i.status,
+            "Added On": i.createdAt ?? "Unknown",
+          }));
+      }
+      const { name, type } = reportNames[selectedReport];
+      exportToExcel(
+        rows.length ? rows : [{ Note: "No records found for the selected period", Period: label }],
+        `${name.replace(/[^a-zA-Z0-9]+/g, "_")}_${range ? `${range.startDate}_${range.endDate}` : "Overall"}`,
+        undefined,
+        `${name} ? ${label}`,
+      );
+      logExport(selectedReport, name, type, range);
+      setSelectedReport(null);
+    } catch (error) {
+      setExportError(
+        error instanceof Error ? error.message : "Unable to generate report. Please try again.",
+      );
+    } finally {
+      exportLock.current = false;
+      setExporting(false);
+    }
   };
 
   const clearHistory = () => {
@@ -199,13 +234,13 @@ function ReportsPage() {
     {
       id: "RT1",
       name: "Company Financial Overview",
-      desc: `Consolidated P&L across ${projects.length} active project(s). Total spend ₹${(
+      desc: `Financial overview across ${projects.length} active project(s). Total spend ₹${(
         execReport?.totalExpenses ?? projects.reduce((acc, p) => acc + (p.spent || 0), 0)
       ).toLocaleString("en-IN")}.`,
       icon: <LineChart className="size-5 text-emerald-600" />,
       bg: "bg-emerald-500/10",
       border: "border-emerald-500/20",
-      action: handleExportFinances,
+      action: () => openExport("REP-FIN"),
     },
     {
       id: "RT2",
@@ -214,7 +249,7 @@ function ReportsPage() {
       icon: <PieChart className="size-5 text-blue-600" />,
       bg: "bg-blue-500/10",
       border: "border-blue-500/20",
-      action: handleExportVendors,
+      action: () => openExport("REP-VEND"),
     },
     {
       id: "RT3",
@@ -223,7 +258,7 @@ function ReportsPage() {
       icon: <Boxes className="size-5 text-orange-600" />,
       bg: "bg-orange-500/10",
       border: "border-orange-500/20",
-      action: handleExportInventory,
+      action: () => openExport("REP-INV"),
     },
   ];
 
@@ -249,10 +284,11 @@ function ReportsPage() {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {REPORT_TYPES.map((rt) => (
-            <div
+            <button
+              type="button"
               key={rt.id}
               onClick={rt.action}
-              className="p-5 rounded-xl border border-border bg-[color:var(--surface)] hover:border-primary/40 transition-colors cursor-pointer group flex flex-col justify-between"
+              className="p-5 rounded-xl border border-border bg-[color:var(--surface)] hover:border-primary/40 transition-colors cursor-pointer group flex flex-col justify-between text-left"
             >
               <div>
                 <div
@@ -268,7 +304,7 @@ function ReportsPage() {
               <div className="mt-4 flex items-center text-xs font-semibold text-primary opacity-80 group-hover:opacity-100 transition-opacity">
                 Generate & Export &rarr;
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -293,7 +329,8 @@ function ReportsPage() {
             <FileText className="size-8 mx-auto text-muted-foreground/40 mb-2" />
             <p className="text-sm font-semibold text-foreground">No reports generated yet</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Click &quot;Generate &amp; Export&quot; on any report generator above to download and log a report.
+              Click &quot;Generate &amp; Export&quot; on any report generator above to download and
+              log a report.
             </p>
           </div>
         ) : (
@@ -316,6 +353,9 @@ function ReportsPage() {
                         <FileText className="size-4 text-muted-foreground" />
                         {rep.name}
                       </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {rep.range ? `${rep.range.startDate} to ${rep.range.endDate}` : "Overall"}
+                      </p>
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-secondary text-muted-foreground">
@@ -326,7 +366,7 @@ function ReportsPage() {
                     <td className="px-6 py-4 text-xs font-medium text-foreground">{rep.author}</td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => handleReExport(rep.key)}
+                        onClick={() => openExport(rep.key, rep)}
                         className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-all flex items-center gap-1.5 text-xs font-semibold ml-auto"
                       >
                         <Download className="size-3.5" /> Re-Export
@@ -339,8 +379,116 @@ function ReportsPage() {
           </div>
         )}
       </div>
+      <Dialog
+        open={selectedReport !== null}
+        onOpenChange={(open) => {
+          if (!open && !exporting) setSelectedReport(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedReport ? reportNames[selectedReport].name : "Export report"}
+            </DialogTitle>
+            <DialogDescription>
+              Choose the reporting period, then download an Excel-compatible spreadsheet (.csv).
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void generateExport();
+            }}
+          >
+            <fieldset disabled={exporting} className="space-y-3">
+              <legend className="text-sm font-semibold mb-2">Date range</legend>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    ["month", "This month"],
+                    ["overall", "Overall"],
+                    ["custom", "Custom dates"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <label
+                    key={value}
+                    className={`flex items-center gap-2 rounded-lg border p-3 text-sm cursor-pointer ${period === value ? "border-primary bg-primary/5" : "border-border"}`}
+                  >
+                    <input
+                      type="radio"
+                      name="report-period"
+                      value={value}
+                      checked={period === value}
+                      onChange={() => {
+                        setPeriod(value);
+                        setExportError("");
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              {period === "custom" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="grid gap-2 text-sm">
+                    From
+                    <input
+                      type="date"
+                      required
+                      className="rounded-lg border border-border bg-background px-3 py-2"
+                      value={startDate}
+                      max={endDate || undefined}
+                      onChange={(event) => setStartDate(event.target.value)}
+                    />
+                  </label>
+                  <label className="grid gap-2 text-sm">
+                    To
+                    <input
+                      type="date"
+                      required
+                      className="rounded-lg border border-border bg-background px-3 py-2"
+                      value={endDate}
+                      min={startDate || undefined}
+                      onChange={(event) => setEndDate(event.target.value)}
+                    />
+                  </label>
+                </div>
+              )}
+            </fieldset>
+            <p className="text-xs text-muted-foreground">
+              {selectedReport === "REP-FIN"
+                ? "Includes recorded spending dated in the selected period. Overall also includes opening balances."
+                : selectedReport === "REP-PROJ"
+                  ? "Includes projects starting in the selected period, with their current totals."
+                  : "Includes records added in the selected period, with their current details. Choose Overall to include records without a recorded creation date."}
+            </p>
+            {exportError && (
+              <p role="alert" className="text-sm text-red-600">
+                {exportError}
+              </p>
+            )}
+            <DialogFooter>
+              <button
+                type="button"
+                disabled={exporting}
+                className="rounded-lg border border-border px-4 py-2 text-sm"
+                onClick={() => setSelectedReport(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={exporting}
+                className="rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
+              >
+                <Download className="size-4" />
+                {exporting ? "Generating..." : "Download Excel"}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
-

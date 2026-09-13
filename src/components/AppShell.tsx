@@ -145,6 +145,7 @@ const GLOBAL_NAV = [
   { to: "/payments", label: "Vendor Payments", icon: cartIcon },
   { to: "/inventory", label: "Inventory", icon: inventoryIcon },
   { to: "/reports", label: "Reports", icon: reportIcon },
+  { to: "/analytics", label: "Employee Analytics", icon: chartIcon },
   { to: "/settings", label: "Settings", icon: gearIcon },
 ];
 
@@ -223,7 +224,10 @@ const getProjectNav = (projectId: string, role?: string) => {
     },
     {
       subLabel: "Reports",
-      items: [{ to: `/projects/${projectId}/reports`, label: "Reports", icon: chartIcon }],
+      items: [
+        { to: `/projects/${projectId}/reports`, label: "Reports", icon: chartIcon },
+        { to: `/projects/${projectId}/analytics`, label: "Employee Analytics", icon: chartIcon },
+      ],
     },
   ];
 };
@@ -239,6 +243,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "/payments",
     "/inventory",
     "/reports",
+    "/analytics",
     "Overview",
     "Project Management",
     "Finance & Billing",
@@ -499,7 +504,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {projectId && (
             <div className="mb-4 animate-fade-in">
               {/* Project Switcher */}
-              {activeRole === "operations_admin" && (
+              {(activeRole === "operations_admin" || activeRole === "supervisor") && (
                 <div className="relative mb-3 px-1">
                   <button
                     onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
