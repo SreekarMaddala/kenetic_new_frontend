@@ -193,6 +193,7 @@ function Page() {
   // Run Payroll Mutation
   const runPayrollMutation = useMutation({
     mutationFn: async () => {
+      if (runPayrollMutation.isPending) return;
       return api.post(`/projects/${projectId}/payroll`, { month: selectedMonth });
     },
     onSuccess: () => {
@@ -262,7 +263,7 @@ function Page() {
           <button
             onClick={() => runPayrollMutation.mutate()}
             disabled={runPayrollMutation.isPending}
-            className="h-9 px-4 bg-orange-600 text-white font-semibold text-xs rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-sm"
+            className="h-9 px-4 bg-orange-600 text-white font-semibold text-xs rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2 shadow-sm"
           >
             <Play className="size-3.5 fill-current" />
             {runPayrollMutation.isPending ? "Running..." : "Run Payroll"}

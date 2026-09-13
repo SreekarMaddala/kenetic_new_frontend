@@ -115,6 +115,7 @@ function VendorsPage() {
 
   const handleCreateVendor = (e: React.FormEvent) => {
     e.preventDefault();
+    if (createVendorMutation.isPending) return;
     if (!name || !email) {
       toast.error("Please enter Vendor Name and Email.");
       return;
@@ -375,9 +376,10 @@ function VendorsPage() {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs font-semibold bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity"
+                disabled={createVendorMutation.isPending}
+                className="px-4 py-2 text-xs font-semibold bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity disabled:opacity-40 disabled:pointer-events-none"
               >
-                Onboard Vendor
+                {createVendorMutation.isPending ? "Onboarding..." : "Onboard Vendor"}
               </button>
             </div>
           </form>

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../contexts/AuthContext";
-import { api, employeeApi, projectApi, type DomainRecord } from "../../../lib/api";
+import { api, employeeApi, projectApi, siteControlApi, type DomainRecord } from "../../../lib/api";
 import { toast } from "sonner";
 import {
   Users,
@@ -90,6 +90,12 @@ function SupervisorsPage() {
       api.get<DomainRecord[]>(`/supervisor/dpr?projectId=${encodeURIComponent(projectId)}`),
   });
 
+  // Fetch issues
+  const issues = useQuery({
+    queryKey: ["issues", projectId],
+    queryFn: () => siteControlApi.listIssues(projectId),
+  });
+
   // Check-In / Check-Out mutation
   const checkMutation = useMutation({
     mutationFn: (action: "check-in" | "check-out") =>
@@ -119,127 +125,82 @@ function SupervisorsPage() {
 
   function handleSubmitReport(e: FormEvent) {
     e.preventDefault();
+    if (reportMutation.isPending) return;
     reportMutation.mutate();
   }
 
-  // Pre-configured supervisor profiles matching reference design with dynamic employee overlay
+  // Purely dynamic supervisor profiles built from real database employees & active session
   const supervisorProfiles: SupervisorProfile[] = useMemo(() => {
-    const list: SupervisorProfile[] = [
-      {
-        id: "AM-01",
-        name: "Amit Mishra",
-        initials: "AM",
-        roleTitle: "Structural Concrete",
-        location: "Multiple Sites — Gurugram, HR",
-        phone: "+91 95000 11000",
-        experience: "5 yrs exp",
-        teamSize: 20,
-        rating: 4.6,
-        status: "Submitted",
-        active: true,
-        workersCount: 20,
-        tasksCount: 3,
-        issuesCount: 1,
-        performanceScore: 97,
-        taskCompletion: 100,
-        attendanceReliability: 99,
-        incidents: 0,
-      },
-      {
-        id: "VR-02",
-        name: "Vikram Rao",
-        initials: "VR",
-        roleTitle: "DLF Camellias Site Lead",
-        location: "DLF Camellias — Sector 42",
-        phone: "+91 94111 22333",
-        experience: "7 yrs exp",
-        teamSize: 38,
-        rating: 4.8,
-        status: "Submitted",
-        active: true,
-        workersCount: 38,
-        tasksCount: 4,
-        issuesCount: 2,
-        performanceScore: 98,
-        taskCompletion: 95,
-        attendanceReliability: 100,
-        incidents: 0,
-      },
-      {
-        id: "PM-03",
-        name: "Priya Menon",
-        initials: "PM",
-        roleTitle: "MEP Operations Lead",
-        location: "Prestige Lakeside",
-        phone: "+91 98222 33444",
-        experience: "4 yrs exp",
-        teamSize: 24,
-        rating: 4.5,
-        status: "Pending",
-        active: true,
-        workersCount: 24,
-        tasksCount: 7,
-        issuesCount: 1,
-        performanceScore: 92,
-        taskCompletion: 88,
-        attendanceReliability: 96,
-        incidents: 0,
-      },
-      {
-        id: "SI-04",
-        name: "Suresh Iyer",
-        initials: "SI",
-        roleTitle: "High-Rise Structures Lead",
-        location: "Lodha World Towers",
-        phone: "+91 97333 44555",
-        experience: "8 yrs exp",
-        teamSize: 52,
-        rating: 4.9,
-        status: "Approved",
-        active: true,
-        workersCount: 52,
-        tasksCount: 2,
-        issuesCount: 0,
-        performanceScore: 99,
-        taskCompletion: 100,
-        attendanceReliability: 100,
-        incidents: 0,
-      },
-    ];
+    const list: SupervisorProfile[] = [];
 
-    // Overlay real API employees if available
     if (employees.data && employees.data.length > 0) {
       const realSupervisors = employees.data.filter((e) => e.role === "supervisor");
-      realSupervisors.forEach((e, idx) => {
-        if (!list.some((p) => p.name.toLowerCase() === e.name.toLowerCase())) {
-          const names = e.name.split(" ");
-          const initials = (names[0][0] + (names[1]?.[0] || "")).toUpperCase();
-          list.push({
-            id: e.employeeId,
-            name: e.name,
-            initials,
-            roleTitle: "Site Supervisor",
-            location: project.data?.name || "Project Site",
-            phone: e.phone || "+91 98000 00000",
-            experience: "3 yrs exp",
-            teamSize: 15 + idx * 5,
-            rating: 4.5 + (idx % 4) * 0.1,
-            status: "Submitted",
-            active: e.status === "Active",
-            workersCount: 15 + idx * 5,
-            tasksCount: 3 + (idx % 3),
-            issuesCount: idx % 2,
-            performanceScore: 94 + (idx % 5),
-            taskCompletion: 92 + (idx % 6),
-            attendanceReliability: 97 + (idx % 3),
-            incidents: 0,
-          });
-        }
+      realSupervisors.forEach((e) => {
+        const displayName = String(e.name || e.email?.split("@")[0] || "Site Supervisor");
+        const names = displayName.split(" ");
+        const initials =
+          names.length > 1
+            ? (names[0][0] + names[1][0]).toUpperCase()
+            : (names[0][0] || "S").toUpperCase();
+
+        list.push({
+          id: e.employeeId,
+          name: displayName,
+          initials,
+          roleTitle: "Site Supervisor",
+          location: String(project.data?.name || "Project Site"),
+          phone: String(e.phone || e.email || "N/A"),
+          experience: "Site Operations",
+          teamSize: 0,
+          rating: 5.0,
+          status: "Submitted",
+          active: e.status === "Active",
+          workersCount: 0,
+          tasksCount: 0,
+          issuesCount: 0,
+          performanceScore: 100,
+          taskCompletion: 100,
+          attendanceReliability: 100,
+          incidents: 0,
+        });
       });
     }
 
+    // Include active logged-in supervisor if not already listed
+    if (user && user.role === "supervisor") {
+      const userDisplayName = String(user.name || user.email?.split("@")[0] || "Site Supervisor");
+      if (!list.some((s) => s.id === user.sub || s.name.toLowerCase() === userDisplayName.toLowerCase())) {
+        const names = userDisplayName.split(" ");
+        const initials =
+          names.length > 1
+            ? (names[0][0] + names[1][0]).toUpperCase()
+            : (names[0][0] || "S").toUpperCase();
+
+        list.unshift({
+          id: user.sub || "CURR-SUP",
+          name: userDisplayName,
+          initials,
+          roleTitle: "Site Supervisor",
+          location: String(project.data?.name || "Project Site"),
+          phone: String(user.email || "N/A"),
+          experience: "Site Operations",
+          teamSize: 0,
+          rating: 5.0,
+          status: "Submitted",
+          active: true,
+          workersCount: 0,
+          tasksCount: 0,
+          issuesCount: 0,
+          performanceScore: 100,
+          taskCompletion: 100,
+          attendanceReliability: 100,
+          incidents: 0,
+        });
+      }
+    }
+
     return list;
-  }, [employees.data, project.data]);
+  }, [employees.data, project.data, user]);
 
   // Filtered supervisor list
   const filteredSupervisors = useMemo(() => {
@@ -257,18 +218,39 @@ function SupervisorsPage() {
   }, [supervisorProfiles, searchQuery, categoryFilter]);
 
   // Selected supervisor object
+  const defaultSupervisor: SupervisorProfile = {
+    id: "none",
+    name: "No Supervisor Selected",
+    initials: "—",
+    roleTitle: "Site Supervisor",
+    location: String(project.data?.name || "Project Site"),
+    phone: "N/A",
+    experience: "Site Operations",
+    teamSize: 0,
+    rating: 5.0,
+    status: "Pending",
+    active: false,
+    workersCount: 0,
+    tasksCount: 0,
+    issuesCount: 0,
+    performanceScore: 100,
+    taskCompletion: 100,
+    attendanceReliability: 100,
+    incidents: 0,
+  };
+
   const selectedSupervisor = useMemo(() => {
     return (
-      supervisorProfiles.find((s) => s.id === selectedSupervisorId) || supervisorProfiles[0]
+      supervisorProfiles.find((s) => s.id === selectedSupervisorId) ||
+      supervisorProfiles[0] ||
+      defaultSupervisor
     );
-  }, [supervisorProfiles, selectedSupervisorId]);
+  }, [supervisorProfiles, selectedSupervisorId, project.data]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const ownAttendance = attendance.data?.find(
     (a) => a.date === todayStr && a.supervisorId === user?.sub,
   );
-
-  const projectName = project.data?.name || "DLF Camellias";
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -319,7 +301,7 @@ function SupervisorsPage() {
         <div className="p-5 rounded-xl border border-border bg-[color:var(--surface)] shadow-sm flex items-center justify-between">
           <div>
             <div className="text-2xl font-black text-foreground mb-0.5">
-              {reports.data?.length || 4}
+              {reports.data?.length ?? 0}
             </div>
             <div className="text-xs font-medium text-muted-foreground">Reports Today</div>
           </div>
@@ -330,7 +312,9 @@ function SupervisorsPage() {
 
         <div className="p-5 rounded-xl border border-border bg-[color:var(--surface)] shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-2xl font-black text-foreground mb-0.5">6</div>
+            <div className="text-2xl font-black text-foreground mb-0.5">
+              {issues.data?.filter((i) => String(i.status).toLowerCase() !== "closed").length ?? 0}
+            </div>
             <div className="text-xs font-medium text-muted-foreground">Open Issues</div>
           </div>
           <div className="size-10 rounded-lg bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center justify-center">
@@ -485,14 +469,14 @@ function SupervisorsPage() {
                     !!ownAttendance
                   }
                   onClick={() => checkMutation.mutate("check-in")}
-                  className="h-8 px-3.5 bg-emerald-600 text-white font-semibold text-xs rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-40 flex items-center gap-1.5"
+                  className="h-8 px-3.5 bg-emerald-600 text-white font-semibold text-xs rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1.5"
                 >
                   <CheckCircle className="size-3.5" /> Check In
                 </button>
                 <button
                   disabled={checkMutation.isPending || !ownAttendance || !!ownAttendance.checkOut}
                   onClick={() => checkMutation.mutate("check-out")}
-                  className="h-8 px-3.5 border border-border text-foreground font-semibold text-xs rounded-lg hover:bg-secondary transition-colors disabled:opacity-40 flex items-center gap-1.5"
+                  className="h-8 px-3.5 border border-border text-foreground font-semibold text-xs rounded-lg hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1.5"
                 >
                   <Clock className="size-3.5" /> Check Out
                 </button>
@@ -675,7 +659,7 @@ function SupervisorsPage() {
                   />
                   <button
                     disabled={reportMutation.isPending || !summary.trim()}
-                    className="h-8 px-4 bg-primary text-primary-foreground font-semibold text-xs rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center gap-1.5"
+                    className="h-8 px-4 bg-primary text-primary-foreground font-semibold text-xs rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1.5"
                   >
                     <Send className="size-3.5" />
                     {reportMutation.isPending ? "Submitting..." : "Submit Report"}

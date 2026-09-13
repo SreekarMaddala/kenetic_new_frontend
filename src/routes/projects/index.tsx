@@ -127,6 +127,7 @@ function ProjectsPage() {
 
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
+    if (createMutation.isPending) return;
     if (!newProjName || !newProjLoc || !newProjBudget || !newProjDeadline) {
       toast.error("Please fill in project name, location, budget, and deadline.");
       return;
@@ -355,9 +356,10 @@ function ProjectsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                  disabled={createMutation.isPending}
+                  className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:pointer-events-none"
                 >
-                  Create Project
+                  {createMutation.isPending ? "Creating..." : "Create Project"}
                 </button>
               </div>
             </form>

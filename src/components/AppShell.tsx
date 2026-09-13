@@ -164,11 +164,6 @@ const getProjectNav = (projectId: string, role?: string) => {
             label: "Daily Labour Attendance",
             icon: usersIcon,
           },
-          {
-            to: `/projects/${projectId}/payroll`,
-            label: "Labour Rates & Payroll",
-            icon: usersIcon,
-          },
         ],
       },
       {
@@ -212,7 +207,6 @@ const getProjectNav = (projectId: string, role?: string) => {
       items: [
         { to: `/projects/${projectId}/supervisors`, label: "Supervisor Check-In", icon: usersIcon },
         { to: `/projects/${projectId}/labour`, label: "Daily Labour Attendance", icon: usersIcon },
-        { to: `/projects/${projectId}/payroll`, label: "Labour Rates & Payroll", icon: usersIcon },
         {
           to: `/projects/${projectId}/logistics`,
           label: "Logistics (Load & KM)",

@@ -287,6 +287,7 @@ function ProjectDetailsPage() {
 
   const handleAddExpense = (e: React.FormEvent) => {
     e.preventDefault();
+    if (createExpenseMutation.isPending) return;
     if (!isEditingExpenses) {
       toast.error("Enable editing to add an expense.");
       return;
@@ -729,9 +730,10 @@ function ProjectDetailsPage() {
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1 mt-2"
+                  disabled={createExpenseMutation.isPending}
+                  className="w-full py-2.5 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1 mt-2"
                 >
-                  <Plus className="size-4" /> Save Expense
+                  <Plus className="size-4" /> {createExpenseMutation.isPending ? "Saving..." : "Save Expense"}
                 </button>
               </form>
             ) : (
