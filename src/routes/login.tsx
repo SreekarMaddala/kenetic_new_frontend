@@ -160,7 +160,7 @@ function LoginPage() {
           <h1 id="login-title">{title}</h1>
           <p className="login-description">{description}</p>
           <form onSubmit={submit} className="login-form">
-            {(screen === "login" || screen === "forgot") && (
+            {(screen === "login" || screen === "forgot" || screen === "reset") && (
               <label className="login-field">
                 Work email
                 <div className="login-input-wrap">
@@ -184,7 +184,7 @@ function LoginPage() {
                   <Mail size={18} aria-hidden="true" />
                   <input
                     autoComplete="one-time-code"
-                    placeholder="Enter your email code"
+                    placeholder="Enter your email verification code"
                     required
                     value={code}
                     disabled={busy}
