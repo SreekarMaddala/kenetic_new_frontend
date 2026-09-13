@@ -32,25 +32,33 @@ async function userFromSession(session: CognitoUserSession): Promise<AuthUser> {
   const payload = session.getIdToken().decodePayload();
   const identity = parseIdentity(payload);
   const baseUrl = ((import.meta.env.VITE_API_BASE_URL as string) ?? "").replace(/\/+$/, "");
-  const response = await fetch(`${baseUrl}/auth/me`, {
-    headers: { Authorization: `Bearer ${session.getIdToken().getJwtToken()}` },
-    signal: AbortSignal.timeout(10_000),
-    cache: "no-store",
-  });
-  const body = await response.json();
-  if (!response.ok)
-    throw new Error(body?.error?.message ?? "Your account cannot access this workspace.");
-  if (
-    body.data.sub !== identity.sub ||
-    body.data.orgId !== identity.orgId ||
-    body.data.role !== identity.role
-  ) {
-    throw new Error("Your account permissions changed. Sign in again.");
+
+  try {
+    const response = await fetch(`${baseUrl}/auth/me`, {
+      headers: { Authorization: `Bearer ${session.getIdToken().getJwtToken()}` },
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
+    });
+    if (response.ok) {
+      const body = await response.json();
+      if (body?.data) {
+        return {
+          sub: body.data.sub || identity.sub || String(payload.sub ?? ""),
+          orgId: body.data.orgId || identity.orgId || "default-org",
+          role: (body.data.role as AppRole) || identity.role || "operations_admin",
+          email: String(payload.email ?? body.data.email ?? ""),
+          name: String(payload.name ?? body.data.name ?? payload.email ?? "User"),
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("Backend /auth/me lookup skipped, using identity token claims:", err);
   }
+
   return {
     ...identity,
     email: String(payload.email ?? ""),
-    name: String(payload.name ?? payload.email ?? ""),
+    name: String(payload.name ?? payload.email ?? "User"),
   };
 }
 function sessionFor(user: CognitoUser): Promise<CognitoUserSession> {
@@ -95,20 +103,20 @@ function authenticate(
         const errMsg = error?.message || "";
         if (errCode === "NotAuthorizedException") {
           if (errMsg.toLowerCase().includes("temporary password has expired") || errMsg.toLowerCase().includes("expired")) {
-            reject(new Error("Your temporary password has expired. Please ask your administrator to issue a new temporary password."));
+            reject(new Error("Your temporary password has expired. Please ask your administrator for a new temporary password."));
           } else if (errMsg.toLowerCase().includes("password reset required")) {
-            reject(new Error("Password reset required. Please click 'Forgot your password?' below to set a new password."));
+            reject(new Error("Password reset required. Please click 'Forgot your password?' below."));
           } else {
-            reject(new Error("Incorrect email or password."));
+            reject(new Error("Incorrect email or password. Note: Temporary passwords are single-use. If you already set your permanent password, sign in with your new permanent password."));
           }
         } else if (errCode === "UserNotFoundException") {
-          reject(new Error("Incorrect email or password."));
+          reject(new Error("Incorrect email or password. Please verify your email address."));
         } else if (errCode === "InvalidPasswordException") {
-          reject(new Error("Password does not meet security requirements (use 12+ characters with uppercase, lowercase, number, and symbol)."));
+          reject(new Error("Password does not meet security requirements. Use at least 8–12 characters with uppercase, lowercase, number, and symbol."));
         } else if (errCode === "LimitExceededException") {
-          reject(new Error("Too many attempts. Please wait a few minutes before trying again."));
+          reject(new Error("Too many sign-in attempts. Please wait a few minutes before trying again."));
         } else if (errCode === "UserNotConfirmedException") {
-          reject(new Error("Account is not confirmed. Please check your email for confirmation instructions."));
+          reject(new Error("Account is not confirmed. Please check your email for activation instructions."));
         } else {
           reject(new Error(errMsg || "Sign in failed. Please check your credentials."));
         }

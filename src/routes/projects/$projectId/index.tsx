@@ -266,11 +266,16 @@ function ProjectDetailsPage() {
     };
 
     const selectedSuper = supervisorList.find(
-      (s) => s.name === detailTimelineName || s.email === detailTimelineName || s.employeeId === detailTimelineName
+      (s) => s.name === detailTimelineName || s.email === detailTimelineName || s.employeeId === detailTimelineName || (s as any).id === detailTimelineName
     );
 
     const existingSupervisorIds = (selectedProject as any)?.supervisorIds || [];
     const updatedSupervisorIds = Array.isArray(existingSupervisorIds) ? [...existingSupervisorIds] : [];
+    
+    const targetId = (selectedSuper as any)?.id || (selectedSuper as any)?.sub || selectedSuper?.employeeId || selectedSuper?.email;
+    if (targetId && !updatedSupervisorIds.includes(targetId)) {
+      updatedSupervisorIds.push(targetId);
+    }
     if (selectedSuper?.employeeId && !updatedSupervisorIds.includes(selectedSuper.employeeId)) {
       updatedSupervisorIds.push(selectedSuper.employeeId);
     }
