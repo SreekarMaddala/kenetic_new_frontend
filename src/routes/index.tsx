@@ -6,6 +6,7 @@ import siteCranes from "../assets/site-cranes.jpg";
 import siteSlab from "../assets/site-slab.jpg";
 import siteSteel from "../assets/site-steel.jpg";
 import invoiceScan from "../assets/invoice-scan.jpg";
+import kineticDemo from "../assets/kinetic-demo.mp4";
 import trackingCardSvg from "../assets/lanyard/tracking-card.svg";
 import financeCardSvg from "../assets/lanyard/finance-card.svg";
 import inventoryCardSvg from "../assets/lanyard/inventory-card.svg";
@@ -918,14 +919,14 @@ function LandingPage() {
               marginLeft: 8,
               padding: "8px 22px",
               borderRadius: 10,
-              background: "linear-gradient(135deg, hsl(158,64%,38%), hsl(158,64%,26%))",
+              background: "linear-gradient(135deg, #f97316, #ea580c)",
               color: "white",
               fontSize: 13,
               fontWeight: 600,
-              boxShadow: "0 4px 16px rgba(0,180,100,0.35)",
+              boxShadow: "0 4px 16px rgba(249,115,22,0.35)",
               transition: "transform .2s, box-shadow .2s",
             }}
-            className="hover:scale-[1.04] hover:shadow-[0_6px_24px_rgba(0,180,100,0.45)]"
+            className="hover:scale-[1.04] hover:shadow-[0_6px_24px_rgba(249,115,22,0.5)]"
           >
             Open Dashboard →
           </Link>
@@ -936,7 +937,7 @@ function LandingPage() {
           style={{
             padding: "8px 16px",
             borderRadius: 10,
-            background: "hsl(158,64%,32%)",
+            background: "linear-gradient(135deg, #f97316, #ea580c)",
             color: "white",
             fontSize: 12,
             fontWeight: 600,
@@ -1173,7 +1174,7 @@ function LandingPage() {
               fontFamily: "monospace",
               textTransform: "uppercase" as const,
               letterSpacing: "0.16em",
-              color: "hsl(158,64%,44%)",
+              color: "hsl(24,95%,53%)",
               marginBottom: 14,
             }}
           >
@@ -1236,7 +1237,7 @@ function LandingPage() {
                     height: 48,
                     borderRadius: "50%",
                     border: "2px solid transparent",
-                    borderTopColor: "hsl(158,64%,44%)",
+                    borderTopColor: "hsl(24,95%,53%)",
                     animation: "spinSlow 1s linear infinite",
                   }}
                 />
@@ -1248,7 +1249,7 @@ function LandingPage() {
               gravity={[0, -40, 0]}
               fov={30}
               badges={[
-                { frontImage: trackingCardSvg, lanyardColor: "#00c87a", offsetX: -8.25 },
+                { frontImage: trackingCardSvg, lanyardColor: "#f97316", offsetX: -8.25 },
                 { frontImage: financeCardSvg, lanyardColor: "#3b9ef5", offsetX: -4.95 },
                 { frontImage: inventoryCardSvg, lanyardColor: "#f59e0b", offsetX: -1.65 },
                 { frontImage: approvalCardSvg, lanyardColor: "#9c5af5", offsetX: 1.65 },
@@ -1275,7 +1276,7 @@ function LandingPage() {
           }}
         >
           {[
-            { label: "Live Project Pipeline", tag: "TRACKING", color: "hsl(158,64%,44%)" },
+            { label: "Live Project Pipeline", tag: "TRACKING", color: "hsl(24,95%,53%)" },
             { label: "AI Bill Extraction", tag: "FINANCE", color: "hsl(210,85%,62%)" },
             { label: "Material Intelligence", tag: "INVENTORY", color: "hsl(40,90%,56%)" },
             { label: "Approval Center", tag: "WORKFLOW", color: "hsl(280,65%,62%)" },
@@ -1339,7 +1340,7 @@ function LandingPage() {
                 fontFamily: "monospace",
                 textTransform: "uppercase" as const,
                 letterSpacing: "0.16em",
-                color: "hsl(158,64%,44%)",
+                color: "hsl(24,95%,53%)",
                 marginBottom: 14,
               }}
             >
@@ -1444,11 +1445,15 @@ function LandingPage() {
                 </span>
               </div>
             </div>
-            <div style={{ position: "relative", width: "100%", height: 600, background: "#080809" }}>
-              <iframe
-                src="/dashboard"
-                style={{ width: "100%", height: "100%", border: "none" }}
-                title="Kenetic Live Interactive Workspace"
+            <div style={{ position: "relative", width: "100%", height: "auto", minHeight: 520, background: "#080809", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <video
+                src={kineticDemo}
+                autoPlay
+                loop
+                muted
+                playsInline
+                controls
+                style={{ width: "100%", height: "100%", maxHeight: 650, objectFit: "cover", display: "block" }}
               />
             </div>
           </div>
@@ -1678,7 +1683,7 @@ function LandingPage() {
               width: 700,
               height: 400,
               borderRadius: "50%",
-              background: "radial-gradient(ellipse, rgba(0,180,100,0.08) 0%, transparent 70%)",
+              background: "radial-gradient(ellipse, rgba(249,115,22,0.12) 0%, transparent 70%)",
               pointerEvents: "none",
               filter: "blur(40px)",
               zIndex: 0,

@@ -3,6 +3,20 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { NewPasswordRequiredError, forgotPassword, resetPassword, clearTokens } from "../lib/auth";
 import { homeForRole } from "../lib/permissions";
+import {
+  ArrowUpRight,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  LockKeyhole,
+  Mail,
+  HardHat,
+  Layers3,
+  UsersRound,
+} from "lucide-react";
+import siteImage from "../assets/site-cranes.jpg";
+import "../styles/login.css";
 
 export const Route = createFileRoute("/login")({ component: LoginPage });
 type Screen = "login" | "new-password" | "forgot" | "reset";
@@ -18,12 +32,14 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   useEffect(() => {
     if (user) navigate({ to: homeForRole(user.role), replace: true });
   }, [user, navigate]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (busy || isLoading) return;
     setBusy(true);
     setError("");
     setNotice("");
@@ -56,125 +72,232 @@ function LoginPage() {
     }
   }
   const choosePassword = screen === "new-password" || screen === "reset";
-  const input =
-    "w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500";
   const title = {
-    login: "Sign in",
-    "new-password": "Activate your account",
-    forgot: "Forgot password",
+    login: "Welcome back.",
+    "new-password": "Make it yours.",
+    forgot: "Let?s get you back.",
+    reset: "A fresh start.",
+  }[screen];
+  const description = {
+    login: "Your projects, people, and progress. All in one place.",
+    "new-password": "Set a permanent password to activate your invited account.",
+    forgot: "Enter your work email and we?ll send a password reset code.",
+    reset: "Enter the code from your email and choose a new password.",
+  }[screen];
+  const action = {
+    login: "Sign in to workspace",
+    "new-password": "Activate account",
+    forgot: "Send reset code",
     reset: "Reset password",
   }[screen];
   return (
-    <main className="min-h-screen bg-[#080809] text-white grid place-items-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center justify-center gap-3 mb-8">
-          <img
-            src="/logo.png"
-            alt="Kenetic Logo"
-            className="size-16 rounded-2xl object-cover shadow-2xl border border-white/20"
-          />
-          <p className="text-orange-500 font-bold tracking-[0.25em] text-center">KENETIC ERP</p>
-        </div>
-        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-8 shadow-2xl">
-          <h1 className="text-2xl font-bold mb-2">{title}</h1>
-          <p className="text-sm text-white/50 mb-6">
-            {screen === "new-password"
-              ? "Set your permanent password to finish accepting your invitation."
-              : "Use your organization account to access your workspace."}
+    <main className="kinetic-login">
+      <section className="login-story" aria-label="Kenetic construction workspace">
+        <img
+          src={siteImage}
+          alt="Tower cranes above a building under construction"
+          className="login-site-image"
+        />
+        <div className="login-image-shade" />
+        <div className="login-blueprint" aria-hidden="true" />
+        <a href="/" className="login-brand" aria-label="Kenetic ERP home">
+          <img src="/logo.png" alt="" />
+          <span>
+            KENETIC<span className="login-brand-sub">CONSTRUCTION ERP</span>
+          </span>
+        </a>
+        <div className="login-story-content">
+          <div className="login-eyebrow">
+            <span /> BUILT FOR THE BUILDERS
+          </div>
+          <h2>
+            Big plans.
+            <br />
+            Real progress<span className="login-orange">.</span>
+          </h2>
+          <p>
+            From the first blueprint to the final brick.
+            <br className="hidden sm:block" /> Bring every part of your project together.
           </p>
-          <form onSubmit={submit} className="space-y-4">
+          <div className="login-story-line" aria-hidden="true">
+            <span />
+            <ArrowUpRight size={26} />
+          </div>
+        </div>
+        <div className="login-story-footer">
+          <div className="login-capabilities">
+            <span>
+              <Layers3 size={16} /> Projects
+            </span>
+            <span>
+              <UsersRound size={16} /> People
+            </span>
+            <span>
+              <HardHat size={16} /> Site operations
+            </span>
+          </div>
+          <span className="login-edition">ONE CONNECTED WORKSPACE</span>
+        </div>
+        <div className="login-corner-mark" aria-hidden="true">
+          +
+        </div>
+      </section>
+
+      <section className="login-access" aria-labelledby="login-title">
+        <div className="login-access-top">
+          <span className="login-workspace-tag">
+            <span /> ORGANIZATION ACCESS
+          </span>
+          <span className="login-index" aria-hidden="true">
+            01 / WORKSPACE
+          </span>
+        </div>
+        <div className="login-form-wrap">
+          <div className="login-welcome-icon" aria-hidden="true">
+            <ArrowUpRight size={28} strokeWidth={1.6} />
+          </div>
+          <p className="login-form-eyebrow">LET?S BUILD SOMETHING GREAT</p>
+          <h1 id="login-title">{title}</h1>
+          <p className="login-description">{description}</p>
+          <form onSubmit={submit} className="login-form">
             {(screen === "login" || screen === "forgot") && (
-              <label className="block text-sm space-y-2">
-                Email
-                <input
-                  className={input}
-                  type="email"
-                  autoComplete="username"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+              <label className="login-field">
+                Work email
+                <div className="login-input-wrap">
+                  <Mail size={18} aria-hidden="true" />
+                  <input
+                    type="email"
+                    autoComplete="username"
+                    placeholder="you@company.com"
+                    required
+                    value={email}
+                    disabled={busy}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </div>
               </label>
             )}
             {screen === "reset" && (
-              <label className="block text-sm space-y-2">
+              <label className="login-field">
                 Verification code
-                <input
-                  className={input}
-                  autoComplete="one-time-code"
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
+                <div className="login-input-wrap">
+                  <Mail size={18} aria-hidden="true" />
+                  <input
+                    autoComplete="one-time-code"
+                    placeholder="Enter your email code"
+                    required
+                    value={code}
+                    disabled={busy}
+                    onChange={(event) => setCode(event.target.value)}
+                  />
+                </div>
               </label>
             )}
             {screen !== "forgot" && (
-              <label className="block text-sm space-y-2">
-                {choosePassword ? "New password" : "Password"}
-                <input
-                  className={input}
-                  type="password"
-                  autoComplete={choosePassword ? "new-password" : "current-password"}
-                  required
-                  minLength={choosePassword ? 12 : undefined}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </label>
+              <div className="login-field">
+                <label htmlFor="login-password">
+                  {choosePassword ? "New password" : "Password"}
+                </label>
+                <div className="login-input-wrap">
+                  <LockKeyhole size={18} aria-hidden="true" />
+                  <input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete={choosePassword ? "new-password" : "current-password"}
+                    placeholder={
+                      choosePassword ? "Create a strong password" : "Enter your password"
+                    }
+                    required
+                    minLength={choosePassword ? 12 : undefined}
+                    value={password}
+                    disabled={busy}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="login-reveal"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
             )}
             {choosePassword && (
               <>
-                <p className="text-xs text-white/50">
+                <p className="login-password-help">
                   Use at least 12 characters with uppercase, lowercase, a number and a symbol.
                 </p>
-                <label className="block text-sm space-y-2">
+                <label className="login-field">
                   Confirm password
-                  <input
-                    className={input}
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={confirmation}
-                    onChange={(e) => setConfirmation(e.target.value)}
-                  />
+                  <div className="login-input-wrap">
+                    <LockKeyhole size={18} aria-hidden="true" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      placeholder="Enter your password again"
+                      required
+                      value={confirmation}
+                      disabled={busy}
+                      onChange={(event) => setConfirmation(event.target.value)}
+                    />
+                  </div>
                 </label>
               </>
             )}
             {(error || sessionError) && (
-              <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300">
+              <p role="alert" className="login-alert">
                 {error || sessionError}
               </p>
             )}
             {notice && (
-              <p role="status" className="text-sm text-green-300">
+              <p role="status" className="login-notice">
                 {notice}
               </p>
             )}
-            <button
-              disabled={busy || isLoading}
-              className="w-full rounded-xl bg-orange-600 py-3 font-semibold disabled:opacity-50"
-            >
-              {busy ? "Please wait…" : title}
+            <button disabled={busy || isLoading} className="login-submit">
+              {busy ? (
+                <>
+                  <LoaderCircle className="login-spinner" size={19} /> Please wait?
+                </>
+              ) : (
+                <>
+                  {action}
+                  <ArrowRight size={19} />
+                </>
+              )}
             </button>
           </form>
           <button
             type="button"
             disabled={busy}
+            className="login-recovery"
             onClick={() => {
               clearTokens();
               setScreen(screen === "login" ? "forgot" : "login");
               setError("");
+              setNotice("");
               setPassword("");
+              setConfirmation("");
+              setShowPassword(false);
             }}
-            className="mt-5 text-sm text-orange-400"
           >
-            {screen === "login" ? "Forgot password?" : "Back to sign in"}
+            {screen === "login" ? "Forgot your password?" : "? Back to sign in"}
           </button>
-          <p className="text-xs text-white/40 mt-6">
-            Need access? Ask your organization administrator for an invitation.
-          </p>
-        </section>
-      </div>
+          <div className="login-invitation">
+            <span>New to the team?</span>
+            <p>Ask your organization administrator for an invitation to your workspace.</p>
+          </div>
+        </div>
+        <footer className="login-access-footer">
+          <span>
+            <LockKeyhole size={13} /> Your organization. Your workspace.
+          </span>
+          <span>KENETIC ERP</span>
+        </footer>
+      </section>
     </main>
   );
 }
