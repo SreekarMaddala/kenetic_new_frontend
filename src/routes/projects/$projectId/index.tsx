@@ -265,9 +265,23 @@ function ProjectDetailsPage() {
       status: detailTimelineStatus,
     };
 
+    const selectedSuper = supervisorList.find(
+      (s) => s.name === detailTimelineName || s.email === detailTimelineName || s.employeeId === detailTimelineName
+    );
+
+    const existingSupervisorIds = (selectedProject as any)?.supervisorIds || [];
+    const updatedSupervisorIds = Array.isArray(existingSupervisorIds) ? [...existingSupervisorIds] : [];
+    if (selectedSuper?.employeeId && !updatedSupervisorIds.includes(selectedSuper.employeeId)) {
+      updatedSupervisorIds.push(selectedSuper.employeeId);
+    }
+    if (selectedSuper?.email && !updatedSupervisorIds.includes(selectedSuper.email)) {
+      updatedSupervisorIds.push(selectedSuper.email);
+    }
+
     try {
       await projectApi.update(projectId!, {
         supervisorsTimeline: [...localTimeline, newItem],
+        supervisorIds: updatedSupervisorIds,
       } as Parameters<typeof projectApi.update>[1]);
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     } catch (e) {

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api, projectApi, type DomainRecord } from "../../../lib/api";
 import { toast } from "sonner";
+import { logisticsPeriod } from "../../../lib/logisticsPeriod";
 import {
   Truck,
   Compass,
@@ -26,6 +27,9 @@ function LogisticsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "operations_admin" || user?.role === "super_admin";
   const qc = useQueryClient();
+  const period = logisticsPeriod();
+  const [monthFilter, setMonthFilter] = useState("all");
+  const visibleMonth = isAdmin ? monthFilter : period.month;
 
   const [activeTab, setActiveTab] = useState<"owned" | "fuel" | "rental">("owned");
 
@@ -36,13 +40,13 @@ function LogisticsPage() {
   // Form states - Daily Mileage Log
   const [selectedVehicle, setSelectedVehicle] = useState("");
   const [driverName, setDriverName] = useState("");
-  const [logDate, setLogDate] = useState(new Date().toISOString().slice(0, 10));
+  const [logDate, setLogDate] = useState(period.today);
   const [startKm, setStartKm] = useState("");
   const [endKm, setEndKm] = useState("");
 
   // Form states - Fuel Fill Log
   const [fuelVehicle, setFuelVehicle] = useState("");
-  const [fuelDate, setFuelDate] = useState(new Date().toISOString().slice(0, 10));
+  const [fuelDate, setFuelDate] = useState(period.today);
   const [fuelLiters, setFuelLiters] = useState("");
   const [fuelRate, setFuelRate] = useState("95");
   const [fuelNotes, setFuelNotes] = useState("");
@@ -50,7 +54,7 @@ function LogisticsPage() {
   // Form states - Rental Auto Trip Log
   const [rentalVendor, setRentalVendor] = useState("");
   const [rentalMaterial, setRentalMaterial] = useState("");
-  const [rentalDate, setRentalDate] = useState(new Date().toISOString().slice(0, 10));
+  const [rentalDate, setRentalDate] = useState(period.today);
   const [rentalRate, setRentalRate] = useState("");
   const [rentalHelper, setRentalHelper] = useState("0");
 
@@ -64,11 +68,21 @@ function LogisticsPage() {
 
   // Query logistics trips
   const logisticsQuery = useQuery({
-    queryKey: ["logistics-trips", projectId],
+    queryKey: ["logistics-trips", projectId, user?.sub, user?.role, period.month],
+    refetchInterval: 60000,
     queryFn: () => api.get<DomainRecord[]>(endpoint),
   });
 
-  const rawLogs = logisticsQuery.data ?? [];
+  const rawLogs = useMemo(
+    () =>
+      (logisticsQuery.data ?? []).filter(
+        (record) =>
+          record.tripType === "vehicle_registration" ||
+          visibleMonth === "all" ||
+          String(record.date ?? "").startsWith(visibleMonth),
+      ),
+    [logisticsQuery.data, visibleMonth],
+  );
 
   // Registered Vehicles
   const registeredVehicles = useMemo(() => {
@@ -156,7 +170,16 @@ function LogisticsPage() {
 
   // Mutations
   const createLogisticsMutation = useMutation({
-    mutationFn: (body: DomainRecord) => api.post("/supervisor/logistics/trips", body),
+    mutationFn: (body: DomainRecord) => {
+      if (
+        !isAdmin &&
+        body.tripType !== "vehicle_registration" &&
+        !String(body.date ?? "").startsWith(logisticsPeriod().month)
+      ) {
+        throw new Error("You can only add logistics entries for the current month.");
+      }
+      return api.post("/supervisor/logistics/trips", body);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["logistics-trips", projectId] });
       toast.success("Logistics record saved successfully.");
@@ -296,6 +319,40 @@ function LogisticsPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
+        {isAdmin ? (
+          <>
+            <label className="text-sm font-semibold" htmlFor="logistics-period">
+              Reporting period
+            </label>
+            <select
+              id="logistics-period"
+              className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              value={monthFilter === "all" ? "all" : "month"}
+              onChange={(event) =>
+                setMonthFilter(event.target.value === "all" ? "all" : period.month)
+              }
+            >
+              <option value="all">All dates</option>
+              <option value="month">Select month</option>
+            </select>
+            {monthFilter !== "all" && (
+              <input
+                aria-label="Logistics month"
+                type="month"
+                value={monthFilter}
+                onChange={(event) => setMonthFilter(event.target.value || period.month)}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              />
+            )}
+          </>
+        ) : (
+          <p className="text-sm font-medium">
+            Current month: {period.month} · You can view and record entries for this month only.
+          </p>
+        )}
+      </div>
+
       {/* Top 3 Summary Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Owned Fleet Distance */}
@@ -307,7 +364,11 @@ function LogisticsPage() {
             <div className="text-3xl font-black text-foreground">
               {totalFleetDistance.toLocaleString()} KM
             </div>
-            <div className="text-xs text-muted-foreground mt-1">Total recorded runs this month</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {visibleMonth === "all"
+                ? "Total recorded runs across all dates"
+                : `Total recorded runs in ${visibleMonth}`}
+            </div>
           </div>
           <div className="size-10 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center justify-center">
             <Compass className="size-5" />
@@ -403,7 +464,9 @@ function LogisticsPage() {
                   <Gauge className="size-7" />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="font-bold text-sm text-foreground">No Daily Mileage Runs Recorded</h4>
+                  <h4 className="font-bold text-sm text-foreground">
+                    No Daily Mileage Runs Recorded
+                  </h4>
                   <p className="text-xs text-muted-foreground max-w-sm">
                     Register a vehicle and log daily odometer runs using the form on the right.
                   </p>
@@ -540,6 +603,8 @@ function LogisticsPage() {
                 <label className="text-xs font-semibold text-muted-foreground">Date</label>
                 <input
                   type="date"
+                  min={isAdmin ? undefined : period.start}
+                  max={isAdmin ? undefined : period.end}
                   required
                   value={logDate}
                   onChange={(e) => setLogDate(e.target.value)}
@@ -680,6 +745,8 @@ function LogisticsPage() {
                 <label className="text-xs font-semibold text-muted-foreground">Fill Date</label>
                 <input
                   type="date"
+                  min={isAdmin ? undefined : period.start}
+                  max={isAdmin ? undefined : period.end}
                   required
                   value={fuelDate}
                   onChange={(e) => setFuelDate(e.target.value)}
@@ -765,7 +832,8 @@ function LogisticsPage() {
                 <div className="space-y-1">
                   <h4 className="font-bold text-sm text-foreground">No Rental Trips Recorded</h4>
                   <p className="text-xs text-muted-foreground max-w-sm">
-                    Log daily rental auto and helper transportation trips using the form on the right.
+                    Log daily rental auto and helper transportation trips using the form on the
+                    right.
                   </p>
                 </div>
               </div>
@@ -847,6 +915,8 @@ function LogisticsPage() {
                 <label className="text-xs font-semibold text-muted-foreground">Trip Date</label>
                 <input
                   type="date"
+                  min={isAdmin ? undefined : period.start}
+                  max={isAdmin ? undefined : period.end}
                   required
                   value={rentalDate}
                   onChange={(e) => setRentalDate(e.target.value)}
