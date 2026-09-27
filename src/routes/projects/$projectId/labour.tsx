@@ -88,8 +88,9 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
   const workers = query.data ?? [];
   const siteWorkers = workers.filter((worker) => worker.allocatedProjectId === projectId);
   const present = siteWorkers.filter((worker) => worker.status === "Present");
-  const wages = present.reduce((sum, worker) => sum + Number(worker.dailyWage ?? worker.rate), 0);
-  const paid = present
+  const halfDay = siteWorkers.filter((worker) => worker.status === "Half Day");
+  const wages = siteWorkers.reduce((sum, worker) => sum + Number(worker.dailyWage ?? (worker.status === "Half Day" ? Number(worker.rate) * 0.5 : worker.status === "Present" ? worker.rate : 0)), 0);
+  const paid = siteWorkers
     .filter((worker) => worker.paymentStatus === "Paid")
     .reduce((sum, worker) => sum + Number(worker.dailyWage ?? worker.rate), 0);
   return (
@@ -113,6 +114,7 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
           <div className="grid gap-4 md:grid-cols-3">
             {[
               ["Present at this project", `${present.length} / ${siteWorkers.length}`],
+              ["Half Day", `${halfDay.length}`],
               ["Paid today", money(paid)],
               ["Unpaid wages today", money(wages - paid)],
             ].map(([label, value]) => (
@@ -256,10 +258,11 @@ function WorkerRow({
   refresh: () => Promise<void>;
 }) {
   const [target, setTarget] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ status: string; paymentStatus: string } | null>(null);
+  const [draft, setDraft] = useState<{ status: string; paymentStatus: string; nightShift: boolean } | null>(null);
   const allocation = target ?? String(worker.allocatedProjectId ?? projectId);
   const status = draft?.status ?? String(worker.status ?? "Absent");
   const payment = draft?.paymentStatus ?? String(worker.paymentStatus ?? "Not paid");
+  const nightShift = draft?.nightShift ?? Boolean(worker.nightShift);
   const enabled = !!worker.allocationConfirmed;
   const save = useMutation({
     mutationFn: (operation: "allocate" | "attendance") =>
@@ -270,7 +273,7 @@ function WorkerRow({
         operation,
         ...(operation === "allocate"
           ? { targetProjectId: allocation }
-          : { status, paymentStatus: payment }),
+          : { status, paymentStatus: payment, nightShift }),
       }),
     onSuccess: async (_, operation) => {
       setDraft(null);
@@ -331,7 +334,7 @@ function WorkerRow({
       </td>
       <td className="p-4">
         <div className="inline-flex rounded-full border border-border p-1 gap-1">
-          {["Present", "Absent"].map((value) => (
+          {["Present", "Half Day", "Absent"].map((value) => (
             <button
               key={value}
               aria-pressed={status === value}
@@ -340,14 +343,24 @@ function WorkerRow({
                 setDraft({
                   status: value,
                   paymentStatus: value === "Absent" ? "Not paid" : payment,
+                  nightShift,
                 })
               }
-              className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-40 ${status === value ? (value === "Present" ? "bg-emerald-600 text-white" : "bg-slate-600 text-white") : "text-muted-foreground"}`}
+              className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-40 ${status === value ? (value === "Present" ? "bg-emerald-600 text-white" : value === "Half Day" ? "bg-amber-600 text-white" : "bg-slate-600 text-white") : "text-muted-foreground"}`}
             >
               {value}
             </button>
           ))}
         </div>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
+          <input
+            type="checkbox"
+            checked={nightShift}
+            disabled={!enabled || status === "Absent" || save.isPending}
+            onChange={(event) => setDraft({ status, paymentStatus: payment, nightShift: event.target.checked })}
+          />
+          Night shift (2× wage)
+        </label>
         {!worker.attendanceRecorded && (
           <p className="text-xs text-muted-foreground mt-1">Not saved yet</p>
         )}
@@ -356,7 +369,7 @@ function WorkerRow({
         <select
           aria-label={`Payment for ${worker.name}`}
           className={input}
-          disabled={!enabled || status !== "Present" || save.isPending}
+          disabled={!enabled || status === "Absent" || save.isPending}
           value={payment}
           onChange={(event) => setDraft({ status, paymentStatus: event.target.value })}
         >
@@ -365,7 +378,7 @@ function WorkerRow({
         </select>
       </td>
       <td className="p-4 whitespace-nowrap font-semibold">
-        {money(enabled && status === "Present" && payment !== "Paid" ? Number(worker.rate) : 0)}
+        {money(enabled && payment !== "Paid" ? Number(worker.rate) * (status === "Half Day" ? 0.5 : status === "Present" ? 1 : 0) * (nightShift && status !== "Absent" ? 2 : 1) : 0)}
       </td>
       <td className="p-4">
         <button

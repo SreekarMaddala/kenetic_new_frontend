@@ -58,7 +58,7 @@ function LogisticsPage() {
   const [rentalRate, setRentalRate] = useState("");
   const [rentalHelper, setRentalHelper] = useState("0");
 
-  const endpoint = `/supervisor/logistics/trips?projectId=${encodeURIComponent(projectId)}`;
+  const endpoint = "/supervisor/logistics/trips";
 
   // Query project details
   const project = useQuery({
@@ -75,24 +75,48 @@ function LogisticsPage() {
 
   const rawLogs = useMemo(
     () =>
-      (logisticsQuery.data ?? []).filter(
-        (record) =>
-          record.tripType === "vehicle_registration" ||
-          visibleMonth === "all" ||
-          String(record.date ?? "").startsWith(visibleMonth),
-      ),
-    [logisticsQuery.data, visibleMonth],
+      (logisticsQuery.data ?? []).filter((record) => {
+        if (record.tripType === "vehicle_registration") {
+          return true;
+        }
+
+        if (record.projectId && record.projectId !== projectId) {
+          return false;
+        }
+
+        if (record.projectId === undefined && projectId) {
+          return false;
+        }
+
+        return visibleMonth === "all" || String(record.date ?? "").startsWith(visibleMonth);
+      }),
+    [logisticsQuery.data, projectId, visibleMonth],
   );
 
   // Registered Vehicles
   const registeredVehicles = useMemo(() => {
+    const seen = new Set<string>();
+
     return rawLogs
       .filter((r) => r.tripType === "vehicle_registration")
       .map((r) => {
-        const name = String(r.vehicle ?? r.model ?? "Vehicle");
+        const rawVehicle = String(r.vehicle ?? r.model ?? "Vehicle");
+        const model = String(r.model ?? rawVehicle);
         const plate = String(r.plateNo ?? r.registrationNo ?? "");
-        return plate ? `${name} (${plate})` : name;
-      });
+        const label = plate
+          ? rawVehicle.endsWith(`(${plate})`)
+            ? rawVehicle
+            : `${model} (${plate})`
+          : rawVehicle;
+
+        if (seen.has(label)) {
+          return null;
+        }
+
+        seen.add(label);
+        return label;
+      })
+      .filter((vehicle): vehicle is string => !!vehicle);
   }, [rawLogs]);
 
   // Mileage Logs
@@ -200,7 +224,6 @@ function LogisticsPage() {
       : vehicleModel.trim();
 
     createLogisticsMutation.mutate({
-      projectId,
       tripType: "vehicle_registration",
       vehicle: vehicleLabel,
       model: vehicleModel.trim(),

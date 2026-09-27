@@ -24,7 +24,7 @@ function ProjectsPage() {
   const { user } = useAuth();
   const isSupervisor = user?.role === "supervisor";
 
-  const { data: rawProjects = [], isLoading } = useQuery({
+  const { data: rawProjects, isLoading, isError, error } = useQuery({
     queryKey: ["projects"],
     queryFn: () => projectApi.list(),
     retry: 1,
@@ -38,9 +38,13 @@ function ProjectsPage() {
   });
 
   const supervisorList = employees.filter((e) => e.role === "supervisor" && e.status === "Active");
+  const employeesById = new Map(employees.map((employee) => [employee.employeeId, employee]));
 
   // Map API models to components expectation
-  const projects = rawProjects.map((p) => ({
+  // An organisation with no projects should still render the portfolio page.
+  // Keep the UI resilient if the API returns an empty/null payload as well.
+  const projectRecords = Array.isArray(rawProjects) ? rawProjects : [];
+  const projects = projectRecords.map((p) => ({
     id: p.projectId,
     name: p.name,
     location: p.location,
@@ -61,7 +65,14 @@ function ProjectsPage() {
     image:
       (p as any).image ||
       "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80",
-    supervisor: (p as any).supervisor || "",
+    supervisor:
+      (p as any).supervisor ||
+      (p.supervisorIds ?? [])
+        .map((id) => {
+          const supervisor = employeesById.get(id);
+          return supervisor ? `${supervisor.name} (${supervisor.email})` : id;
+        })
+        .join(", "),
     todaysLabour: (p as any).todaysLabour || 0,
     openIssues: (p as any).openIssues || 0,
   }));
@@ -158,6 +169,18 @@ function ProjectsPage() {
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-72 bg-secondary rounded-xl animate-pulse" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-8 max-w-7xl mx-auto w-full">
+        <PageHeader eyebrow="Portfolio" title="Projects" />
+        <div className="mt-8 bg-[color:var(--surface)] border border-destructive/30 rounded-xl p-12 text-center max-w-xl mx-auto space-y-4 shadow-sm">
+          <h2 className="text-xl font-display font-semibold text-foreground">Unable to load projects</h2>
+          <p className="text-sm text-muted-foreground">{(error as Error)?.message || "Please try again."}</p>
         </div>
       </div>
     );
@@ -538,7 +561,7 @@ function ProjectsPage() {
                       {p.name}
                     </h3>
                     <p className="text-[10px] text-zinc-250 font-mono uppercase tracking-wider mt-0.5 drop-shadow-sm">
-                      {p.location}
+                      {p.location || "Location not provided"}
                     </p>
                   </div>
                 </div>

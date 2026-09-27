@@ -121,6 +121,9 @@ function DashboardPage() {
       priority: "medium",
     };
   });
+  const budgetTotal = (projects ?? []).reduce((sum, project) => sum + (project.budget ?? 0), 0);
+  const spentTotal = (projects ?? []).reduce((sum, project) => sum + (project.spent ?? 0), 0);
+  const spentPercent = budgetTotal > 0 ? (spentTotal / budgetTotal) * 100 : 0;
   const pendingApprovalsCount = analytics?.pendingApprovals ?? approvals.length;
 
   const recentInvoices: any[] = [];
@@ -163,8 +166,8 @@ function DashboardPage() {
     <div className="p-8 max-w-7xl mx-auto w-full space-y-8 animate-fade-up">
       {/* Header */}
       <PageHeader
-        eyebrow="Command Center"
-        title="Operations Control"
+        eyebrow="Workspace overview"
+        title="Dashboard"
         actions={
           <div className="flex gap-2">
             <Link
@@ -187,7 +190,7 @@ function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <Card className="border border-border bg-[color:var(--surface)] hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest">
+            <CardTitle className="text-xs font-sans font-medium text-muted-foreground">
               Active Projects
             </CardTitle>
             <Building2 className="size-4 text-accent" />
@@ -195,14 +198,14 @@ function DashboardPage() {
           <CardContent>
             <div className="text-3xl font-display font-semibold">{activeProjectsCount}</div>
             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-              <span className="text-accent font-medium">100% on schedule</span> across India
+              Projects with an active status
             </p>
           </CardContent>
         </Card>
 
         <Card className="border border-border bg-[color:var(--surface)] hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest">
+            <CardTitle className="text-xs font-sans font-medium text-muted-foreground">
               Budget Managed
             </CardTitle>
             <IndianRupee className="size-4 text-primary" />
@@ -212,12 +215,12 @@ function DashboardPage() {
             <div className="mt-1.5 flex flex-col gap-1">
               <div className="flex justify-between items-center text-[10px] text-muted-foreground font-mono">
                 <span>Spent: {totalSpentVal}</span>
-                <span>59.2%</span>
+                <span>{spentPercent.toFixed(1)}%</span>
               </div>
               <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
                 <div
                   className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{ width: "59.2%" }}
+                  style={{ width: `${Math.min(100, Math.max(0, spentPercent))}%` }}
                 />
               </div>
             </div>
@@ -226,7 +229,7 @@ function DashboardPage() {
 
         <Card className="border border-border bg-[color:var(--surface)] hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest">
+            <CardTitle className="text-xs font-sans font-medium text-muted-foreground">
               Workflow Tasks
             </CardTitle>
             <FileCheck2 className="size-4 text-accent" />
@@ -234,7 +237,7 @@ function DashboardPage() {
           <CardContent>
             <div className="text-3xl font-display font-semibold">{pendingApprovalsCount}</div>
             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-              <span className="text-primary font-medium">{approvals.length} critical</span> items
+              <span className="text-primary font-medium">{approvals.length} pending</span> items
               await sign-off
             </p>
           </CardContent>
@@ -242,7 +245,7 @@ function DashboardPage() {
 
         <Card className="border border-border bg-[color:var(--surface)] hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest">
+            <CardTitle className="text-xs font-sans font-medium text-muted-foreground">
               Material Alerts
             </CardTitle>
             <AlertTriangle className="size-4 text-yellow-500" />
@@ -250,7 +253,8 @@ function DashboardPage() {
           <CardContent>
             <div className="text-3xl font-display font-semibold">{stockAlerts.length}</div>
             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-              <span className="text-yellow-600 font-medium">Stock running low</span> at 2 sites
+              <span className="text-yellow-600 font-medium">Stock running low</span> in the central
+              warehouse
             </p>
           </CardContent>
         </Card>
@@ -271,7 +275,7 @@ function DashboardPage() {
             </div>
             <div className="flex items-center gap-2 px-3 py-1 rounded border border-border bg-secondary text-[11px] font-mono text-muted-foreground">
               <TrendingUp className="size-3.5 text-accent" />
-              <span>OVERALL SPENT: 59.2%</span>
+              <span>Spent: {spentPercent.toFixed(1)}%</span>
             </div>
           </CardHeader>
           <CardContent className="h-[350px] pr-4">
@@ -312,8 +316,8 @@ function DashboardPage() {
                 />
                 <Bar
                   dataKey="Budget"
-                  fill="hsl(22 90% 48% / 0.15)"
-                  stroke="hsl(22 90% 48%)"
+                  fill="hsl(164 20% 78%)"
+                  stroke="var(--primary)"
                   strokeWidth={1}
                   radius={[4, 4, 0, 0]}
                 />
@@ -478,7 +482,7 @@ function DashboardPage() {
             <CardTitle className="font-display font-semibold text-lg flex items-center justify-between">
               <span>AI Bill Extraction logs</span>
               <span className="text-[10px] font-mono text-accent px-2 py-0.5 bg-accent/10 rounded">
-                98% ACCURACY
+                INVOICE PROCESSING
               </span>
             </CardTitle>
             <CardDescription className="text-xs text-muted-foreground">

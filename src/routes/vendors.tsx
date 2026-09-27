@@ -14,8 +14,9 @@ import {
   ShieldCheck,
   Briefcase,
   X,
+  History,
 } from "lucide-react";
-import { vendorApi, type Vendor } from "../lib/api";
+import { vendorApi, paymentApi, type Vendor, type VendorPayment } from "../lib/api";
 
 export const Route = createFileRoute("/vendors")({
   component: VendorsPage,
@@ -66,12 +67,19 @@ function VendorsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
+  const [historyVendor, setHistoryVendor] = useState<Vendor | null>(null);
+  const payments = useQuery({
+    queryKey: ["vendor-payments"],
+    queryFn: paymentApi.list,
+    enabled: Boolean(historyVendor),
+  });
 
   // Onboard Vendor form state
   const [name, setName] = useState("");
   const [type, setType] = useState("Materials & Supplies");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [materialsSupplied, setMaterialsSupplied] = useState("");
 
   const { data: rawVendors = [], isLoading } = useQuery({
     queryKey: ["vendors"],
@@ -88,6 +96,7 @@ function VendorsPage() {
       setName("");
       setEmail("");
       setPhone("");
+      setMaterialsSupplied("");
     },
   });
 
@@ -99,6 +108,7 @@ function VendorsPage() {
     rating: typeof v.rating === "number" ? v.rating : 0,
     email: v.email || "—",
     phone: v.phone || "—",
+    materialsSupplied: v.materialsSupplied || v.materials || "—",
     badge: v.badge || (v.status === "Active" ? "Standard" : "Under Review"),
     activeContracts: typeof v.activeContracts === "number" ? v.activeContracts : 0,
   }));
@@ -125,6 +135,7 @@ function VendorsPage() {
       type,
       email,
       phone,
+      materialsSupplied: materialsSupplied.trim() || undefined,
       status: "Active",
     });
   };
@@ -220,6 +231,7 @@ function VendorsPage() {
               <tr>
                 <th className="px-6 py-4 font-medium">Vendor / Supplier</th>
                 <th className="px-6 py-4 font-medium">Category & Rating</th>
+                <th className="px-6 py-4 font-medium">Materials Supplied</th>
                 <th className="px-6 py-4 font-medium">Contact Details</th>
                 <th className="px-6 py-4 font-medium">Contracts</th>
                 <th className="px-6 py-4 font-medium">Status</th>
@@ -253,6 +265,9 @@ function VendorsPage() {
                       <StarRating value={ven.rating} />
                     </div>
                   </td>
+                  <td className="px-6 py-4 text-xs text-muted-foreground">
+                    {ven.materialsSupplied === "—" ? "—" : ven.materialsSupplied}
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5">
@@ -280,6 +295,13 @@ function VendorsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
+                    <button
+                      title="View vendor history"
+                      onClick={() => setHistoryVendor(ven)}
+                      className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <History className="size-4" />
+                    </button>
                     <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md opacity-0 group-hover:opacity-100 transition-all">
                       <MoreHorizontal className="size-4" />
                     </button>
@@ -288,7 +310,7 @@ function VendorsPage() {
               ))}
               {filteredVendors.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground text-sm">
+                  <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground text-sm">
                     No vendors found matching the filters.
                   </td>
                 </tr>
@@ -297,6 +319,42 @@ function VendorsPage() {
           </table>
         </div>
       </div>
+
+      {historyVendor && (
+        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl max-h-[85vh] overflow-auto rounded-xl border border-border bg-[color:var(--surface)] shadow-xl">
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Vendor history</p>
+                <h2 className="text-xl font-semibold">{historyVendor.name}</h2>
+              </div>
+              <button onClick={() => setHistoryVendor(null)} aria-label="Close history"><X className="size-5" /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <MetricCard label="Payments" value={(payments.data ?? []).filter((p) => p.vendorId === historyVendor.vendorId).length} icon={<History className="size-5" />} color="bg-primary/10 text-primary" />
+                <MetricCard label="Contracts" value={historyVendor.activeContracts ?? 0} icon={<Briefcase className="size-5" />} color="bg-blue-500/10 text-blue-600" />
+                <MetricCard label="Status" value={historyVendor.status ?? "Unknown"} icon={<ShieldCheck className="size-5" />} color="bg-emerald-500/10 text-emerald-600" />
+                <MetricCard label="Materials" value={historyVendor.materialsSupplied ?? "—"} icon={<Briefcase className="size-5" />} color="bg-orange-500/10 text-orange-600" />
+              </div>
+              <section>
+                <h3 className="font-semibold mb-3">Payment history</h3>
+                {payments.isLoading ? <p className="text-sm text-muted-foreground">Loading history…</p> : (
+                  <div className="space-y-2">
+                    {(payments.data ?? []).filter((p) => p.vendorId === historyVendor.vendorId).map((payment) => (
+                      <div key={payment.paymentId} className="flex justify-between items-center rounded-lg border border-border p-3 text-sm">
+                        <div><div className="font-medium">{payment.description || "Vendor payment"}</div><div className="text-xs text-muted-foreground">{payment.createdAt ? new Date(payment.createdAt).toLocaleDateString() : "Date unavailable"} · {payment.status}</div></div>
+                        <span className="font-mono font-semibold">₹{Number(payment.amount || 0).toLocaleString("en-IN")}</span>
+                      </div>
+                    ))}
+                    {(payments.data ?? []).filter((p) => p.vendorId === historyVendor.vendorId).length === 0 && <p className="text-sm text-muted-foreground">No payment history found.</p>}
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -362,6 +420,19 @@ function VendorsPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full h-9 px-3 bg-secondary/20 border border-border rounded-md text-xs focus:outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-muted-foreground mb-1 block">
+                  Materials Supplied
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Cement, TMT Steel, Sand, Bricks"
+                  value={materialsSupplied}
+                  onChange={(e) => setMaterialsSupplied(e.target.value)}
+                  className="w-full h-9 px-3 bg-secondary/20 border border-border rounded-md text-xs focus:outline-none focus:border-primary"
                 />
               </div>
             </div>

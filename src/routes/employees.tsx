@@ -6,13 +6,21 @@ import { useAuth } from "../contexts/AuthContext";
 import { employeeApi, orgApi, type Employee, type CreateEmployeeBody } from "../lib/api";
 import { ROLE_LABELS, type AppRole } from "../lib/permissions";
 import { toast } from "sonner";
+import { Mail, ShieldOff, ShieldCheck } from "lucide-react";
+import {
+  RegistryTable,
+  RecordIdentity,
+  RecordStatus,
+  RecordActions,
+  type RegistryColumn,
+} from "../components/RegistryTable";
+import { DropdownMenuItem } from "../components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/employees")({ component: EmployeesPage });
 function EmployeesPage() {
   const { user } = useAuth();
   const platform = user?.role === "super_admin";
   const qc = useQueryClient();
-  const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateEmployeeBody>({
     name: "",
@@ -30,17 +38,9 @@ function EmployeesPage() {
     enabled: platform,
   });
   const create = useMutation({
-    mutationFn: async (body: CreateEmployeeBody) => {
-      const created = await employeeApi.create(body);
-      if (created?.employeeId) {
-        try {
-          await employeeApi.invite(created.employeeId, created.orgId);
-        } catch (e) {
-          console.warn("Failed to auto-send invitation email:", e);
-        }
-      }
-      return created;
-    },
+    // Account creation already sends the Cognito invitation. Resending here
+    // replaces the temporary credentials from the first email.
+    mutationFn: (body: CreateEmployeeBody) => employeeApi.create(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employees"] });
       setOpen(false);
@@ -70,6 +70,92 @@ function EmployeesPage() {
     event.preventDefault();
     create.mutate(form);
   }
+  const organizationName = (employee: Employee) =>
+    organizations.data?.find((org) => org.orgId === employee.orgId)?.name ??
+    employee.orgId ??
+    "Not assigned";
+  const columns: RegistryColumn<Employee>[] = [
+    {
+      key: "name",
+      label: "Account",
+      value: (employee) => employee.name,
+      render: (employee) => <RecordIdentity name={employee.name} detail={employee.email} />,
+    },
+    {
+      key: "role",
+      label: "Role",
+      value: (employee) => ROLE_LABELS[employee.role as AppRole] ?? employee.role,
+      render: (employee) => (
+        <span className="record-plan">
+          {ROLE_LABELS[employee.role as AppRole] ?? employee.role}
+        </span>
+      ),
+    },
+    {
+      key: "organization",
+      label: "Organization",
+      value: organizationName,
+      render: (employee) => (
+        <span className="block max-w-52 truncate" title={organizationName(employee)}>
+          {organizationName(employee)}
+        </span>
+      ),
+    },
+    {
+      key: "invitation",
+      label: "Invitation",
+      value: (employee) => employee.invitationStatus ?? "",
+      render: (employee) => employee.invitationStatus || "Not recorded",
+    },
+    {
+      key: "status",
+      label: "Status",
+      value: (employee) => employee.status,
+      render: (employee) => <RecordStatus status={employee.status} />,
+    },
+    {
+      key: "actions",
+      label: "",
+      render: (employee) => {
+        const manageable =
+          employee.role !== "super_admin" &&
+          employee.employeeId !== user?.sub &&
+          (platform || employee.role === "supervisor");
+        return (
+          <RecordActions name={employee.name} id={employee.employeeId}>
+            {manageable && (
+              <>
+                <DropdownMenuItem
+                  disabled={manage.isPending || employee.status !== "Active"}
+                  onSelect={() => manage.mutate({ employee, action: "invite" })}
+                >
+                  <Mail size={14} />
+                  Resend invitation
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={manage.isPending}
+                  className={employee.status === "Active" ? "record-danger" : ""}
+                  onSelect={() =>
+                    manage.mutate({
+                      employee,
+                      action: employee.status === "Active" ? "Disabled" : "Active",
+                    })
+                  }
+                >
+                  {employee.status === "Active" ? (
+                    <ShieldOff size={14} />
+                  ) : (
+                    <ShieldCheck size={14} />
+                  )}
+                  {employee.status === "Active" ? "Disable account" : "Enable account"}
+                </DropdownMenuItem>
+              </>
+            )}
+          </RecordActions>
+        );
+      },
+    },
+  ];
   const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6">
@@ -112,11 +198,7 @@ function EmployeesPage() {
           </label>
           <label className="text-sm space-y-2">
             Role
-            <select
-              className={input}
-              disabled
-              value={form.role}
-            >
+            <select className={input} disabled value={form.role}>
               {platform ? (
                 <option value="operations_admin">Operations Admin</option>
               ) : (
@@ -174,93 +256,21 @@ function EmployeesPage() {
           </div>
         </form>
       )}
-      <input
-        aria-label="Search accounts"
-        className={input}
-        placeholder="Search name, email or organization"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+      <RegistryTable
+        title="User accounts"
+        description="Manage team access, roles, and invitations."
+        rows={employees.data ?? []}
+        columns={columns}
+        rowKey={(employee) => employee.employeeId}
+        searchText={(employee) =>
+          `${employee.name} ${employee.email} ${employee.orgId ?? ""} ${organizationName(employee)} ${ROLE_LABELS[employee.role as AppRole] ?? employee.role}`
+        }
+        status={(employee) => employee.status}
+        statuses={["Active", "Disabled"]}
+        loading={employees.isLoading}
+        error={employees.error?.message}
+        onRetry={() => employees.refetch()}
       />
-      {employees.error && (
-        <p role="alert" className="text-red-600">
-          {employees.error.message}
-        </p>
-      )}
-      {employees.isLoading ? (
-        <p>Loading accounts…</p>
-      ) : (
-        <div className="overflow-auto border border-border rounded-xl">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-secondary">
-              <tr>
-                {["Account", "Role", "Organization", "Status", "Actions"].map((h) => (
-                  <th key={h} className="p-4">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {employees.data
-                ?.filter((e) =>
-                  `${e.name} ${e.email} ${e.orgId}`.toLowerCase().includes(search.toLowerCase()),
-                )
-                .map((employee) => {
-                  const manageable =
-                    employee.role !== "super_admin" &&
-                    employee.employeeId !== user?.sub &&
-                    (platform || employee.role === "supervisor");
-                  return (
-                    <tr key={employee.employeeId} className="border-t border-border">
-                      <td className="p-4">
-                        <p className="font-semibold">{employee.name}</p>
-                        <p className="text-muted-foreground">{employee.email}</p>
-                      </td>
-                      <td className="p-4">
-                        {ROLE_LABELS[employee.role as AppRole] ?? employee.role}
-                      </td>
-                      <td className="p-4">
-                        {organizations.data?.find((o) => o.orgId === employee.orgId)?.name ??
-                          employee.orgId}
-                      </td>
-                      <td className="p-4">{employee.status}</td>
-                      <td className="p-4">
-                        {manageable && (
-                          <div className="flex gap-3">
-                            <button
-                              disabled={manage.isPending || employee.status !== "Active"}
-                              className="text-primary disabled:opacity-40"
-                              onClick={() => manage.mutate({ employee, action: "invite" })}
-                            >
-                              {employee.invitationStatus === "Sent"
-                                ? "Resend invitation"
-                                : "Send invitation"}
-                            </button>
-                            <button
-                              disabled={manage.isPending}
-                              className="text-primary disabled:opacity-40"
-                              onClick={() =>
-                                manage.mutate({
-                                  employee,
-                                  action: employee.status === "Active" ? "Disabled" : "Active",
-                                })
-                              }
-                            >
-                              {employee.status === "Active" ? "Disable" : "Enable"}
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-          {employees.data?.length === 0 && (
-            <p className="p-6 text-muted-foreground">No accounts yet.</p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

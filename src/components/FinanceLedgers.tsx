@@ -29,6 +29,12 @@ export function PaymentLedger() {
       required: true,
       options: (vendors.data ?? []).map((v) => ({ value: v.vendorId, label: v.name })),
     },
+    {
+      key: "material",
+      label: "Material supplied",
+      placeholder: "e.g. Cement, TMT Steel, Sand",
+      helperText: "Optional, but useful when the payment is tied to a specific material category.",
+    },
     ...(projectId
       ? [
           {
@@ -58,16 +64,22 @@ export function PaymentLedger() {
       endpoint={endpoint}
       idKey="paymentId"
       fields={fields}
-      onCreate={(body) =>
-        api.post(endpoint, {
+      onCreate={(body) => {
+        const materialValue = typeof body.material === "string" ? body.material.trim() : "";
+        return api.post(endpoint, {
           ...body,
           projectId: projectId || body.projectId,
           vendorName: vendors.data?.find((v) => v.vendorId === body.vendorId)?.name,
-        })
-      }
+          material:
+            materialValue ||
+            vendors.data?.find((v) => v.vendorId === body.vendorId)?.materialsSupplied ||
+            undefined,
+        });
+      }}
       columns={[
         { key: "date", label: "Date" },
         { key: "vendorName", label: "Vendor" },
+        { key: "material", label: "Material" },
         { key: "projectName", label: "Project" },
         { key: "amount", label: "Amount" },
         { key: "mode", label: "Mode" },
@@ -81,7 +93,14 @@ export function PaymentLedger() {
           projectName: projects.find((p) => p.projectId === r.projectId)?.name ?? r.projectId,
         }))
       }
-      actions={reviewActions(endpoint, "paymentId")}
+      actions={[
+        ...reviewActions(endpoint, "paymentId"),
+        {
+          label: "Revert",
+          visible: (row) => String(row.status ?? "").toLowerCase() === "approved",
+          run: (row) => api.patch(`${endpoint}/${encodeURIComponent(String(row.paymentId))}`, { status: "Pending" }),
+        },
+      ]}
     />
   );
 }

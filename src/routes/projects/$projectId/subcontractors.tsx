@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ProjectBoq } from "../../../components/ProjectBoq";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../../components/ui/tabs";
 import {
   WorkflowLedger,
   reviewActions,
@@ -7,12 +9,24 @@ import {
 } from "../../../components/WorkflowLedger";
 import { api } from "../../../lib/api";
 import { useAuth } from "../../../contexts/AuthContext";
-export const Route = createFileRoute("/projects/$projectId/subcontractors")({ component: Page });
+export const Route = createFileRoute("/projects/$projectId/subcontractors")({
+  component: Page,
+  validateSearch: (search: Record<string, unknown>): { tab: "contractors" | "boq" } => ({
+    tab: search.tab === "boq" ? "boq" : "contractors",
+  }),
+});
 function Page() {
   const { projectId } = Route.useParams();
+  const { tab } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const endpoint = `/projects/${projectId}/subcontractors`;
   return (
-    <>
+    <Tabs value={tab} onValueChange={(value) => navigate({ search: { tab: value === "boq" ? "boq" : "contractors" } })}>
+      <TabsList aria-label="Subcontractor sections" className="mb-6">
+        <TabsTrigger value="contractors">Subcontractors</TabsTrigger>
+        <TabsTrigger value="boq">BOQ</TabsTrigger>
+      </TabsList>
+      <TabsContent value="contractors">
       <WorkflowLedger
         title="Subcontractors"
         endpoint={endpoint}
@@ -55,6 +69,10 @@ function Page() {
         ]}
         actions={reviewActions(endpoint, "subcontractorId")}
       />
-    </>
+      </TabsContent>
+      <TabsContent value="boq">
+        <ProjectBoq projectId={projectId} />
+      </TabsContent>
+    </Tabs>
   );
 }

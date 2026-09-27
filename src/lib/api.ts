@@ -398,6 +398,7 @@ export interface Vendor {
   rating?: number;
   email: string;
   phone: string;
+  materialsSupplied?: string;
   badge?: string;
   activeContracts?: number;
   createdAt?: string;
@@ -407,6 +408,7 @@ export interface CreateVendorBody {
   type: string;
   email: string;
   phone: string;
+  materialsSupplied?: string;
 }
 
 export interface InventoryItem {

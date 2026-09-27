@@ -29,6 +29,8 @@ export type Field = {
   options?: { value: string; label: string }[];
   min?: number;
   defaultValue?: string;
+  placeholder?: string;
+  helperText?: string;
 };
 
 export type LedgerAction = {
@@ -601,6 +603,7 @@ export function WorkflowLedger({
                     name={field.key}
                     rows={3}
                     required={field.required}
+                    placeholder={field.placeholder}
                     className="w-full p-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 ) : (
@@ -611,8 +614,12 @@ export function WorkflowLedger({
                     min={field.type === "number" ? (field.min ?? 0) : undefined}
                     step={field.type === "number" ? "any" : undefined}
                     defaultValue={field.defaultValue}
+                    placeholder={field.placeholder}
                     className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
+                )}
+                {field.helperText && (
+                  <p className="text-[10px] text-muted-foreground">{field.helperText}</p>
                 )}
               </div>
             ))}

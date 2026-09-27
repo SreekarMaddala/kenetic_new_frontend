@@ -2,7 +2,7 @@ import { Link, useRouterState, useRouter, useNavigate } from "@tanstack/react-ro
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { useProject } from "../lib/ProjectContext";
-import { ChevronDown, Plus, ChevronRight, LogOut } from "lucide-react";
+import { ChevronDown, Plus, ChevronRight, LogOut, Menu, X } from "lucide-react";
 import { ROLE_LABELS, homeForRole } from "../lib/permissions";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -90,7 +90,6 @@ const gearIcon = (
   </svg>
 );
 
-const boqIcon = reportIcon;
 const fileIcon = (
   <svg viewBox="0 0 16 16" className="size-4 shrink-0" fill="currentColor">
     <path
@@ -139,7 +138,7 @@ const shieldIcon = (
 
 const GLOBAL_NAV = [
   { to: "/dashboard", label: "Dashboard", icon: dashIcon },
-  { to: "/projects", label: "Portfolio", icon: folderIcon },
+  { to: "/projects", label: "Projects", icon: folderIcon },
   { to: "/employees", label: "Employees", icon: usersIcon },
   { to: "/vendors", label: "Vendors", icon: usersIcon },
   { to: "/payments", label: "Vendor Payments", icon: cartIcon },
@@ -189,7 +188,6 @@ const getProjectNav = (projectId: string, role?: string) => {
     {
       subLabel: "Project Management",
       items: [
-        { to: `/projects/${projectId}/boq`, label: "BOQ", icon: boqIcon },
         { to: `/projects/${projectId}/subcontractors`, label: "Sub-Contractors", icon: usersIcon },
         { to: `/projects/${projectId}/drawings`, label: "Drawings", icon: fileIcon },
         { to: `/projects/${projectId}/documents`, label: "Documents", icon: fileIcon },
@@ -265,6 +263,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   const activeRole = user?.role ?? "supervisor";
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileNavOpen(false);
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, []);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
@@ -280,7 +289,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasPermission = (item: string) => hasPermissionForRole(activeRole, item);
 
   const activeAccount = {
-    color: "hsl(22, 90%, 48%)",
+    color: "var(--primary)",
     initials: "",
     name: user?.name ?? "",
     title: ROLE_LABELS[activeRole],
@@ -312,12 +321,30 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="app-shell flex min-h-screen bg-background text-foreground">
+      <a className="skip-link" href="#workspace-content">
+        Skip to content
+      </a>
+      {mobileNavOpen && (
+        <button
+          className="nav-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
       <aside
-        className="sticky top-0 h-screen w-64 shrink-0 border-r border-border bg-[color:var(--surface)] flex flex-col"
-        style={{ boxShadow: "2px 0 24px rgba(0,0,0,0.04)" }}
+        id="workspace-navigation"
+        aria-label="Workspace navigation"
+        className={`workspace-sidebar ${mobileNavOpen ? "is-open" : ""}`}
       >
         {/* ─────── Logo ─────── */}
+        <button
+          className="mobile-nav-close"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+        >
+          <X size={18} />
+        </button>
         <div className="px-4 pt-5 pb-4">
           <Link to={homeForRole(activeRole)} className="flex items-center gap-3 group">
             <img
@@ -340,17 +367,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {/* ─────── Navigation ─────── */}
-        <nav className="flex-1 overflow-y-auto px-3 pb-2 scrollbar-thin">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 pb-2 scrollbar-thin">
           {/* Admin Navigation (Software Provider) */}
           {activeRole === "super_admin" && (
             <div className="mb-4 mt-2">
               <div className="px-2 py-1.5 mb-1">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-primary">
+                <span className="text-[11px] font-sans font-semibold text-primary">
                   Software Provider
                 </span>
               </div>
               <div className="px-2 py-1 mb-1 mt-3">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+                <span className="text-[10px] font-sans font-semibold text-muted-foreground">
                   Platform
                 </span>
               </div>
@@ -360,7 +387,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   className={
                     "flex items-center gap-2.5 px-2.5 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-150 " +
                     (pathname.startsWith("/organizations")
-                      ? "bg-primary/10 text-primary border border-primary/15 shadow-sm"
+                      ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary/70")
                   }
                 >
@@ -380,7 +407,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   className={
                     "flex items-center gap-2.5 px-2.5 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-150 " +
                     (pathname.startsWith("/employees")
-                      ? "bg-primary/10 text-primary border border-primary/15 shadow-sm"
+                      ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary/70")
                   }
                 >
@@ -403,7 +430,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {activeRole === "operations_admin" && (
             <div className="mb-4">
               <div className="px-2 py-1.5 mb-1">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+                <span className="text-[10px] font-sans font-semibold text-muted-foreground">
                   Global
                 </span>
               </div>
@@ -418,7 +445,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       className={
                         "flex items-center gap-2.5 px-2.5 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-150 " +
                         (active
-                          ? "bg-primary/10 text-primary border border-primary/15 shadow-sm"
+                          ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:text-foreground hover:bg-secondary/70")
                       }
                     >
@@ -436,10 +463,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {/* Supervisor Header */}
           {activeRole === "supervisor" && (
             <div className="px-2 py-1.5 mb-2 mt-4">
-              <Link
-                to="/projects"
-                className="text-[11px] font-mono font-bold uppercase tracking-widest text-primary"
-              >
+              <Link to="/projects" className="text-[11px] font-sans font-semibold text-primary">
                 My Projects
               </Link>
             </div>
@@ -448,7 +472,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {/* Project Navigation */}
           {projectId && activeRole === "operations_admin" && (
             <div className="px-2 py-1.5 mb-2 mt-4 flex items-center justify-between group">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+              <span className="text-[10px] font-sans font-semibold text-muted-foreground">
                 Current Project
               </span>
             </div>
@@ -514,9 +538,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <div key={group.subLabel}>
                     <button
                       onClick={() => toggleGroup(group.subLabel)}
+                      aria-expanded={!collapsedGroups[group.subLabel]}
                       className="w-full flex items-center justify-between px-2 py-1 mb-0.5 group/subheader rounded-md hover:bg-secondary/40 transition-colors"
                     >
-                      <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="text-[10px] font-sans font-semibold text-muted-foreground">
                         {group.subLabel}
                       </span>
                       {group.subLabel !== "Overview" && group.subLabel !== "Reports" && (
@@ -538,7 +563,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                               className={
                                 "flex items-center gap-2.5 px-2 py-1.5 text-[12.5px] font-medium rounded-lg transition-all duration-150 " +
                                 (active
-                                  ? "bg-primary/10 text-primary border border-primary/15 shadow-sm"
+                                  ? "bg-primary/10 text-primary"
                                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/70")
                               }
                             >
@@ -559,7 +584,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           )}
 
-          {!projectId && (
+          {!projectId && activeRole !== "super_admin" && (
             <div className="px-3 py-6 mt-6 border-t border-border border-dashed text-center">
               <p className="text-xs text-muted-foreground">
                 Select a project from Portfolio to view project-specific modules.
@@ -575,9 +600,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         {/* ─────── Account card ─────── */}
-        <div className="px-3 pb-4 relative space-y-1">
-          <div className="w-full p-3 bg-secondary/30 hover:bg-secondary/60 rounded-xl border border-border transition-colors text-left flex items-center justify-between group">
-            <div className="flex items-center gap-2.5">
+        <div className="px-3 pb-4 relative space-y-1 shrink-0 min-w-0">
+          <div className="w-full min-w-0 p-3 bg-secondary/30 rounded-xl border border-border text-left">
+            <div className="flex min-w-0 items-center gap-2.5">
               <div
                 className="size-7 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
                 style={{ backgroundColor: activeAccount.color }}
@@ -591,13 +616,18 @@ export function AppShell({ children }: { children: ReactNode }) {
                       .toUpperCase()
                   : activeAccount.initials}
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold leading-tight truncate text-foreground">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p title={user?.name ?? activeAccount.name} className="text-xs font-semibold leading-tight truncate text-foreground">
                   {user?.name ?? activeAccount.name}
                 </p>
-                <p className="text-[9px] text-muted-foreground truncate">
-                  {ROLE_LABELS[activeRole]} · {user?.email}
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {ROLE_LABELS[activeRole]}
                 </p>
+                {user?.email && (
+                  <p title={user.email} className="text-[10px] text-muted-foreground truncate">
+                    {user.email}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -613,14 +643,27 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto">
-        {/* Global Breadcrumb */}
-        <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border px-8 py-3 flex items-center gap-2 text-[13px] font-medium">
+      <main
+        id="workspace-content"
+        tabIndex={-1}
+        className="workspace-main flex-1 min-w-0 flex flex-col h-screen overflow-y-auto"
+      >
+        {/* Workspace navigation */}
+        <div className="workspace-topbar">
+          <button
+            className="mobile-nav-toggle"
+            aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={mobileNavOpen}
+            aria-controls="workspace-navigation"
+            onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          >
+            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
           <Link
-            to="/projects"
+            to={homeForRole(activeRole)}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            Portfolio
+            Workspace
           </Link>
           {projectId && project && (
             <>
@@ -660,24 +703,21 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex items-end justify-between mb-8 gap-4 animate-fade-up">
+    <header className="page-header">
       <div className="min-w-0">
         {eyebrow && (
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-px w-6 bg-primary/50 rounded-full" />
-            <p className="text-[10px] font-mono text-primary/70 uppercase tracking-[0.18em]">
-              {eyebrow}
-            </p>
+            <p className="text-xs font-medium text-muted-foreground">{eyebrow}</p>
           </div>
         )}
         <h1
-          className="text-3xl font-display font-bold tracking-tight truncate"
+          className="text-2xl font-display font-semibold tracking-tight"
           style={{ letterSpacing: "-0.025em" }}
         >
           {title}
         </h1>
       </div>
-      {actions ? <div className="flex gap-3 shrink-0">{actions}</div> : null}
+      {actions ? <div className="page-actions flex flex-wrap gap-2">{actions}</div> : null}
     </header>
   );
 }

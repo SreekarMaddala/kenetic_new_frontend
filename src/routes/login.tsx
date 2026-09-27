@@ -3,23 +3,13 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { NewPasswordRequiredError, forgotPassword, resetPassword, clearTokens } from "../lib/auth";
 import { homeForRole } from "../lib/permissions";
-import {
-  ArrowUpRight,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  LoaderCircle,
-  LockKeyhole,
-  Mail,
-  HardHat,
-  Layers3,
-  UsersRound,
-} from "lucide-react";
-import siteImage from "../assets/site-cranes.jpg";
+import { ArrowRight, Eye, EyeOff, Info, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import siteImage from "../assets/image.png";
 import "../styles/login.css";
 
 export const Route = createFileRoute("/login")({ component: LoginPage });
-type Screen = "login" | "new-password" | "forgot" | "reset";
+type Screen = "invite" | "login" | "new-password" | "forgot" | "reset";
 
 function LoginPage() {
   const { user, login, completeInvitation, isLoading, error: sessionError } = useAuth();
@@ -33,20 +23,62 @@ function LoginPage() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  useEffect(() => { setFieldErrors({}); }, [screen]);
+  function fieldFeedback(id: string) {
+    return fieldErrors[id] ? (
+      <span id={`${id}-error`} className="login-field-error" role="alert">
+        <Info size={14} aria-hidden="true" /> {fieldErrors[id]}
+      </span>
+    ) : null;
+  }
+  function validationProps(id: string) {
+    return {
+      id,
+      "aria-invalid": Boolean(fieldErrors[id]),
+      "aria-describedby": fieldErrors[id] ? `${id}-error` : undefined,
+      onInput: () => setFieldErrors((current) => ({ ...current, [id]: "" })),
+    };
+  }
   useEffect(() => {
     if (user) navigate({ to: homeForRole(user.role), replace: true });
   }, [user, navigate]);
 
-  async function submit(event: FormEvent) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || isLoading) return;
+    const errors: Record<string, string> = {};
+    const inputs = Array.from(event.currentTarget.querySelectorAll("input"));
+    for (const input of inputs) {
+      if (input.validity.valueMissing || (input.id === "login-code" && !input.value.trim())) {
+        errors[input.id] = {
+          "login-email": "Enter your work email to continue.",
+          "login-password": "Enter your password to continue.",
+          "login-code": "Enter the verification code from your email.",
+          "login-confirmation": "Re-enter your new password.",
+        }[input.id] || "Complete this field.";
+      } else if (input.validity.typeMismatch) {
+        errors[input.id] = "Use a valid email, like you@company.com.";
+      }
+    }
+    if (screen === "new-password" || screen === "reset") {
+      if (password && password.length < 12)
+        errors["login-password"] = "Use at least 12 characters for your new password.";
+      if (confirmation && password !== confirmation)
+        errors["login-confirmation"] = "Passwords do not match. Try again.";
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      inputs.find((input) => errors[input.id])?.focus();
+      return;
+    }
     setBusy(true);
     setError("");
     setNotice("");
     try {
       if ((screen === "new-password" || screen === "reset") && password !== confirmation)
         throw new Error("Passwords do not match.");
-      if (screen === "login") await login(email, password);
+      if (screen === "login" || screen === "invite") await login(email, password);
       else if (screen === "new-password") await completeInvitation(password);
       else if (screen === "forgot") {
         await forgotPassword(email);
@@ -73,19 +105,23 @@ function LoginPage() {
   }
   const choosePassword = screen === "new-password" || screen === "reset";
   const title = {
-    login: "Welcome back.",
-    "new-password": "Make it yours.",
-    forgot: "Let?s get you back.",
-    reset: "A fresh start.",
+    invite: "Activate your account.",
+    login: "Sign In",
+    "new-password": "Set your password",
+    forgot: "Reset your password",
+    reset: "Choose a new password",
   }[screen];
   const description = {
-    login: "Your projects, people, and progress. All in one place.",
+    invite:
+      "Use the temporary password from your latest invitation email.",
+    login: "Sign in to your workspace.",
     "new-password": "Set a permanent password to activate your invited account.",
-    forgot: "Enter your work email and we?ll send a password reset code.",
+    forgot: "Enter your work email and we'll send a password reset code.",
     reset: "Enter the code from your email and choose a new password.",
   }[screen];
   const action = {
-    login: "Sign in to workspace",
+    invite: "Continue to set password",
+    login: "Sign in",
     "new-password": "Activate account",
     forgot: "Send reset code",
     reset: "Reset password",
@@ -93,80 +129,54 @@ function LoginPage() {
   return (
     <main className="kinetic-login">
       <section className="login-story" aria-label="Kenetic construction workspace">
-        <img
-          src={siteImage}
-          alt="Tower cranes above a building under construction"
-          className="login-site-image"
-        />
-        <div className="login-image-shade" />
-        <div className="login-blueprint" aria-hidden="true" />
-        <a href="/" className="login-brand" aria-label="Kenetic ERP home">
+        <a href="/" className="login-brand" aria-label="Kenetic home">
           <img src="/logo.png" alt="" />
           <span>
-            KENETIC<span className="login-brand-sub">CONSTRUCTION ERP</span>
+            Kenetic<span className="login-brand-sub">Construction management</span>
           </span>
         </a>
         <div className="login-story-content">
-          <div className="login-eyebrow">
-            <span /> BUILT FOR THE BUILDERS
-          </div>
           <h2>
-            Big plans.
+            Every working day,
             <br />
-            Real progress<span className="login-orange">.</span>
+            in one place.
           </h2>
           <p>
-            From the first blueprint to the final brick.
-            <br className="hidden sm:block" /> Bring every part of your project together.
+            Your projects, site records and team, together.
           </p>
-          <div className="login-story-line" aria-hidden="true">
-            <span />
-            <ArrowUpRight size={26} />
-          </div>
         </div>
-        <div className="login-story-footer">
-          <div className="login-capabilities">
-            <span>
-              <Layers3 size={16} /> Projects
-            </span>
-            <span>
-              <UsersRound size={16} /> People
-            </span>
-            <span>
-              <HardHat size={16} /> Site operations
-            </span>
-          </div>
-          <span className="login-edition">ONE CONNECTED WORKSPACE</span>
-        </div>
-        <div className="login-corner-mark" aria-hidden="true">
-          +
-        </div>
+        <img
+          src={siteImage}
+          alt="Cranes above an active construction site"
+          className="login-site-image"
+        />
+        <div className="login-story-footer">Kenetic - Construction operations</div>
       </section>
 
       <section className="login-access" aria-labelledby="login-title">
         <div className="login-access-top">
           <span className="login-workspace-tag">
-            <span /> ORGANIZATION ACCESS
+            <span /> Workspace access
           </span>
-          <span className="login-index" aria-hidden="true">
-            01 / WORKSPACE
-          </span>
+          <span className="login-index" aria-hidden="true"></span>
         </div>
         <div className="login-form-wrap">
-          <div className="login-welcome-icon" aria-hidden="true">
-            <ArrowUpRight size={28} strokeWidth={1.6} />
-          </div>
-          <p className="login-form-eyebrow">LET?S BUILD SOMETHING GREAT</p>
-          <h1 id="login-title">{title}</h1>
-          <p className="login-description">{description}</p>
-          <form onSubmit={submit} className="login-form">
-            {(screen === "login" || screen === "forgot" || screen === "reset") && (
+          <header className="login-form-header">
+            <h1 id="login-title">{title}</h1>
+            {screen !== "login" && <p className="login-description">{description}</p>}
+          </header>
+          <form onSubmit={submit} className="login-form" noValidate>
+            {(screen === "login" ||
+              screen === "invite" ||
+              screen === "forgot" ||
+              screen === "reset") && (
               <label className="login-field">
                 Work email
                 <div className="login-input-wrap">
                   <Mail size={18} aria-hidden="true" />
                   <input
                     type="email"
+                    {...validationProps("login-email")}
                     autoComplete="username"
                     placeholder="you@company.com"
                     required
@@ -175,6 +185,7 @@ function LoginPage() {
                     onChange={(event) => setEmail(event.target.value)}
                   />
                 </div>
+                {fieldFeedback("login-email")}
               </label>
             )}
             {screen === "reset" && (
@@ -184,6 +195,7 @@ function LoginPage() {
                   <Mail size={18} aria-hidden="true" />
                   <input
                     autoComplete="one-time-code"
+                    {...validationProps("login-code")}
                     placeholder="Enter your email verification code"
                     required
                     value={code}
@@ -191,21 +203,30 @@ function LoginPage() {
                     onChange={(event) => setCode(event.target.value)}
                   />
                 </div>
+                {fieldFeedback("login-code")}
               </label>
             )}
             {screen !== "forgot" && (
               <div className="login-field">
                 <label htmlFor="login-password">
-                  {choosePassword ? "New password" : "Password"}
+                  {choosePassword
+                    ? "New password"
+                    : screen === "invite"
+                      ? "Temporary password"
+                      : "Password"}
                 </label>
                 <div className="login-input-wrap">
                   <LockKeyhole size={18} aria-hidden="true" />
                   <input
-                    id="login-password"
+                    {...validationProps("login-password")}
                     type={showPassword ? "text" : "password"}
                     autoComplete={choosePassword ? "new-password" : "current-password"}
                     placeholder={
-                      choosePassword ? "Create a strong password" : "Enter your password"
+                      choosePassword
+                        ? "Create a strong password"
+                        : screen === "invite"
+                          ? "Enter your invitation password"
+                          : "Enter your password"
                     }
                     required
                     minLength={choosePassword ? 12 : undefined}
@@ -223,6 +244,7 @@ function LoginPage() {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {fieldFeedback("login-password")}
               </div>
             )}
             {choosePassword && (
@@ -237,6 +259,7 @@ function LoginPage() {
                     <input
                       type={showPassword ? "text" : "password"}
                       autoComplete="new-password"
+                      {...validationProps("login-confirmation")}
                       placeholder="Enter your password again"
                       required
                       value={confirmation}
@@ -244,6 +267,7 @@ function LoginPage() {
                       onChange={(event) => setConfirmation(event.target.value)}
                     />
                   </div>
+                  {fieldFeedback("login-confirmation")}
                 </label>
               </>
             )}
@@ -260,7 +284,7 @@ function LoginPage() {
             <button disabled={busy || isLoading} className="login-submit">
               {busy ? (
                 <>
-                  <LoaderCircle className="login-spinner" size={19} /> Please wait?
+                  <LoaderCircle className="login-spinner" size={19} /> Please wait…
                 </>
               ) : (
                 <>
@@ -284,11 +308,42 @@ function LoginPage() {
               setShowPassword(false);
             }}
           >
-            {screen === "login" ? "Forgot your password?" : "? Back to sign in"}
+            {screen === "login" ? "Forgot your password?" : "Back to sign in"}
           </button>
           <div className="login-invitation">
-            <span>New to the team?</span>
-            <p>Ask your organization administrator for an invitation to your workspace.</p>
+            {(screen === "login" || screen === "invite") && (
+              <button
+                type="button"
+                disabled={busy || isLoading}
+                className="login-recovery"
+                onClick={() => {
+                  clearTokens();
+                  setScreen(screen === "invite" ? "login" : "invite");
+                  setPassword("");
+                  setConfirmation("");
+                  setError("");
+                  setNotice("");
+                  setShowPassword(false);
+                }}
+              >
+                {screen === "invite"
+                  ? "Sign in instead"
+                  : "Activate account"}
+              </button>
+            )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="login-info">
+                  <Info size={16} aria-hidden="true" /> Access help
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="login-help-popover" side="top" align="end" sideOffset={10}>
+                <h2>Need an invitation?</h2>
+                <p>Ask your organization administrator to invite you, then select Activate account.</p>
+                <h2>Temporary password not working?</h2>
+                <p>Ask your administrator to resend the invitation and use the latest email.</p>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         <footer className="login-access-footer">
