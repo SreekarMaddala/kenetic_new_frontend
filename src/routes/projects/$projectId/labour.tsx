@@ -371,7 +371,7 @@ function WorkerRow({
           className={input}
           disabled={!enabled || status === "Absent" || save.isPending}
           value={payment}
-          onChange={(event) => setDraft({ status, paymentStatus: event.target.value })}
+          onChange={(event) => setDraft({ status, paymentStatus: event.target.value, nightShift })}
         >
           <option>Not paid</option>
           <option>Paid</option>

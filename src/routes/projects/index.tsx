@@ -4,6 +4,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { PageHeader } from "../../components/AppShell";
 import * as React from "react";
 import { toast } from "sonner";
+import { ProjectLocationField } from "../../components/ProjectLocationField";
+import { localDate, projectBudgets, validDate } from "../../lib/projectForm";
 import { ArrowLeft, User } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectApi, employeeApi, type Project } from "../../lib/api";
@@ -24,7 +26,12 @@ function ProjectsPage() {
   const { user } = useAuth();
   const isSupervisor = user?.role === "supervisor";
 
-  const { data: rawProjects, isLoading, isError, error } = useQuery({
+  const {
+    data: rawProjects,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["projects"],
     queryFn: () => projectApi.list(),
     retry: 1,
@@ -139,18 +146,26 @@ function ProjectsPage() {
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
     if (createMutation.isPending) return;
-    if (!newProjName || !newProjLoc || !newProjBudget || !newProjDeadline) {
+    if (!newProjName.trim() || !newProjLoc.trim() || !newProjBudget || !newProjDeadline) {
       toast.error("Please fill in project name, location, budget, and deadline.");
       return;
     }
 
-    const budgetVal = parseFloat(newProjBudget) * 10_000_000; // convert Cr to absolute
+    let budgets;
+    try {
+      budgets = projectBudgets(newProjBudget, newProjSpent);
+      if (!validDate(newProjDeadline) || newProjDeadline < localDate())
+        throw new Error("Choose a valid deadline on or after the project start date.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Check project details.");
+      return;
+    }
     const selectedSuper = supervisorList.find((s) => s.employeeId === newProjSupervisor);
     createMutation.mutate({
-      name: newProjName,
-      location: newProjLoc,
-      budget: budgetVal,
-      startDate: new Date().toISOString().split("T")[0],
+      name: newProjName.trim(),
+      location: newProjLoc.trim(),
+      ...budgets,
+      startDate: localDate(),
       endDate: newProjDeadline,
       phase: newProjPhase || "Planning",
       progress: parseInt(newProjProgress) || 0,
@@ -179,8 +194,12 @@ function ProjectsPage() {
       <div className="p-8 max-w-7xl mx-auto w-full">
         <PageHeader eyebrow="Portfolio" title="Projects" />
         <div className="mt-8 bg-[color:var(--surface)] border border-destructive/30 rounded-xl p-12 text-center max-w-xl mx-auto space-y-4 shadow-sm">
-          <h2 className="text-xl font-display font-semibold text-foreground">Unable to load projects</h2>
-          <p className="text-sm text-muted-foreground">{(error as Error)?.message || "Please try again."}</p>
+          <h2 className="text-xl font-display font-semibold text-foreground">
+            Unable to load projects
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {(error as Error)?.message || "Please try again."}
+          </p>
         </div>
       </div>
     );
@@ -231,19 +250,7 @@ function ProjectsPage() {
                   />
                 </div>
 
-                <div className="space-y-1.5 md:col-span-2">
-                  <label className="font-semibold text-muted-foreground">
-                    Location (City, State) *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Bangalore, KA"
-                    value={newProjLoc}
-                    onChange={(e) => setNewProjLoc(e.target.value)}
-                    className="w-full p-2.5 bg-background border border-border rounded-lg text-sm text-foreground focus:ring-1 focus:ring-primary"
-                    required
-                  />
-                </div>
+                <ProjectLocationField value={newProjLoc} onChange={setNewProjLoc} />
 
                 <div className="space-y-1.5">
                   <label className="font-semibold text-muted-foreground">Project Phase</label>
@@ -274,7 +281,13 @@ function ProjectsPage() {
                     Total Budget (₹ Cr) *
                   </label>
                   <input
-                    type="text"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    inputMode="decimal"
+                    onKeyDown={(event) => {
+                      if (["e", "E", "+", "-"].includes(event.key)) event.preventDefault();
+                    }}
                     placeholder="e.g. 82.40"
                     value={newProjBudget}
                     onChange={(e) => setNewProjBudget(e.target.value)}
@@ -286,7 +299,13 @@ function ProjectsPage() {
                 <div className="space-y-1.5">
                   <label className="font-semibold text-muted-foreground">Spent Budget (₹ Cr)</label>
                   <input
-                    type="text"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    onKeyDown={(event) => {
+                      if (["e", "E", "+", "-"].includes(event.key)) event.preventDefault();
+                    }}
                     placeholder="e.g. 51.10"
                     value={newProjSpent}
                     onChange={(e) => setNewProjSpent(e.target.value)}
@@ -341,8 +360,8 @@ function ProjectsPage() {
                 <div className="space-y-1.5">
                   <label className="font-semibold text-muted-foreground">Deadline Date *</label>
                   <input
-                    type="text"
-                    placeholder="e.g. Nov 2025, Aug 2026"
+                    type="date"
+                    min={localDate()}
                     value={newProjDeadline}
                     onChange={(e) => setNewProjDeadline(e.target.value)}
                     className="w-full p-2.5 bg-background border border-border rounded-lg text-sm font-mono text-foreground"
@@ -516,7 +535,9 @@ function ProjectsPage() {
                 <User className="size-6" />
               </div>
               <h2 className="text-xl font-display font-semibold text-foreground">
-                {isSupervisor ? "No Construction Projects Assigned Yet" : "No Projects in Portfolio"}
+                {isSupervisor
+                  ? "No Construction Projects Assigned Yet"
+                  : "No Projects in Portfolio"}
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {isSupervisor
@@ -535,130 +556,136 @@ function ProjectsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {projects.map((p, i) => (
-              <article
-                key={p.name}
-                onClick={() => {
-                  navigate({ to: isSupervisor ? `/projects/${p.id}/supervisors` : `/projects/${p.id}` });
-                }}
-                className="cursor-pointer bg-[color:var(--surface)] hover:shadow-md transition-shadow rounded-xl border border-border overflow-hidden flex flex-col group"
-              >
-                {/* Project Image Header */}
-                <div className="relative h-44 w-full bg-secondary overflow-hidden shrink-0">
-                  <img
-                    src={
-                      p.image ||
-                      "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80"
-                    }
-                    alt={p.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute top-3 right-3">
-                    <StatusChip status={p.status} />
-                  </div>
-                  <div className="absolute bottom-3 left-3 text-white">
-                    <h3 className="font-display font-semibold text-lg leading-tight truncate drop-shadow-md">
-                      {p.name}
-                    </h3>
-                    <p className="text-[10px] text-zinc-250 font-mono uppercase tracking-wider mt-0.5 drop-shadow-sm">
-                      {p.location || "Location not provided"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-                  <div>
-                    <div className="flex justify-between items-baseline mb-2">
-                      <span className="text-xs text-muted-foreground">{p.phase}</span>
-                      <span className="text-xs font-mono font-semibold">{p.progress}%</span>
+                <article
+                  key={p.name}
+                  onClick={() => {
+                    navigate({
+                      to: isSupervisor ? `/projects/${p.id}/supervisors` : `/projects/${p.id}`,
+                    });
+                  }}
+                  className="cursor-pointer bg-[color:var(--surface)] hover:shadow-md transition-shadow rounded-xl border border-border overflow-hidden flex flex-col group"
+                >
+                  {/* Project Image Header */}
+                  <div className="relative h-44 w-full bg-secondary overflow-hidden shrink-0">
+                    <img
+                      src={
+                        p.image ||
+                        "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80"
+                      }
+                      alt={p.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute top-3 right-3">
+                      <StatusChip status={p.status} />
                     </div>
-                    <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className={
-                          "h-full " +
-                          (p.status === "Delayed"
-                            ? "bg-primary"
-                            : p.status === "At Risk"
-                              ? "bg-yellow-500"
-                              : "bg-accent")
-                        }
-                        style={{ width: `${p.progress}%` }}
-                      />
+                    <div className="absolute bottom-3 left-3 text-white">
+                      <h3 className="font-display font-semibold text-lg leading-tight truncate drop-shadow-md">
+                        {p.name}
+                      </h3>
+                      <p className="text-[10px] text-zinc-250 font-mono uppercase tracking-wider mt-0.5 drop-shadow-sm">
+                        {p.location || "Location not provided"}
+                      </p>
                     </div>
                   </div>
 
-                  {p.supervisor && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-secondary/20 rounded-lg p-2.5 my-1.5 border border-border/40 shrink-0">
-                      <User className="size-3.5 text-primary shrink-0" />
-                      <span className="truncate font-medium">
-                        Supervisor: <strong className="text-foreground">{p.supervisor}</strong>
-                      </span>
-                    </div>
-                  )}
-
-                  <dl className="grid grid-cols-2 gap-3 pt-3 border-t border-border text-xs">
+                  <div className="p-5 flex-1 flex flex-col justify-between gap-4">
                     <div>
-                      <dt className="text-muted-foreground mb-1">Today's Labour</dt>
-                      <dd className="font-mono font-medium">{p.todaysLabour || 0} workers</dd>
+                      <div className="flex justify-between items-baseline mb-2">
+                        <span className="text-xs text-muted-foreground">{p.phase}</span>
+                        <span className="text-xs font-mono font-semibold">{p.progress}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className={
+                            "h-full " +
+                            (p.status === "Delayed"
+                              ? "bg-primary"
+                              : p.status === "At Risk"
+                                ? "bg-yellow-500"
+                                : "bg-accent")
+                          }
+                          style={{ width: `${p.progress}%` }}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <dt className="text-muted-foreground mb-1">Open Issues</dt>
-                      <dd
-                        className={`font-mono font-medium ${(p.openIssues || 0) > 0 ? "text-destructive" : ""}`}
+
+                    {p.supervisor && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-secondary/20 rounded-lg p-2.5 my-1.5 border border-border/40 shrink-0">
+                        <User className="size-3.5 text-primary shrink-0" />
+                        <span className="truncate font-medium">
+                          Supervisor: <strong className="text-foreground">{p.supervisor}</strong>
+                        </span>
+                      </div>
+                    )}
+
+                    <dl className="grid grid-cols-2 gap-3 pt-3 border-t border-border text-xs">
+                      <div>
+                        <dt className="text-muted-foreground mb-1">Today's Labour</dt>
+                        <dd className="font-mono font-medium">{p.todaysLabour || 0} workers</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground mb-1">Open Issues</dt>
+                        <dd
+                          className={`font-mono font-medium ${(p.openIssues || 0) > 0 ? "text-destructive" : ""}`}
+                        >
+                          {p.openIssues || 0} pending
+                        </dd>
+                      </div>
+                    </dl>
+                    <dl className="grid grid-cols-3 gap-3 pt-3 border-t border-border text-xs">
+                      <div>
+                        <dt className="text-muted-foreground">Budget</dt>
+                        <dd className="font-mono font-medium mt-0.5">{p.budget}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Spent</dt>
+                        <dd className="font-mono font-medium mt-0.5">{p.spent}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Deadline</dt>
+                        <dd className="font-mono font-medium mt-0.5">{p.deadline}</dd>
+                      </div>
+                    </dl>
+                    <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate({
+                            to: isSupervisor
+                              ? `/projects/${p.id}/supervisors`
+                              : `/projects/${p.id}`,
+                          });
+                        }}
+                        className="py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded hover:opacity-90 transition-opacity"
                       >
-                        {p.openIssues || 0} pending
-                      </dd>
+                        View
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="py-1.5 text-xs font-medium bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate({ to: `/projects/${p.id}/reports` });
+                        }}
+                        className="py-1.5 text-xs font-medium bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+                      >
+                        Analytics
+                      </button>
                     </div>
-                  </dl>
-                  <dl className="grid grid-cols-3 gap-3 pt-3 border-t border-border text-xs">
-                    <div>
-                      <dt className="text-muted-foreground">Budget</dt>
-                      <dd className="font-mono font-medium mt-0.5">{p.budget}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Spent</dt>
-                      <dd className="font-mono font-medium mt-0.5">{p.spent}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Deadline</dt>
-                      <dd className="font-mono font-medium mt-0.5">{p.deadline}</dd>
-                    </div>
-                  </dl>
-                  <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate({ to: isSupervisor ? `/projects/${p.id}/supervisors` : `/projects/${p.id}` });
-                      }}
-                      className="py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded hover:opacity-90 transition-opacity"
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      className="py-1.5 text-xs font-medium bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate({ to: `/projects/${p.id}/reports` });
-                      }}
-                      className="py-1.5 text-xs font-medium bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
-                    >
-                      Analytics
-                    </button>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </div>
-    )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

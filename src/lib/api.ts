@@ -380,6 +380,8 @@ export interface Project {
 export interface CreateProjectBody {
   name: string;
   budget: number;
+  spent?: number;
+  supervisorIds?: string[];
   location: string;
   startDate: string;
   endDate: string;

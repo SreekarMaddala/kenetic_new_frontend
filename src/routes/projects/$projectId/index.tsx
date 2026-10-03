@@ -1,3 +1,4 @@
+import { allocationEnd, nextDate, validDate } from "../../../lib/projectForm";
 import { api, projectApi } from "../../../lib/api";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -35,6 +36,7 @@ interface TimelineItem {
   phase: string;
   start: string;
   end: string;
+  untilProjectEnd?: boolean;
   status: string;
 }
 
@@ -128,9 +130,7 @@ function ProjectDetailsPage() {
   });
 
   const supervisorList = React.useMemo(() => {
-    return rawEmployees.filter(
-      (e) => e.role === "supervisor" || e.role === "operations_admin",
-    );
+    return rawEmployees.filter((e) => e.role === "supervisor" || e.role === "operations_admin");
   }, [rawEmployees]);
 
   const { data: rawMaterials = [] } = useQuery({
@@ -237,6 +237,8 @@ function ProjectDetailsPage() {
   const [detailTimelinePhase, setDetailTimelinePhase] = React.useState("");
   const [detailTimelineStart, setDetailTimelineStart] = React.useState("");
   const [detailTimelineEnd, setDetailTimelineEnd] = React.useState("");
+  const [untilProjectEnd, setUntilProjectEnd] = React.useState(false);
+  const [savingAllocation, setSavingAllocation] = React.useState(false);
   const [detailTimelineStatus, setDetailTimelineStatus] = React.useState("Active");
 
   // Media Date Filter State
@@ -253,26 +255,50 @@ function ProjectDetailsPage() {
 
   const handleAddTimelineItemToProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!detailTimelinePhase || !detailTimelineStart || !detailTimelineEnd) {
+    if (savingAllocation) return;
+    if (!detailTimelineName || !detailTimelinePhase.trim() || !detailTimelineStart) {
       toast.error("Please fill in phase, start period, and end period.");
+      return;
+    }
+    let end;
+    try {
+      end = allocationEnd(
+        detailTimelineStart,
+        detailTimelineEnd,
+        untilProjectEnd,
+        rawProject?.endDate || "",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Check allocation dates.");
       return;
     }
     const newItem = {
       name: detailTimelineName,
       phase: detailTimelinePhase,
       start: detailTimelineStart,
-      end: detailTimelineEnd,
+      end,
+      untilProjectEnd,
       status: detailTimelineStatus,
     };
 
     const selectedSuper = supervisorList.find(
-      (s) => s.name === detailTimelineName || s.email === detailTimelineName || s.employeeId === detailTimelineName || (s as any).id === detailTimelineName
+      (s) =>
+        s.name === detailTimelineName ||
+        s.email === detailTimelineName ||
+        s.employeeId === detailTimelineName ||
+        (s as any).id === detailTimelineName,
     );
 
     const existingSupervisorIds = (selectedProject as any)?.supervisorIds || [];
-    const updatedSupervisorIds = Array.isArray(existingSupervisorIds) ? [...existingSupervisorIds] : [];
-    
-    const targetId = (selectedSuper as any)?.id || (selectedSuper as any)?.sub || selectedSuper?.employeeId || selectedSuper?.email;
+    const updatedSupervisorIds = Array.isArray(existingSupervisorIds)
+      ? [...existingSupervisorIds]
+      : [];
+
+    const targetId =
+      (selectedSuper as any)?.id ||
+      (selectedSuper as any)?.sub ||
+      selectedSuper?.employeeId ||
+      selectedSuper?.email;
     if (targetId && !updatedSupervisorIds.includes(targetId)) {
       updatedSupervisorIds.push(targetId);
     }
@@ -283,20 +309,25 @@ function ProjectDetailsPage() {
       updatedSupervisorIds.push(selectedSuper.email);
     }
 
+    setSavingAllocation(true);
     try {
       await projectApi.update(projectId!, {
         supervisorsTimeline: [...localTimeline, newItem],
         supervisorIds: updatedSupervisorIds,
       } as Parameters<typeof projectApi.update>[1]);
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save allocation");
       return;
+    } finally {
+      setSavingAllocation(false);
     }
     setLocalTimeline([...localTimeline, newItem]);
     setDetailTimelinePhase("");
     setDetailTimelineStart("");
     setDetailTimelineEnd("");
+    setUntilProjectEnd(false);
     toast.success(`Allocated ${detailTimelineName} to ${detailTimelinePhase} phase successfully!`);
   };
 
@@ -765,7 +796,8 @@ function ProjectDetailsPage() {
                   disabled={createExpenseMutation.isPending}
                   className="w-full py-2.5 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1 mt-2"
                 >
-                  <Plus className="size-4" /> {createExpenseMutation.isPending ? "Saving..." : "Save Expense"}
+                  <Plus className="size-4" />{" "}
+                  {createExpenseMutation.isPending ? "Saving..." : "Save Expense"}
                 </button>
               </form>
             ) : (
@@ -944,7 +976,11 @@ function ProjectDetailsPage() {
                       <div className="flex-1 max-w-md mx-auto w-full">
                         <div className="flex justify-between text-[10px] text-muted-foreground font-mono mb-1">
                           <span>{item.start}</span>
-                          <span>{item.end}</span>
+                          <span>
+                            {item.untilProjectEnd
+                              ? `${rawProject?.endDate || item.end} (Project end)`
+                              : item.end}
+                          </span>
                         </div>
                         <div className="h-2 w-full bg-secondary rounded-full overflow-hidden border border-border/20">
                           <div className={`h-full ${progressWidth}`} />
@@ -1016,8 +1052,8 @@ function ProjectDetailsPage() {
                 <div className="space-y-1.5">
                   <label className="font-medium text-muted-foreground">Start Period</label>
                   <input
-                    type="text"
-                    placeholder="e.g. Jul 2026"
+                    type="date"
+                    max={validDate(rawProject?.endDate || "") ? rawProject?.endDate : undefined}
                     value={detailTimelineStart}
                     onChange={(e) => setDetailTimelineStart(e.target.value)}
                     className="w-full p-2.5 bg-background border border-border rounded-lg text-xs text-foreground font-mono"
@@ -1027,15 +1063,38 @@ function ProjectDetailsPage() {
                 <div className="space-y-1.5">
                   <label className="font-medium text-muted-foreground">End Period</label>
                   <input
-                    type="text"
-                    placeholder="e.g. Dec 2026"
-                    value={detailTimelineEnd}
+                    type="date"
+                    min={nextDate(detailTimelineStart) || undefined}
+                    max={validDate(rawProject?.endDate || "") ? rawProject?.endDate : undefined}
+                    disabled={untilProjectEnd}
+                    value={
+                      untilProjectEnd
+                        ? validDate(rawProject?.endDate || "")
+                          ? rawProject?.endDate
+                          : ""
+                        : detailTimelineEnd
+                    }
                     onChange={(e) => setDetailTimelineEnd(e.target.value)}
-                    className="w-full p-2.5 bg-background border border-border rounded-lg text-xs text-foreground font-mono"
-                    required
+                    className="w-full p-2.5 bg-background border border-border rounded-lg text-xs text-foreground font-mono disabled:opacity-50"
+                    required={!untilProjectEnd}
                   />
                 </div>
               </div>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={untilProjectEnd}
+                  onChange={(event) => setUntilProjectEnd(event.target.checked)}
+                />
+                Until project end
+              </label>
+              {untilProjectEnd && !validDate(rawProject?.endDate || "") && (
+                <p role="alert" className="text-destructive">
+                  Set a valid project deadline to use this option.
+                </p>
+              )}
 
               <div className="space-y-1.5">
                 <label className="font-medium text-muted-foreground">Allocation Status</label>
@@ -1052,9 +1111,11 @@ function ProjectDetailsPage() {
 
               <button
                 type="submit"
+                disabled={savingAllocation}
                 className="w-full py-2.5 bg-foreground text-background font-semibold rounded-lg hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 mt-2"
               >
-                <Plus className="size-4" /> Save Phase Allocation
+                <Plus className="size-4" />{" "}
+                {savingAllocation ? "Saving..." : "Save Phase Allocation"}
               </button>
             </form>
           </div>
