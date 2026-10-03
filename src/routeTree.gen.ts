@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as VendorsRouteImport } from './routes/vendors'
 import { Route as VehiclesRouteImport } from './routes/vehicles'
 import { Route as SubcontractorsRouteImport } from './routes/subcontractors'
@@ -46,6 +47,11 @@ import { Route as ProjectsProjectIdBoqRouteImport } from './routes/projects/$pro
 import { Route as ProjectsProjectIdBillsRouteImport } from './routes/projects/$projectId/bills'
 import { Route as ProjectsProjectIdAnalyticsRouteImport } from './routes/projects/$projectId/analytics'
 
+const WorkersRoute = WorkersRouteImport.update({
+  id: '/workers',
+  path: '/workers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VendorsRoute = VendorsRouteImport.update({
   id: '/vendors',
   path: '/vendors',
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/subcontractors': typeof SubcontractorsRoute
   '/vehicles': typeof VehiclesRoute
   '/vendors': typeof VendorsRoute
+  '/workers': typeof WorkersRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
   '/projects/$projectId/analytics': typeof ProjectsProjectIdAnalyticsRoute
@@ -295,6 +302,7 @@ export interface FileRoutesByTo {
   '/subcontractors': typeof SubcontractorsRoute
   '/vehicles': typeof VehiclesRoute
   '/vendors': typeof VendorsRoute
+  '/workers': typeof WorkersRoute
   '/projects': typeof ProjectsIndexRoute
   '/projects/$projectId/analytics': typeof ProjectsProjectIdAnalyticsRoute
   '/projects/$projectId/bills': typeof ProjectsProjectIdBillsRoute
@@ -333,6 +341,7 @@ export interface FileRoutesById {
   '/subcontractors': typeof SubcontractorsRoute
   '/vehicles': typeof VehiclesRoute
   '/vendors': typeof VendorsRoute
+  '/workers': typeof WorkersRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
   '/projects/$projectId/analytics': typeof ProjectsProjectIdAnalyticsRoute
@@ -373,6 +382,7 @@ export interface FileRouteTypes {
     | '/subcontractors'
     | '/vehicles'
     | '/vendors'
+    | '/workers'
     | '/projects/$projectId'
     | '/projects/'
     | '/projects/$projectId/analytics'
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/subcontractors'
     | '/vehicles'
     | '/vendors'
+    | '/workers'
     | '/projects'
     | '/projects/$projectId/analytics'
     | '/projects/$projectId/bills'
@@ -448,6 +459,7 @@ export interface FileRouteTypes {
     | '/subcontractors'
     | '/vehicles'
     | '/vendors'
+    | '/workers'
     | '/projects/$projectId'
     | '/projects/'
     | '/projects/$projectId/analytics'
@@ -487,12 +499,20 @@ export interface RootRouteChildren {
   SubcontractorsRoute: typeof SubcontractorsRoute
   VehiclesRoute: typeof VehiclesRoute
   VendorsRoute: typeof VendorsRoute
+  WorkersRoute: typeof WorkersRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
   ProjectsIndexRoute: typeof ProjectsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/workers': {
+      id: '/workers'
+      path: '/workers'
+      fullPath: '/workers'
+      preLoaderRoute: typeof WorkersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/vendors': {
       id: '/vendors'
       path: '/vendors'
@@ -812,6 +832,7 @@ const rootRouteChildren: RootRouteChildren = {
   SubcontractorsRoute: SubcontractorsRoute,
   VehiclesRoute: VehiclesRoute,
   VendorsRoute: VendorsRoute,
+  WorkersRoute: WorkersRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
   ProjectsIndexRoute: ProjectsIndexRoute,
 }

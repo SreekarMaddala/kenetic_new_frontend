@@ -82,7 +82,7 @@ function Page() {
                   ? []
                   : available.map((r) => ({
                       value: String(r.subcontractorId),
-                      label: `${r.name} ? ${r.trade}`,
+                      label: `${r.name} - ${r.trade}`,
                     })),
               helperText:
                 registry.isPending || assignments.isPending
@@ -90,7 +90,13 @@ function Page() {
                   : "Only active, unassigned subcontractors are available. Onboard a company in the global registry first.",
             },
             { key: "scopeOfWork", label: "Scope of work", type: "textarea", required: true },
-            { key: "contractValue", label: "Contract value", type: "number", min: 0 },
+            {
+              key: "contractValue",
+              label: "Contract value (₹ INR)",
+              type: "number",
+              min: 0,
+              helperText: "Enter the contract value in Indian rupees (INR).",
+            },
             { key: "startDate", label: "Start date", type: "date" },
             { key: "endDate", label: "End date", type: "date" },
           ]}
@@ -100,7 +106,7 @@ function Page() {
             { key: "phone", label: "Phone" },
             { key: "trade", label: "Trade" },
             { key: "scopeOfWork", label: "Scope of work" },
-            { key: "contractValue", label: "Contract value" },
+            { key: "contractValue", label: "Contract value (₹ INR)" },
             { key: "startDate", label: "Start" },
             { key: "endDate", label: "End" },
             { key: "status", label: "Status" },

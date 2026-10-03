@@ -290,7 +290,7 @@ export function WorkflowLedger({
       );
     }
 
-    if (["amount", "cost", "total", "price", "budget"].includes(key.toLowerCase()) && typeof val === "number") {
+    if (["amount", "cost", "total", "price", "budget", "contractvalue"].includes(key.toLowerCase()) && typeof val === "number") {
       return <span className="font-bold text-foreground">₹{val.toLocaleString("en-IN")}</span>;
     }
 

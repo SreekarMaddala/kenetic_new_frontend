@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -48,8 +48,6 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
   const user = useAuth().user;
   const admin = user?.role === "operations_admin" || user?.role === "super_admin";
   const qc = useQueryClient();
-  const [newName, setNewName] = useState("");
-  const [newRate, setNewRate] = useState("800");
   const projects = useQuery({ queryKey: ["projects"], queryFn: projectApi.list });
   const query = useQuery({
     queryKey: ["labour", projectId, day, admin ? "allocation" : "attendance"],
@@ -69,22 +67,6 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
       qc.invalidateQueries({ queryKey: ["payroll-cycle", projectId] }),
     ]);
   }
-  const register = useMutation({
-    mutationFn: () =>
-      api.post("/supervisor/labour/attendance", {
-        projectId,
-        date: day,
-        operation: "register",
-        name: newName.trim(),
-        rate: Number(newRate),
-      }),
-    onSuccess: async () => {
-      setNewName("");
-      await refresh();
-      toast.success("Worker registered. Confirm the project allocation with Enter.");
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
   const workers = query.data ?? [];
   const siteWorkers = workers.filter((worker) => worker.allocatedProjectId === projectId);
   const present = siteWorkers.filter((worker) => worker.status === "Present");
@@ -189,7 +171,7 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
             {!workers.length && (
               <p className="p-6 text-muted-foreground">
                 {admin
-                  ? "Register a worker to begin allocation."
+                  ? "No workers registered. Add workers from the Workers page to begin allocation."
                   : "No workers allocated to this project. Ask your admin to allocate workers."}
               </p>
             )}
@@ -202,42 +184,9 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
         </p>
       )}
       {admin && (
-        <form
-          className="rounded-2xl border border-border bg-card p-6 space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            register.mutate();
-          }}
-        >
-          <h2 className="font-semibold">Register Worker</h2>
-          <div className="flex flex-wrap items-end gap-4">
-            <label className="grid gap-2 text-sm">
-              Worker name
-              <input
-                required
-                maxLength={128}
-                className={input}
-                value={newName}
-                onChange={(event) => setNewName(event.target.value)}
-              />
-            </label>
-            <label className="grid gap-2 text-sm">
-              Daily wage (₹)
-              <input
-                required
-                type="number"
-                min="0.01"
-                step="0.01"
-                className={input}
-                value={newRate}
-                onChange={(event) => setNewRate(event.target.value)}
-              />
-            </label>
-            <button className={button} disabled={register.isPending}>
-              {register.isPending ? "Registering..." : "Register worker"}
-            </button>
-          </div>
-        </form>
+        <p className="text-sm text-muted-foreground">
+          Register workers from the <Link to="/workers" className="text-primary underline">Workers page</Link>, then allocate them here.
+        </p>
       )}
     </>
   );
