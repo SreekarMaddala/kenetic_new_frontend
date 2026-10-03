@@ -17,6 +17,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as OrganizationsRouteImport } from './routes/organizations'
+import { Route as MySalaryRouteImport } from './routes/my-salary'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as ExpensesRouteImport } from './routes/expenses'
@@ -85,6 +86,11 @@ const PaymentsRoute = PaymentsRouteImport.update({
 const OrganizationsRoute = OrganizationsRouteImport.update({
   id: '/organizations',
   path: '/organizations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MySalaryRoute = MySalaryRouteImport.update({
+  id: '/my-salary',
+  path: '/my-salary',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
+  '/my-salary': typeof MySalaryRoute
   '/organizations': typeof OrganizationsRoute
   '/payments': typeof PaymentsRoute
   '/reports': typeof ReportsRoute
@@ -295,6 +302,7 @@ export interface FileRoutesByTo {
   '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
+  '/my-salary': typeof MySalaryRoute
   '/organizations': typeof OrganizationsRoute
   '/payments': typeof PaymentsRoute
   '/reports': typeof ReportsRoute
@@ -334,6 +342,7 @@ export interface FileRoutesById {
   '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
+  '/my-salary': typeof MySalaryRoute
   '/organizations': typeof OrganizationsRoute
   '/payments': typeof PaymentsRoute
   '/reports': typeof ReportsRoute
@@ -375,6 +384,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/inventory'
     | '/login'
+    | '/my-salary'
     | '/organizations'
     | '/payments'
     | '/reports'
@@ -414,6 +424,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/inventory'
     | '/login'
+    | '/my-salary'
     | '/organizations'
     | '/payments'
     | '/reports'
@@ -452,6 +463,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/inventory'
     | '/login'
+    | '/my-salary'
     | '/organizations'
     | '/payments'
     | '/reports'
@@ -492,6 +504,7 @@ export interface RootRouteChildren {
   ExpensesRoute: typeof ExpensesRoute
   InventoryRoute: typeof InventoryRoute
   LoginRoute: typeof LoginRoute
+  MySalaryRoute: typeof MySalaryRoute
   OrganizationsRoute: typeof OrganizationsRoute
   PaymentsRoute: typeof PaymentsRoute
   ReportsRoute: typeof ReportsRoute
@@ -560,6 +573,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations'
       fullPath: '/organizations'
       preLoaderRoute: typeof OrganizationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-salary': {
+      id: '/my-salary'
+      path: '/my-salary'
+      fullPath: '/my-salary'
+      preLoaderRoute: typeof MySalaryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -825,6 +845,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExpensesRoute: ExpensesRoute,
   InventoryRoute: InventoryRoute,
   LoginRoute: LoginRoute,
+  MySalaryRoute: MySalaryRoute,
   OrganizationsRoute: OrganizationsRoute,
   PaymentsRoute: PaymentsRoute,
   ReportsRoute: ReportsRoute,

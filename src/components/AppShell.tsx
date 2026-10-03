@@ -2,7 +2,7 @@ import { Link, useRouterState, useRouter, useNavigate } from "@tanstack/react-ro
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { useProject } from "../lib/ProjectContext";
-import { ChevronDown, ChevronRight, LogOut, Menu, X, ArrowLeft } from "lucide-react";
+import { ChevronDown, ChevronRight, LogOut, Menu, X, ArrowLeft, Wallet } from "lucide-react";
 import { ROLE_LABELS, homeForRole } from "../lib/permissions";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -202,7 +202,11 @@ const getProjectNav = (projectId: string, role?: string) => {
     {
       subLabel: "Site Operations",
       items: [
-        { to: `/projects/${projectId}/supervisors`, label: "Supervisor Attendance", icon: usersIcon },
+        {
+          to: `/projects/${projectId}/supervisors`,
+          label: "Supervisor Attendance",
+          icon: usersIcon,
+        },
         { to: `/projects/${projectId}/labour`, label: "Daily Labour Attendance", icon: usersIcon },
         {
           to: `/projects/${projectId}/logistics`,
@@ -294,7 +298,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     : homeForRole(activeRole);
 
   // Determine current active item for breadcrumbs
-  let currentNavLabel = "";
+  let currentNavLabel = pathname === "/my-salary" ? "My Salary" : "";
   if (projectId) {
     for (const group of projectNav) {
       for (const item of group.items) {
@@ -458,11 +462,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
 
           {/* Supervisor Header */}
-          {!projectId && activeRole === "supervisor" && (
-            <div className="px-2 py-1.5 mb-2 mt-4">
-              <Link to="/projects" className="text-[11px] font-sans font-semibold text-primary">
-                My Projects
-              </Link>
+          {activeRole === "supervisor" && (
+            <div className="space-y-1 mb-4 mt-4">
+              {[
+                { to: "/projects", label: "My Projects", icon: folderIcon },
+                { to: "/my-salary", label: "My Salary", icon: <Wallet className="size-4" /> },
+              ].map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  aria-current={pathname === item.to ? "page" : undefined}
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${pathname === item.to ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
+                >
+                  {item.icon}
+                  {item.label}
+                </Link>
+              ))}
             </div>
           )}
 
@@ -521,7 +536,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           )}
 
-          {!projectId && activeRole !== "super_admin" && (
+          {!projectId && pathname !== "/my-salary" && activeRole !== "super_admin" && (
             <div className="px-3 py-6 mt-6 border-t border-border border-dashed text-center">
               <p className="text-xs text-muted-foreground">
                 Select a project from Portfolio to view project-specific modules.
@@ -618,7 +633,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           {projectId && project && (
             <>
               <ChevronRight className="size-3.5 text-muted-foreground/50" />
-              <span title={project.name} className="font-semibold text-primary truncate max-w-[200px]">
+              <span
+                title={project.name}
+                className="font-semibold text-primary truncate max-w-[200px]"
+              >
                 {project.name}
               </span>
             </>
@@ -639,6 +657,26 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
 
+        {activeRole === "supervisor" && (
+          <nav
+            aria-label="Supervisor navigation"
+            className="flex gap-2 border-b border-border bg-card px-4 py-3 sm:px-8"
+          >
+            {[
+              { to: "/projects", label: "My Projects" },
+              { to: "/my-salary", label: "My Salary" },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                aria-current={pathname === item.to ? "page" : undefined}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${pathname === item.to ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
         <div className="flex-1">{children}</div>
       </main>
     </div>
