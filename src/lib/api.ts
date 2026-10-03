@@ -7,7 +7,9 @@
 
 import { refreshSession } from "./auth";
 
-const BASE_URL = ((import.meta.env.VITE_API_BASE_URL as string) ?? "").replace(/\/+$/, "");
+const BASE_URL = import.meta.env.DEV
+  ? "/api"
+  : ((import.meta.env.VITE_API_BASE_URL as string) ?? "").replace(/\/+$/, "");
 
 // ── Core fetch wrapper ────────────────────────────────────────────────────────
 

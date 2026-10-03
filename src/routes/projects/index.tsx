@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useAuth } from "../../contexts/AuthContext";
 import { PageHeader } from "../../components/AppShell";
@@ -6,7 +6,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { ProjectLocationField } from "../../components/ProjectLocationField";
 import { localDate, projectBudgets, validDate } from "../../lib/projectForm";
-import { ArrowLeft, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, Wallet } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectApi, employeeApi, type Project } from "../../lib/api";
 
@@ -528,6 +528,24 @@ function ProjectsPage() {
               )
             }
           />
+
+          {isSupervisor && (
+            <Link
+              to="/my-salary"
+              className="flex items-center gap-4 rounded-xl border border-primary/20 bg-primary/5 p-5 transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                <Wallet className="size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold text-foreground">My Salary</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  View your monthly salary, deductions and payment history.
+                </p>
+              </div>
+              <ArrowRight className="size-5 shrink-0 text-primary" aria-hidden="true" />
+            </Link>
+          )}
 
           {projects.length === 0 ? (
             <div className="bg-[color:var(--surface)] border border-border rounded-xl p-12 text-center max-w-xl mx-auto space-y-4 my-8 shadow-sm">

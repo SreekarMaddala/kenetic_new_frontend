@@ -31,7 +31,9 @@ function pool() {
 async function userFromSession(session: CognitoUserSession): Promise<AuthUser> {
   const payload = session.getIdToken().decodePayload();
   const identity = parseIdentity(payload);
-  const baseUrl = ((import.meta.env.VITE_API_BASE_URL as string) ?? "").replace(/\/+$/, "");
+  const baseUrl = import.meta.env.DEV
+    ? "/api"
+    : ((import.meta.env.VITE_API_BASE_URL as string) ?? "").replace(/\/+$/, "");
 
   try {
     const response = await fetch(`${baseUrl}/auth/me`, {
