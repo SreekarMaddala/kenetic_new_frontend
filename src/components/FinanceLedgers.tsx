@@ -1,28 +1,22 @@
 import { WorkflowLedger, reviewActions, type Field } from "./WorkflowLedger";
 import { useProject } from "../lib/ProjectContext";
 import { useQuery } from "@tanstack/react-query";
-import { vendorApi, api, type DomainRecord } from "../lib/api";
+import { vendorApi, api, type DomainRecord, type InventoryItem } from "../lib/api";
 
 export function PaymentLedger() {
   const { projectId, projects } = useProject();
   const vendors = useQuery({ queryKey: ["vendors"], queryFn: vendorApi.list });
-  const endpoint = projectId ? `/projects/${projectId}/payments` : "/payments";
+  const materials = useQuery({
+    queryKey: ["material-catalog"],
+    queryFn: () => api.get<InventoryItem[]>("/inventory?catalog=true"),
+  });
+  const endpoint = `/projects/${projectId}/payments`;
   const bills = useQuery({
     queryKey: ["bills", projectId],
     queryFn: () => api.get<DomainRecord[]>(`/projects/${projectId}/bills`),
     enabled: !!projectId,
   });
   const fields: Field[] = [
-    ...(!projectId
-      ? [
-          {
-            key: "projectId",
-            label: "Project",
-            required: true,
-            options: projects.map((p) => ({ value: p.projectId, label: p.name })),
-          },
-        ]
-      : []),
     {
       key: "vendorId",
       label: "Vendor",
@@ -30,10 +24,22 @@ export function PaymentLedger() {
       options: (vendors.data ?? []).map((v) => ({ value: v.vendorId, label: v.name })),
     },
     {
-      key: "material",
+      key: "materialId",
       label: "Material supplied",
-      placeholder: "e.g. Cement, TMT Steel, Sand",
-      helperText: "Optional, but useful when the payment is tied to a specific material category.",
+      required: true,
+      dependsOn: "vendorId",
+      optionsByValue: Object.fromEntries(
+        (vendors.data ?? []).map((vendor) => [
+          vendor.vendorId,
+          (materials.data ?? [])
+            .filter((item) => vendor.materialIds?.includes(item.itemId))
+            .map((item) => ({ value: item.itemId, label: `${item.name} (${item.unit})` })),
+        ]),
+      ),
+      helperText:
+        materials.isError || vendors.isError
+          ? "Unable to load vendor materials. Refresh and try again."
+          : "Select a vendor first. Assign materials to the vendor in Vendors if the list is empty.",
     },
     ...(projectId
       ? [
@@ -57,6 +63,8 @@ export function PaymentLedger() {
     { key: "reference", label: "Transaction / receipt reference", required: true },
     { key: "description", label: "Remarks", type: "textarea" },
   ];
+  if (!projectId) return null;
+
   return (
     <WorkflowLedger
       title="Vendor Payments"
@@ -64,22 +72,17 @@ export function PaymentLedger() {
       endpoint={endpoint}
       idKey="paymentId"
       fields={fields}
-      onCreate={(body) => {
-        const materialValue = typeof body.material === "string" ? body.material.trim() : "";
-        return api.post(endpoint, {
+      onCreate={(body) =>
+        api.post(endpoint, {
           ...body,
-          projectId: projectId || body.projectId,
-          vendorName: vendors.data?.find((v) => v.vendorId === body.vendorId)?.name,
-          material:
-            materialValue ||
-            vendors.data?.find((v) => v.vendorId === body.vendorId)?.materialsSupplied ||
-            undefined,
-        });
-      }}
+          projectId,
+        })
+      }
       columns={[
         { key: "date", label: "Date" },
         { key: "vendorName", label: "Vendor" },
         { key: "material", label: "Material" },
+        { key: "materialUnit", label: "Unit" },
         { key: "projectName", label: "Project" },
         { key: "amount", label: "Amount" },
         { key: "mode", label: "Mode" },
@@ -93,14 +96,7 @@ export function PaymentLedger() {
           projectName: projects.find((p) => p.projectId === r.projectId)?.name ?? r.projectId,
         }))
       }
-      actions={[
-        ...reviewActions(endpoint, "paymentId"),
-        {
-          label: "Revert",
-          visible: (row) => String(row.status ?? "").toLowerCase() === "approved",
-          run: (row) => api.patch(`${endpoint}/${encodeURIComponent(String(row.paymentId))}`, { status: "Pending" }),
-        },
-      ]}
+      actions={reviewActions(endpoint, "paymentId")}
     />
   );
 }

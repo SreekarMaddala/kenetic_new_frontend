@@ -1,31 +1,13 @@
 import { allocationEnd, nextDate, validDate } from "../../../lib/projectForm";
-import { api, projectApi } from "../../../lib/api";
+import { projectApi } from "../../../lib/api";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import * as React from "react";
 import { toast } from "sonner";
-import {
-  FileText,
-  Layers,
-  ArrowLeft,
-  Compass,
-  User,
-  ShieldCheck,
-  Eye,
-  Download,
-  AlertCircle,
-  Utensils,
-  Plus,
-} from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Compass, User, ShieldCheck, Plus } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProject } from "../../../lib/ProjectContext";
-import {
-  financeApi,
-  siteControlApi,
-  fieldOperationsApi,
-  documentControlApi,
-  employeeApi,
-} from "../../../lib/api";
+import { financeApi, siteControlApi, employeeApi } from "../../../lib/api";
 
 export const Route = createFileRoute("/projects/$projectId/")({
   component: ProjectDetailsPage,
@@ -88,12 +70,7 @@ function ProjectDetailsPage() {
   }, [rawProject]);
 
   // Detail Page active Tab
-  const [detailTab, setDetailTab] = React.useState<
-    "plans" | "materials" | "expenses" | "media" | "supervisors"
-  >("plans");
-
-  // Authority Mode State (Required for editing expenses)
-  const [isEditingExpenses, setIsEditingExpenses] = React.useState(false);
+  const [detailTab, setDetailTab] = React.useState<"media" | "supervisors">("media");
 
   const { data: rawExpenses = [] } = useQuery({
     queryKey: ["expenses", projectId],
@@ -116,13 +93,6 @@ function ProjectDetailsPage() {
     retry: 1,
   });
 
-  const { data: rawDrawings = [] } = useQuery({
-    queryKey: ["drawings", projectId],
-    queryFn: () => documentControlApi.listDrawings(projectId!),
-    enabled: !!projectId,
-    retry: 1,
-  });
-
   const { data: rawEmployees = [] } = useQuery({
     queryKey: ["employees"],
     queryFn: () => employeeApi.list(),
@@ -132,20 +102,6 @@ function ProjectDetailsPage() {
   const supervisorList = React.useMemo(() => {
     return rawEmployees.filter((e) => e.role === "supervisor" || e.role === "operations_admin");
   }, [rawEmployees]);
-
-  const { data: rawMaterials = [] } = useQuery({
-    queryKey: ["materials-stock", projectId],
-    queryFn: () => fieldOperationsApi.listMaterials(projectId!),
-    enabled: !!projectId,
-    retry: 1,
-  });
-
-  const { data: rawLogistics = [] } = useQuery({
-    queryKey: ["logistics-trips", projectId],
-    queryFn: () => fieldOperationsApi.listLogistics(projectId!),
-    enabled: !!projectId,
-    retry: 1,
-  });
 
   const expenses = rawExpenses.map((e) => ({
     id: e.expenseId,
@@ -173,42 +129,6 @@ function ProjectDetailsPage() {
     return selectedProject?.openIssues ?? 0;
   }, [rawIssues, selectedProject?.openIssues]);
 
-  const planSheets = React.useMemo(() => {
-    if (Array.isArray(rawDrawings) && rawDrawings.length > 0) {
-      return rawDrawings.map((d: any, idx: number) => ({
-        id: d.drawingId || d.recordId || `DWG-${idx + 1}`,
-        name: d.title || d.name || `Plan Sheet #${idx + 1}`,
-        type: d.category || d.type || "Architectural",
-        date: d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-IN") : "Recent",
-      }));
-    }
-    return [];
-  }, [rawDrawings]);
-
-  const siteMaterials = React.useMemo(() => {
-    if (Array.isArray(rawMaterials) && rawMaterials.length > 0) {
-      return rawMaterials.map((m: any) => ({
-        name: m.name || m.materialName || "Material Item",
-        stock: `${m.totalStock || m.quantity || 0} ${m.unit || "units"}`,
-        status: m.status || "Healthy",
-      }));
-    }
-    return [];
-  }, [rawMaterials]);
-
-  const siteLogistics = React.useMemo(() => {
-    if (Array.isArray(rawLogistics) && rawLogistics.length > 0) {
-      return rawLogistics.map((l: any, idx: number) => ({
-        material: l.material || l.vehicleNo || `Transit Shipment #${idx + 1}`,
-        carrier: l.carrier || l.driverName || "Logistics Partner",
-        date: l.date || (l.createdAt ? new Date(l.createdAt).toLocaleDateString("en-IN") : "Today"),
-        cost: l.cost ? `₹${Number(l.cost).toLocaleString("en-IN")}` : "In Transit",
-        status: l.status || "In Transit",
-      }));
-    }
-    return [];
-  }, [rawLogistics]);
-
   const progressPhotos = React.useMemo(() => {
     if (Array.isArray(rawInspections) && rawInspections.length > 0) {
       return rawInspections.map((insp: any, idx: number) => ({
@@ -225,12 +145,6 @@ function ProjectDetailsPage() {
     }
     return [];
   }, [rawInspections, selectedProject?.supervisor]);
-
-  // Form states - Expense
-  const [expCategory, setExpCategory] = React.useState("Food & Mess");
-  const [expAmount, setExpAmount] = React.useState("");
-  const [expDesc, setExpDesc] = React.useState("");
-  const [expPaidBy, setExpPaidBy] = React.useState("");
 
   // In-Detail Timeline Allocation State
   const [detailTimelineName, setDetailTimelineName] = React.useState("");
@@ -331,63 +245,7 @@ function ProjectDetailsPage() {
     toast.success(`Allocated ${detailTimelineName} to ${detailTimelinePhase} phase successfully!`);
   };
 
-  const createExpenseMutation = useMutation({
-    mutationFn: (body: Parameters<typeof financeApi.createExpense>[1]) =>
-      financeApi.createExpense(projectId!, body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["expenses", projectId] });
-      toast.success("Expense transaction logged successfully!");
-      setExpAmount("");
-      setExpDesc("");
-      setExpPaidBy("");
-    },
-    onError: (err: Error) => {
-      toast.error(`Failed to log expense: ${err.message}`);
-    },
-  });
-
   if (!selectedProject) return null;
-
-  const handleAddExpense = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (createExpenseMutation.isPending) return;
-    if (!isEditingExpenses) {
-      toast.error("Enable editing to add an expense.");
-      return;
-    }
-    if (!expAmount || !expDesc || !expPaidBy) {
-      toast.error("All expense details (including Mandatory Paid By source) are required.");
-      return;
-    }
-
-    createExpenseMutation.mutate({
-      category: expCategory,
-      description: expDesc,
-      amount: parseFloat(expAmount),
-      submittedBy: expPaidBy,
-      projectId: projectId,
-    });
-  };
-
-  const handleToggleExpenseEditing = () => {
-    setIsEditingExpenses(!isEditingExpenses);
-    toast.success(`${!isEditingExpenses ? "Expense editing enabled" : "Read-only view enabled"}`, {
-      description: !isEditingExpenses
-        ? "The expense entry form is now available."
-        : "Expense logs are now view-only.",
-    });
-  };
-
-  const handleViewDocument = async (id: string) => {
-    try {
-      const result = await api.get<{ url: string }>(
-        `/projects/${projectId}/drawings/${id}/download`,
-      );
-      window.location.assign(result.url);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not open file");
-    }
-  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -485,36 +343,6 @@ function ProjectDetailsPage() {
       {/* Details tab selection */}
       <div className="flex border-b border-border gap-2 overflow-x-auto">
         <button
-          onClick={() => setDetailTab("plans")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all flex items-center gap-2 shrink-0 ${
-            detailTab === "plans"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <FileText className="size-4" /> Plan Sheets Online
-        </button>
-        <button
-          onClick={() => setDetailTab("materials")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all flex items-center gap-2 shrink-0 ${
-            detailTab === "materials"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Layers className="size-4" /> Material Availability & Transport
-        </button>
-        <button
-          onClick={() => setDetailTab("expenses")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all flex items-center gap-2 shrink-0 ${
-            detailTab === "expenses"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Utensils className="size-4" /> Food & Pantry Expenses
-        </button>
-        <button
           onClick={() => setDetailTab("media")}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all flex items-center gap-2 shrink-0 ${
             detailTab === "media"
@@ -536,297 +364,7 @@ function ProjectDetailsPage() {
         </button>
       </div>
 
-      {/* TAB 1: Plan Sheets */}
-      {detailTab === "plans" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {planSheets.map((sheet) => (
-            <div
-              key={sheet.id}
-              className="bg-[color:var(--surface)] border border-border rounded-xl p-5 shadow-sm flex items-center justify-between gap-4"
-            >
-              <div className="min-w-0">
-                <h3 className="font-semibold text-sm truncate">{sheet.name}</h3>
-                <div className="flex items-center gap-3 mt-2 text-[10px] font-mono text-muted-foreground">
-                  <span className="bg-secondary px-2 py-0.5 rounded font-medium">{sheet.type}</span>
-                  <span>Uploaded: {sheet.date}</span>
-                </div>
-              </div>
-              <div className="flex gap-1.5 shrink-0">
-                <button
-                  onClick={() => handleViewDocument(sheet.id)}
-                  className="size-8 grid place-items-center border border-border rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                  title="View Drawing"
-                >
-                  <Eye className="size-4" />
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      const result = await api.get<{ url: string }>(
-                        `/projects/${projectId}/drawings/${sheet.id}/download`,
-                      );
-                      window.location.assign(result.url);
-                    } catch (e) {
-                      toast.error(e instanceof Error ? e.message : "Download failed");
-                    }
-                  }}
-                  className="size-8 grid place-items-center bg-foreground text-background rounded hover:bg-zinc-800 transition-colors"
-                  title="Download Sheet"
-                >
-                  <Download className="size-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-          {planSheets.length === 0 && (
-            <div className="col-span-2 p-8 text-center bg-[color:var(--surface)] border border-border rounded-xl text-muted-foreground text-xs">
-              No digital plan sheets uploaded for this project yet.
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 2: Materials Availability & Transportation */}
-      {detailTab === "materials" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Material Stock Ledger specific to this site */}
-          <div className="lg:col-span-6 bg-[color:var(--surface)] border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-border bg-secondary/10 flex justify-between items-center">
-              <h3 className="font-display font-semibold text-xs uppercase tracking-wider font-mono text-muted-foreground">
-                Available Stock Ledger
-              </h3>
-              <span className="text-[10px] font-mono text-muted-foreground">SITE WAREHOUSE</span>
-            </div>
-            <div className="divide-y divide-border">
-              {siteMaterials.map((m) => (
-                <div
-                  key={m.name}
-                  className="p-4 flex items-center justify-between hover:bg-secondary/10 transition-colors"
-                >
-                  <div>
-                    <h4 className="font-semibold text-xs">{m.name}</h4>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Warehouse stock level
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <strong className="font-mono text-xs">{m.stock}</strong>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider ${
-                        m.status === "Healthy"
-                          ? "bg-accent/10 text-accent"
-                          : m.status === "Warning"
-                            ? "bg-yellow-500/10 text-yellow-700"
-                            : "bg-primary/10 text-primary"
-                      }`}
-                    >
-                      {m.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {siteMaterials.length === 0 && (
-                <div className="p-8 text-center text-xs text-muted-foreground">
-                  No warehouse material records for this site.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Inbound transport for this project */}
-          <div className="lg:col-span-6 bg-[color:var(--surface)] border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-border bg-secondary/10 flex justify-between items-center">
-              <h3 className="font-display font-semibold text-xs uppercase tracking-wider font-mono text-muted-foreground">
-                Material Inbound Logistics
-              </h3>
-              <span className="text-[10px] font-mono text-muted-foreground">TRANSIT LEDGER</span>
-            </div>
-            <div className="divide-y divide-border">
-              {siteLogistics.map((t, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 flex items-start justify-between hover:bg-secondary/10 transition-colors"
-                >
-                  <div>
-                    <h4 className="font-semibold text-xs">{t.material}</h4>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{t.carrier}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1 font-mono">{t.date}</p>
-                  </div>
-                  <div className="text-right">
-                    <strong className="font-mono text-xs block">{t.cost}</strong>
-                    <span className="inline-block px-1.5 py-0.5 rounded bg-accent/10 text-accent text-[9px] font-mono uppercase tracking-wider mt-1">
-                      {t.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {siteLogistics.length === 0 && (
-                <div className="p-8 text-center text-xs text-muted-foreground">
-                  No inbound logistics shipments in transit.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: Food & pantry expenses (Authority Lock) */}
-      {detailTab === "expenses" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Expenses table (7 cols) */}
-          <div className="lg:col-span-7 bg-[color:var(--surface)] border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <div className="px-5 py-4 border-b border-border bg-secondary/10 flex justify-between items-center flex-wrap gap-3">
-              <div>
-                <h3 className="font-display font-semibold text-xs uppercase tracking-wider font-mono text-muted-foreground">
-                  Site Expenditure Ledger
-                </h3>
-              </div>
-
-              {/* Authority Toggle */}
-              <button
-                onClick={handleToggleExpenseEditing}
-                className={`px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                  isEditingExpenses
-                    ? "bg-accent text-accent-foreground border border-accent"
-                    : "bg-secondary text-muted-foreground border border-border hover:text-foreground"
-                }`}
-              >
-                <ShieldCheck className="size-4" />
-                {isEditingExpenses ? "Expense editing: ON" : "Enable expense editing"}
-              </button>
-            </div>
-
-            <div className="overflow-x-auto flex-1">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="bg-secondary/40 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-                    <th className="px-6 py-3 font-medium">Date</th>
-                    <th className="px-6 py-3 font-medium">Category / Details</th>
-                    <th className="px-6 py-3 font-medium">Paid By (Source)</th>
-                    <th className="px-6 py-3 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {expenses
-                    .filter((e) => e.project === selectedProject.name)
-                    .map((exp) => (
-                      <tr key={exp.id} className="hover:bg-secondary/10 transition-colors">
-                        <td className="px-6 py-4 font-mono text-muted-foreground">{exp.date}</td>
-                        <td className="px-6 py-4">
-                          <p className="font-semibold">{exp.category}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">{exp.desc}</p>
-                        </td>
-                        <td className="px-6 py-4 font-medium flex items-center gap-1 mt-1">
-                          <User className="size-3 text-muted-foreground shrink-0" />
-                          <span>{exp.paidBy}</span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-mono font-semibold text-foreground">
-                          ₹{exp.amount.toLocaleString("en-IN")}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Add Expense form (Authority restricted) (5 cols) */}
-          <div className="lg:col-span-5 bg-[color:var(--surface)] border border-border rounded-xl shadow-sm p-6 flex flex-col justify-between">
-            {isEditingExpenses ? (
-              <form onSubmit={handleAddExpense} className="space-y-4 text-xs">
-                <div>
-                  <h3 className="font-display font-semibold text-sm">Log New Site Expense</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Log cash/food payments directly with mandatory payee verification.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Expense Category</label>
-                  <select
-                    value={expCategory}
-                    onChange={(e) => setExpCategory(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md"
-                  >
-                    <option value="Food & Mess">Food & Mess charges</option>
-                    <option value="Site Supplies">Site Supplies</option>
-                    <option value="Repairs">Repairs & Maintenance</option>
-                    <option value="Other">Other Expenses</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Amount (₹)</label>
-                  <input
-                    type="number"
-                    placeholder="Expense Amount"
-                    value={expAmount}
-                    onChange={(e) => setExpAmount(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground">Description / Purpose</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Tea & samosa snacks for floor cast crew"
-                    value={expDesc}
-                    onChange={(e) => setExpDesc(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-medium text-muted-foreground flex items-center gap-1">
-                    Paid By (Mandatory Payment Agent){" "}
-                    <span className="text-primary font-bold">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Rajesh Kumar (PM)"
-                    value={expPaidBy}
-                    onChange={(e) => setExpPaidBy(e.target.value)}
-                    className="w-full p-2 bg-background border border-border rounded-md border-primary/20 focus:border-primary"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={createExpenseMutation.isPending}
-                  className="w-full py-2.5 bg-foreground text-background font-semibold rounded hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1 mt-2"
-                >
-                  <Plus className="size-4" />{" "}
-                  {createExpenseMutation.isPending ? "Saving..." : "Save Expense"}
-                </button>
-              </form>
-            ) : (
-              <div className="py-8 px-4 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-3">
-                <div className="size-12 rounded-full bg-yellow-500/10 grid place-items-center text-yellow-600">
-                  <AlertCircle className="size-6" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground text-sm">
-                    Logging Restrictive Lock
-                  </h4>
-                  <p className="mt-1 leading-relaxed">
-                    To add new food or site transactions, you must toggle on expense editing at the
-                    top of the ledger.
-                  </p>
-                </div>
-                <button
-                  onClick={handleToggleExpenseEditing}
-                  className="mt-3 px-4 py-2 border border-border hover:bg-secondary text-foreground font-medium rounded transition-colors"
-                >
-                  Enable expense editing
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: Site Media & Progress Photos */}
+      {/* Site Media & Progress Photos */}
       {detailTab === "media" && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -921,7 +459,7 @@ function ProjectDetailsPage() {
         </div>
       )}
 
-      {/* TAB 5: Site Team & Phased Timelines */}
+      {/* Site Team & Phased Timelines */}
       {detailTab === "supervisors" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
           {/* Timeline chart visual */}

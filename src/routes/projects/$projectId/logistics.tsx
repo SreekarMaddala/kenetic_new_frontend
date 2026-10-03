@@ -33,10 +33,6 @@ function LogisticsPage() {
 
   const [activeTab, setActiveTab] = useState<"owned" | "fuel" | "rental">("owned");
 
-  // Form states - Register Vehicle
-  const [vehicleModel, setVehicleModel] = useState("");
-  const [licensePlate, setLicensePlate] = useState("");
-
   // Form states - Daily Mileage Log
   const [selectedVehicle, setSelectedVehicle] = useState("");
   const [driverName, setDriverName] = useState("");
@@ -195,11 +191,7 @@ function LogisticsPage() {
   // Mutations
   const createLogisticsMutation = useMutation({
     mutationFn: (body: DomainRecord) => {
-      if (
-        !isAdmin &&
-        body.tripType !== "vehicle_registration" &&
-        !String(body.date ?? "").startsWith(logisticsPeriod().month)
-      ) {
+      if (!isAdmin && !String(body.date ?? "").startsWith(logisticsPeriod().month)) {
         throw new Error("You can only add logistics entries for the current month.");
       }
       return api.post("/supervisor/logistics/trips", body);
@@ -210,28 +202,6 @@ function LogisticsPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
-  // Handle Form 1: Register Vehicle
-  function handleRegisterVehicle(e: FormEvent) {
-    e.preventDefault();
-    if (createLogisticsMutation.isPending) return;
-    if (!vehicleModel.trim()) {
-      toast.error("Please enter vehicle model.");
-      return;
-    }
-    const vehicleLabel = licensePlate.trim()
-      ? `${vehicleModel.trim()} (${licensePlate.trim()})`
-      : vehicleModel.trim();
-
-    createLogisticsMutation.mutate({
-      tripType: "vehicle_registration",
-      vehicle: vehicleLabel,
-      model: vehicleModel.trim(),
-      plateNo: licensePlate.trim(),
-    });
-    setVehicleModel("");
-    setLicensePlate("");
-  }
 
   // Handle Form 2: Log Mileage
   function handleLogMileage(e: FormEvent) {
@@ -491,7 +461,8 @@ function LogisticsPage() {
                     No Daily Mileage Runs Recorded
                   </h4>
                   <p className="text-xs text-muted-foreground max-w-sm">
-                    Register a vehicle and log daily odometer runs using the form on the right.
+                    Select a registered fleet vehicle and log daily odometer runs using the form on
+                    the right.
                   </p>
                 </div>
               </div>
@@ -527,58 +498,8 @@ function LogisticsPage() {
             )}
           </div>
 
-          {/* Right Column: Register Vehicle & Log Mileage Forms (4 cols) */}
+          {/* Right Column: Log Mileage Form (4 cols) */}
           <div className="lg:col-span-4 space-y-6">
-            {/* Form 1: Register New Vehicle */}
-            {isAdmin && (
-              <form
-                onSubmit={handleRegisterVehicle}
-                className="p-5 rounded-xl border border-border bg-[color:var(--surface)] shadow-sm space-y-3"
-              >
-                <div>
-                  <h4 className="font-bold text-sm text-foreground">Register New Vehicle</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Register a new vehicle into the company fleet.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 pt-1">
-                  <label className="text-xs font-semibold text-muted-foreground">
-                    Vehicle Make & Model
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Mahindra Bolero, Tata Ace, Tata 407"
-                    value={vehicleModel}
-                    onChange={(e) => setVehicleModel(e.target.value)}
-                    className="w-full h-9 px-3 text-xs border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">
-                    License Plate / Registration No.
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. KA-03-MJ-2401"
-                    value={licensePlate}
-                    onChange={(e) => setLicensePlate(e.target.value)}
-                    className="w-full h-9 px-3 text-xs border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={createLogisticsMutation.isPending}
-                  className="w-full h-9 bg-orange-600 text-white font-bold text-xs rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1.5 shadow-sm"
-                >
-                  <Plus className="size-3.5" /> Register Vehicle
-                </button>
-              </form>
-            )}
-
             {/* Form 2: Log Daily Mileage Run */}
             <form
               onSubmit={handleLogMileage}

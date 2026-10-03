@@ -2,7 +2,7 @@ import { Link, useRouterState, useRouter, useNavigate } from "@tanstack/react-ro
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { useProject } from "../lib/ProjectContext";
-import { ChevronDown, Plus, ChevronRight, LogOut, Menu, X } from "lucide-react";
+import { ChevronDown, ChevronRight, LogOut, Menu, X, ArrowLeft } from "lucide-react";
 import { ROLE_LABELS, homeForRole } from "../lib/permissions";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -141,8 +141,8 @@ const GLOBAL_NAV = [
   { to: "/projects", label: "Projects", icon: folderIcon },
   { to: "/employees", label: "Employees", icon: usersIcon },
   { to: "/vendors", label: "Vendors", icon: usersIcon },
-  { to: "/payments", label: "Vendor Payments", icon: cartIcon },
-  { to: "/inventory", label: "Inventory", icon: inventoryIcon },
+  { to: "/subcontractors", label: "Subcontractors", icon: usersIcon },
+  { to: "/vehicles", label: "Vehicles", icon: cartIcon },
   { to: "/reports", label: "Reports", icon: reportIcon },
   { to: "/analytics", label: "Employee Analytics", icon: chartIcon },
   { to: "/settings", label: "Settings", icon: gearIcon },
@@ -174,7 +174,6 @@ const getProjectNav = (projectId: string, role?: string) => {
             label: "Logistics (Load & KM)",
             icon: inventoryIcon,
           },
-          { to: `/projects/${projectId}/materials`, label: "Materials Registry", icon: folderIcon },
         ],
       },
     ];
@@ -189,8 +188,6 @@ const getProjectNav = (projectId: string, role?: string) => {
       subLabel: "Project Management",
       items: [
         { to: `/projects/${projectId}/subcontractors`, label: "Sub-Contractors", icon: usersIcon },
-        { to: `/projects/${projectId}/drawings`, label: "Drawings", icon: fileIcon },
-        { to: `/projects/${projectId}/documents`, label: "Documents", icon: fileIcon },
       ],
     },
     {
@@ -204,20 +201,13 @@ const getProjectNav = (projectId: string, role?: string) => {
     {
       subLabel: "Site Operations",
       items: [
-        { to: `/projects/${projectId}/supervisors`, label: "Supervisor Check-In", icon: usersIcon },
+        { to: `/projects/${projectId}/supervisors`, label: "Supervisor Attendance", icon: usersIcon },
         { to: `/projects/${projectId}/labour`, label: "Daily Labour Attendance", icon: usersIcon },
         {
           to: `/projects/${projectId}/logistics`,
           label: "Logistics (Load & KM)",
           icon: inventoryIcon,
         },
-        {
-          to: `/projects/${projectId}/materials`,
-          label: "Materials Registry",
-          icon: inventoryIcon,
-        },
-        { to: `/projects/${projectId}/equipment`, label: "Equipment", icon: gearIcon },
-        { to: `/projects/${projectId}/warehouse`, label: "Central Warehouse", icon: folderIcon },
       ],
     },
     {
@@ -237,9 +227,9 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "/projects",
     "/employees",
     "/vendors",
+    "/subcontractors",
+    "/vehicles",
     "/settings",
-    "/payments",
-    "/inventory",
     "/reports",
     "/analytics",
     "Overview",
@@ -254,7 +244,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { projectId, project, projects, switchProject } = useProject();
+  const { projectId, project } = useProject();
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -274,7 +264,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, []);
-  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const toggleGroup = (label: string) => {
@@ -298,6 +287,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const projectNav = projectId
     ? getProjectNav(projectId, activeRole).filter((g) => hasPermission(g.subLabel))
     : [];
+  const workspaceHome = projectId
+    ? (projectNav[0]?.items[0]?.to ?? "/projects")
+    : homeForRole(activeRole);
 
   // Determine current active item for breadcrumbs
   let currentNavLabel = "";
@@ -334,7 +326,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
       <aside
         id="workspace-navigation"
-        aria-label="Workspace navigation"
+        aria-label={projectId ? "Project navigation" : "Workspace navigation"}
         className={`workspace-sidebar ${mobileNavOpen ? "is-open" : ""}`}
       >
         {/* ─────── Logo ─────── */}
@@ -346,7 +338,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <X size={18} />
         </button>
         <div className="px-4 pt-5 pb-4">
-          <Link to={homeForRole(activeRole)} className="flex items-center gap-3 group">
+          <Link to={workspaceHome} className="flex items-center gap-3 group">
             <img
               src="/logo.png"
               alt="Kenetic Logo"
@@ -367,9 +359,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {/* ─────── Navigation ─────── */}
-        <nav className="flex-1 min-h-0 overflow-y-auto px-3 pb-2 scrollbar-thin">
+        <nav
+          key={projectId ?? "global"}
+          className="flex-1 min-h-0 overflow-y-auto px-3 pb-2 scrollbar-thin"
+        >
           {/* Admin Navigation (Software Provider) */}
-          {activeRole === "super_admin" && (
+          {!projectId && activeRole === "super_admin" && (
             <div className="mb-4 mt-2">
               <div className="px-2 py-1.5 mb-1">
                 <span className="text-[11px] font-sans font-semibold text-primary">
@@ -427,7 +422,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
 
           {/* Global Navigation */}
-          {activeRole === "operations_admin" && (
+          {!projectId && activeRole === "operations_admin" && (
             <div className="mb-4">
               <div className="px-2 py-1.5 mb-1">
                 <span className="text-[10px] font-sans font-semibold text-muted-foreground">
@@ -461,7 +456,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
 
           {/* Supervisor Header */}
-          {activeRole === "supervisor" && (
+          {!projectId && activeRole === "supervisor" && (
             <div className="px-2 py-1.5 mb-2 mt-4">
               <Link to="/projects" className="text-[11px] font-sans font-semibold text-primary">
                 My Projects
@@ -470,68 +465,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
 
           {/* Project Navigation */}
-          {projectId && activeRole === "operations_admin" && (
-            <div className="px-2 py-1.5 mb-2 mt-4 flex items-center justify-between group">
-              <span className="text-[10px] font-sans font-semibold text-muted-foreground">
-                Current Project
-              </span>
-            </div>
-          )}
-
           {projectId && (
             <div className="mb-4 animate-fade-in">
-              {/* Project Switcher */}
-              {(activeRole === "operations_admin" || activeRole === "supervisor") && (
-                <div className="relative mb-3 px-1">
-                  <button
-                    onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-secondary/30 hover:bg-secondary/60 border border-border rounded-lg text-sm font-semibold transition-colors text-left"
-                  >
-                    <span className="truncate">{project?.name}</span>
-                    <ChevronDown className="size-4 text-muted-foreground shrink-0" />
-                  </button>
-
-                  {isSwitcherOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setIsSwitcherOpen(false)}
-                      />
-                      <div className="absolute top-full left-1 right-1 mt-1 bg-[color:var(--surface)] border border-border rounded-xl shadow-xl z-50 p-1.5 max-h-[300px] overflow-y-auto">
-                        <div className="space-y-0.5">
-                          {projects.map((p) => (
-                            <button
-                              key={p.projectId}
-                              onClick={() => {
-                                switchProject(p.projectId);
-                                setIsSwitcherOpen(false);
-                              }}
-                              className={`w-full text-left px-2.5 py-1.5 text-[13px] rounded-lg transition-colors ${
-                                p.projectId === projectId
-                                  ? "bg-primary/10 text-primary font-semibold"
-                                  : "hover:bg-secondary text-foreground"
-                              }`}
-                            >
-                              {p.name}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="mt-1 pt-1 border-t border-border">
-                          <Link
-                            to="/projects"
-                            onClick={() => setIsSwitcherOpen(false)}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
-                          >
-                            <Plus className="size-3.5" />
-                            New Project
-                          </Link>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
               {/* Project Sub-modules */}
               <div className="space-y-3 pl-1">
                 {projectNav.map((group) => (
@@ -601,6 +536,16 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* ─────── Account card ─────── */}
         <div className="px-3 pb-4 relative space-y-1 shrink-0 min-w-0">
+          {projectId && (
+            <Link
+              to="/projects"
+              onClick={() => setMobileNavOpen(false)}
+              className="w-full mb-3 px-3 py-2.5 text-sm font-semibold text-primary border border-border rounded-lg flex items-center gap-2 hover:bg-secondary transition-colors"
+            >
+              <ArrowLeft className="size-4" />
+              Exit project
+            </Link>
+          )}
           <div className="w-full min-w-0 p-3 bg-secondary/30 rounded-xl border border-border text-left">
             <div className="flex min-w-0 items-center gap-2.5">
               <div
@@ -617,7 +562,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                   : activeAccount.initials}
               </div>
               <div className="min-w-0 flex-1 space-y-0.5">
-                <p title={user?.name ?? activeAccount.name} className="text-xs font-semibold leading-tight truncate text-foreground">
+                <p
+                  title={user?.name ?? activeAccount.name}
+                  className="text-xs font-semibold leading-tight truncate text-foreground"
+                >
                   {user?.name ?? activeAccount.name}
                 </p>
                 <p className="text-[10px] text-muted-foreground truncate">
@@ -649,7 +597,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="workspace-main flex-1 min-w-0 flex flex-col h-screen overflow-y-auto"
       >
         {/* Workspace navigation */}
-        <div className="workspace-topbar">
+        <div className="workspace-topbar flex-wrap">
           <button
             className="mobile-nav-toggle"
             aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
@@ -660,15 +608,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <Link
-            to={homeForRole(activeRole)}
+            to={workspaceHome}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            Workspace
+            {projectId ? "Project workspace" : "Workspace"}
           </Link>
           {projectId && project && (
             <>
               <ChevronRight className="size-3.5 text-muted-foreground/50" />
-              <span className="text-muted-foreground truncate max-w-[150px]">{project.name}</span>
+              <span title={project.name} className="font-semibold text-primary truncate max-w-[200px]">
+                {project.name}
+              </span>
             </>
           )}
           {currentNavLabel &&

@@ -401,6 +401,7 @@ export interface Vendor {
   email: string;
   phone: string;
   materialsSupplied?: string;
+  materialIds?: string[];
   badge?: string;
   activeContracts?: number;
   createdAt?: string;
@@ -410,7 +411,7 @@ export interface CreateVendorBody {
   type: string;
   email: string;
   phone: string;
-  materialsSupplied?: string;
+  materialIds?: string[];
 }
 
 export interface InventoryItem {
@@ -436,6 +437,9 @@ export interface VendorPayment {
   paymentId: string;
   vendorId?: string;
   vendorName?: string;
+  materialId?: string;
+  material?: string;
+  materialUnit?: string;
   amount: number;
   status: string;
   projectId?: string;
@@ -444,6 +448,7 @@ export interface VendorPayment {
 }
 export interface CreatePaymentBody {
   vendorId: string;
+  materialId: string;
   amount: number;
   projectId?: string;
   description?: string;

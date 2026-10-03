@@ -16,7 +16,7 @@ import {
   X,
   History,
 } from "lucide-react";
-import { vendorApi, paymentApi, type Vendor, type VendorPayment } from "../lib/api";
+import { vendorApi, api, type Vendor, type CreateVendorBody, type InventoryItem } from "../lib/api";
 
 export const Route = createFileRoute("/vendors")({
   component: VendorsPage,
@@ -67,19 +67,18 @@ function VendorsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
-  const [historyVendor, setHistoryVendor] = useState<Vendor | null>(null);
-  const payments = useQuery({
-    queryKey: ["vendor-payments"],
-    queryFn: paymentApi.list,
-    enabled: Boolean(historyVendor),
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const materials = useQuery({
+    queryKey: ["material-catalog"],
+    queryFn: () => api.get<InventoryItem[]>("/inventory?catalog=true"),
   });
-
+  const [historyVendor, setHistoryVendor] = useState<Vendor | null>(null);
   // Onboard Vendor form state
   const [name, setName] = useState("");
   const [type, setType] = useState("Materials & Supplies");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [materialsSupplied, setMaterialsSupplied] = useState("");
+  const [materialIds, setMaterialIds] = useState<string[]>([]);
 
   const { data: rawVendors = [], isLoading } = useQuery({
     queryKey: ["vendors"],
@@ -88,30 +87,40 @@ function VendorsPage() {
   });
 
   const createVendorMutation = useMutation({
-    mutationFn: (body: any) => vendorApi.create(body),
+    mutationFn: (body: CreateVendorBody) =>
+      editingVendor ? vendorApi.update(editingVendor.vendorId, body) : vendorApi.create(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
-      toast.success("Vendor onboarded successfully.");
+      toast.success(
+        editingVendor ? "Vendor updated successfully." : "Vendor onboarded successfully.",
+      );
       setShowModal(false);
+      setEditingVendor(null);
       setName("");
       setEmail("");
       setPhone("");
-      setMaterialsSupplied("");
+      setMaterialIds([]);
     },
+    onError: (error: Error) => toast.error(error.message),
   });
 
-  const vendors: Vendor[] = (Array.isArray(rawVendors) ? rawVendors : []).map((v: any, idx: number) => ({
-    vendorId: v.vendorId || v.recordId || `VEN-${idx + 1}`,
-    name: v.name || `Vendor ${idx + 1}`,
-    type: v.type || v.category || "Supplier",
-    status: v.status || "Active",
-    rating: typeof v.rating === "number" ? v.rating : 0,
-    email: v.email || "—",
-    phone: v.phone || "—",
-    materialsSupplied: v.materialsSupplied || v.materials || "—",
-    badge: v.badge || (v.status === "Active" ? "Standard" : "Under Review"),
-    activeContracts: typeof v.activeContracts === "number" ? v.activeContracts : 0,
-  }));
+  const vendors: Vendor[] = (Array.isArray(rawVendors) ? rawVendors : []).map(
+    (v: any, idx: number) => ({
+      vendorId: v.vendorId || v.recordId || `VEN-${idx + 1}`,
+      name: v.name || `Vendor ${idx + 1}`,
+      type: v.type || v.category || "Supplier",
+      status: v.status || "Active",
+      rating: typeof v.rating === "number" ? v.rating : 0,
+      email: v.email || "—",
+      phone: v.phone || "—",
+      materialsSupplied: Array.isArray(v.materialIds)
+        ? v.materialsSupplied || "—"
+        : v.materialsSupplied || v.materials || "—",
+      materialIds: v.materialIds ?? [],
+      badge: v.badge || (v.status === "Active" ? "Standard" : "Under Review"),
+      activeContracts: typeof v.activeContracts === "number" ? v.activeContracts : 0,
+    }),
+  );
 
   const filteredVendors = vendors.filter((ven) => {
     const venName = ven.name || "";
@@ -135,8 +144,7 @@ function VendorsPage() {
       type,
       email,
       phone,
-      materialsSupplied: materialsSupplied.trim() || undefined,
-      status: "Active",
+      materialIds,
     });
   };
 
@@ -156,7 +164,15 @@ function VendorsPage() {
         eyebrow="Global Workspace"
         actions={
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setEditingVendor(null);
+              setName("");
+              setEmail("");
+              setPhone("");
+              setType("Materials & Supplies");
+              setMaterialIds([]);
+              setShowModal(true);
+            }}
             className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
           >
             <Plus className="size-4" /> Onboard Vendor
@@ -296,13 +312,26 @@ function VendorsPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      title="View vendor history"
+                      title="View vendor details"
                       onClick={() => setHistoryVendor(ven)}
                       className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <History className="size-4" />
                     </button>
-                    <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md opacity-0 group-hover:opacity-100 transition-all">
+                    <button
+                      title="Edit vendor and materials"
+                      aria-label={`Edit ${ven.name}`}
+                      onClick={() => {
+                        setEditingVendor(ven);
+                        setName(ven.name);
+                        setType(ven.type);
+                        setEmail(ven.email === "—" ? "" : ven.email);
+                        setPhone(ven.phone === "—" ? "" : ven.phone);
+                        setMaterialIds(ven.materialIds ?? []);
+                        setShowModal(true);
+                      }}
+                      className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-all"
+                    >
                       <MoreHorizontal className="size-4" />
                     </button>
                   </td>
@@ -325,32 +354,36 @@ function VendorsPage() {
           <div className="w-full max-w-3xl max-h-[85vh] overflow-auto rounded-xl border border-border bg-[color:var(--surface)] shadow-xl">
             <div className="flex items-center justify-between p-6 border-b border-border">
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Vendor history</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Vendor details
+                </p>
                 <h2 className="text-xl font-semibold">{historyVendor.name}</h2>
               </div>
-              <button onClick={() => setHistoryVendor(null)} aria-label="Close history"><X className="size-5" /></button>
+              <button onClick={() => setHistoryVendor(null)} aria-label="Close vendor details">
+                <X className="size-5" />
+              </button>
             </div>
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <MetricCard label="Payments" value={(payments.data ?? []).filter((p) => p.vendorId === historyVendor.vendorId).length} icon={<History className="size-5" />} color="bg-primary/10 text-primary" />
-                <MetricCard label="Contracts" value={historyVendor.activeContracts ?? 0} icon={<Briefcase className="size-5" />} color="bg-blue-500/10 text-blue-600" />
-                <MetricCard label="Status" value={historyVendor.status ?? "Unknown"} icon={<ShieldCheck className="size-5" />} color="bg-emerald-500/10 text-emerald-600" />
-                <MetricCard label="Materials" value={historyVendor.materialsSupplied ?? "—"} icon={<Briefcase className="size-5" />} color="bg-orange-500/10 text-orange-600" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <MetricCard
+                  label="Contracts"
+                  value={historyVendor.activeContracts ?? 0}
+                  icon={<Briefcase className="size-5" />}
+                  color="bg-blue-500/10 text-blue-600"
+                />
+                <MetricCard
+                  label="Status"
+                  value={historyVendor.status ?? "Unknown"}
+                  icon={<ShieldCheck className="size-5" />}
+                  color="bg-emerald-500/10 text-emerald-600"
+                />
+                <MetricCard
+                  label="Materials"
+                  value={historyVendor.materialsSupplied ?? "—"}
+                  icon={<Briefcase className="size-5" />}
+                  color="bg-orange-500/10 text-orange-600"
+                />
               </div>
-              <section>
-                <h3 className="font-semibold mb-3">Payment history</h3>
-                {payments.isLoading ? <p className="text-sm text-muted-foreground">Loading history…</p> : (
-                  <div className="space-y-2">
-                    {(payments.data ?? []).filter((p) => p.vendorId === historyVendor.vendorId).map((payment) => (
-                      <div key={payment.paymentId} className="flex justify-between items-center rounded-lg border border-border p-3 text-sm">
-                        <div><div className="font-medium">{payment.description || "Vendor payment"}</div><div className="text-xs text-muted-foreground">{payment.createdAt ? new Date(payment.createdAt).toLocaleDateString() : "Date unavailable"} · {payment.status}</div></div>
-                        <span className="font-mono font-semibold">₹{Number(payment.amount || 0).toLocaleString("en-IN")}</span>
-                      </div>
-                    ))}
-                    {(payments.data ?? []).filter((p) => p.vendorId === historyVendor.vendorId).length === 0 && <p className="text-sm text-muted-foreground">No payment history found.</p>}
-                  </div>
-                )}
-              </section>
             </div>
           </div>
         </div>
@@ -363,7 +396,9 @@ function VendorsPage() {
             className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-fade-up"
           >
             <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/30">
-              <h3 className="font-semibold text-sm">Onboard New Vendor / Supplier</h3>
+              <h3 className="font-semibold text-sm">
+                {editingVendor ? "Edit Vendor / Supplier" : "Onboard New Vendor / Supplier"}
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
@@ -374,7 +409,9 @@ function VendorsPage() {
             </div>
             <div className="p-4 space-y-4 text-xs">
               <div>
-                <label className="font-semibold text-muted-foreground mb-1 block">Vendor Name</label>
+                <label className="font-semibold text-muted-foreground mb-1 block">
+                  Vendor Name
+                </label>
                 <input
                   type="text"
                   required
@@ -386,7 +423,9 @@ function VendorsPage() {
               </div>
 
               <div>
-                <label className="font-semibold text-muted-foreground mb-1 block">Category / Type</label>
+                <label className="font-semibold text-muted-foreground mb-1 block">
+                  Category / Type
+                </label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
@@ -401,7 +440,9 @@ function VendorsPage() {
               </div>
 
               <div>
-                <label className="font-semibold text-muted-foreground mb-1 block">Email Address</label>
+                <label className="font-semibold text-muted-foreground mb-1 block">
+                  Email Address
+                </label>
                 <input
                   type="email"
                   required
@@ -413,7 +454,9 @@ function VendorsPage() {
               </div>
 
               <div>
-                <label className="font-semibold text-muted-foreground mb-1 block">Phone Number</label>
+                <label className="font-semibold text-muted-foreground mb-1 block">
+                  Phone Number
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. +91 98123 45678"
@@ -427,13 +470,59 @@ function VendorsPage() {
                 <label className="font-semibold text-muted-foreground mb-1 block">
                   Materials Supplied
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Cement, TMT Steel, Sand, Bricks"
-                  value={materialsSupplied}
-                  onChange={(e) => setMaterialsSupplied(e.target.value)}
+                <select
+                  aria-label="Add supplied material"
+                  value=""
+                  disabled={materials.isPending || materials.isError}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    if (id) setMaterialIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+                  }}
                   className="w-full h-9 px-3 bg-secondary/20 border border-border rounded-md text-xs focus:outline-none focus:border-primary"
-                />
+                >
+                  <option value="">
+                    {materials.isPending ? "Loading materials..." : "Select a material to add"}
+                  </option>
+                  {(materials.data ?? [])
+                    .filter((item) => !materialIds.includes(item.itemId))
+                    .map((item) => (
+                      <option key={item.itemId} value={item.itemId}>
+                        {item.name} ({item.unit})
+                      </option>
+                    ))}
+                </select>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {materialIds.map((id) => {
+                    const item = materials.data?.find((m) => m.itemId === id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-label={`Remove ${item?.name ?? id}`}
+                        onClick={() => setMaterialIds((ids) => ids.filter((value) => value !== id))}
+                        className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1"
+                      >
+                        {item ? `${item.name} (${item.unit})` : id}
+                        <X className="size-3" />
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-muted-foreground">
+                  {materials.isError ? (
+                    "Unable to load materials. Refresh and try again."
+                  ) : (
+                    "Select the available materials this vendor supplies."
+                  )}
+                </p>
+                {editingVendor &&
+                  !editingVendor.materialIds?.length &&
+                  editingVendor.materialsSupplied !== "—" && (
+                    <p className="mt-2 text-muted-foreground">
+                      Previous material text: {editingVendor.materialsSupplied}. Select matching
+                      catalog materials to replace it.
+                    </p>
+                  )}
               </div>
             </div>
 
@@ -450,7 +539,11 @@ function VendorsPage() {
                 disabled={createVendorMutation.isPending}
                 className="px-4 py-2 text-xs font-semibold bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity disabled:opacity-40 disabled:pointer-events-none"
               >
-                {createVendorMutation.isPending ? "Onboarding..." : "Onboard Vendor"}
+                {createVendorMutation.isPending
+                  ? "Saving..."
+                  : editingVendor
+                    ? "Save Vendor"
+                    : "Onboard Vendor"}
               </button>
             </div>
           </form>

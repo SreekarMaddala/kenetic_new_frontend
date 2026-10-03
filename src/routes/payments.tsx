@@ -1,3 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PaymentLedger } from "../components/FinanceLedgers";
-export const Route = createFileRoute("/payments")({ component: PaymentLedger });
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/payments")({
+  beforeLoad: () => {
+    throw redirect({ to: "/projects" });
+  },
+});

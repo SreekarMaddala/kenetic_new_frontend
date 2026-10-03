@@ -20,6 +20,7 @@ import {
 import { PageHeader } from "./AppShell";
 import { api, type DomainRecord } from "../lib/api";
 import { exportToExcel } from "../lib/excel";
+import { useProject } from "../lib/ProjectContext";
 
 export type Field = {
   key: string;
@@ -27,6 +28,8 @@ export type Field = {
   type?: "number" | "date" | "month" | "textarea" | "file";
   required?: boolean;
   options?: { value: string; label: string }[];
+  dependsOn?: string;
+  optionsByValue?: Record<string, { value: string; label: string }[]>;
   min?: number;
   defaultValue?: string;
   placeholder?: string;
@@ -64,6 +67,11 @@ export function readLedgerForm(
     if (field.type === "file") continue;
     const value = String(form.get(field.key) ?? "").trim();
     if (field.required && !value) throw new Error(`${field.label} is required.`);
+    const options = field.optionsByValue
+      ? field.optionsByValue[String(form.get(field.dependsOn ?? "") ?? "")] ?? []
+      : field.options;
+    if (value && options && !options.some((option) => option.value === value))
+      throw new Error(`Select a valid ${field.label.toLowerCase()}.`);
     if (field.type === "number" && value) {
       const n = Number(value);
       if (!Number.isFinite(n) || n < (field.min ?? 0))
@@ -105,8 +113,10 @@ export function WorkflowLedger({
   upload,
 }: Props) {
   const qc = useQueryClient();
+  const { projectId } = useProject();
   const [open, setOpen] = useState(false);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const [selections, setSelections] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [projectFilter, setProjectFilter] = useState("ALL");
   const [monthFilter, setMonthFilter] = useState("ALL");
@@ -117,6 +127,8 @@ export function WorkflowLedger({
     setProjectFilter("ALL");
     setMonthFilter("ALL");
   }, [endpoint]);
+
+  useEffect(() => { setSelections({}); }, [open, endpoint]);
 
   const query = useQuery({
     queryKey: ["ledger", endpoint],
@@ -160,14 +172,14 @@ export function WorkflowLedger({
   }, [rows]);
 
   const projectFiltered = useMemo(() => {
-    if (projectFilter === "ALL") return rows;
+    if (projectId || projectFilter === "ALL") return rows;
     return rows.filter(
       (r) =>
         String(r.projectId ?? "") === projectFilter ||
         String(r.projectName ?? "") === projectFilter ||
         String(r.project ?? "") === projectFilter,
     );
-  }, [rows, projectFilter]);
+  }, [rows, projectFilter, projectId]);
 
   const monthFiltered = useMemo(() => {
     if (monthFilter === "ALL") return projectFiltered;
@@ -405,7 +417,7 @@ export function WorkflowLedger({
             )}
           </div>
 
-          {availableProjects.length > 0 && (
+          {!projectId && availableProjects.length > 0 && (
             <div className="flex items-center gap-2">
               <Building2 className="size-4 text-orange-600 shrink-0" />
               <select
@@ -584,15 +596,17 @@ export function WorkflowLedger({
                   {field.required ? <span className="text-orange-600 font-bold ml-1">*</span> : ""}
                 </label>
 
-                {field.options ? (
+                {field.options || field.optionsByValue ? (
                   <select
+                    key={field.dependsOn ? selections[field.dependsOn] ?? "" : field.key}
                     name={field.key}
                     required={field.required}
                     defaultValue={field.defaultValue ?? ""}
+                    onChange={(e) => setSelections((values) => ({ ...values, [field.key]: e.target.value }))}
                     className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                   >
                     <option value="">Select option...</option>
-                    {field.options.map((o) => (
+                    {(field.optionsByValue ? field.optionsByValue[selections[field.dependsOn ?? ""]] ?? [] : field.options ?? []).map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
                       </option>

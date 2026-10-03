@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "../components/AppShell";
@@ -44,7 +44,6 @@ export const Route = createFileRoute("/dashboard")({
 
 function DashboardPage() {
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const inventory = useQuery({
     queryKey: ["ledger", "/inventory"],
     queryFn: () => api.get<DomainRecord[]>("/inventory"),
@@ -147,7 +146,6 @@ function DashboardPage() {
   const handleReject = (id: string, _title: string) =>
     approvalMutation.mutate({ id, status: "Rejected" });
 
-  const handleReorder = (_itemName: string) => navigate({ to: "/inventory" });
 
   if (analyticsLoading) {
     return (
@@ -358,12 +356,6 @@ function DashboardPage() {
                         <span>Reorder: {item.reorder}</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleReorder(item.name)}
-                      className="px-2.5 py-1 text-[10px] font-medium border border-primary/20 hover:border-primary text-primary bg-primary/5 hover:bg-primary/10 rounded transition-all shrink-0"
-                    >
-                      Review stock
-                    </button>
                   </div>
                 ))
               ) : (
@@ -376,14 +368,6 @@ function DashboardPage() {
               )}
             </CardContent>
           </div>
-          <CardHeader className="border-t border-border p-4 bg-secondary/20">
-            <Link
-              to={"/inventory" as any}
-              className="text-xs font-medium text-accent hover:text-accent/80 transition-colors flex items-center justify-center gap-1 w-full"
-            >
-              Open Material Ledger <ChevronRight className="size-3.5" />
-            </Link>
-          </CardHeader>
         </Card>
       </div>
 

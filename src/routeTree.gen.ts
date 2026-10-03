@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VendorsRouteImport } from './routes/vendors'
+import { Route as VehiclesRouteImport } from './routes/vehicles'
+import { Route as SubcontractorsRouteImport } from './routes/subcontractors'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PaymentsRouteImport } from './routes/payments'
@@ -47,6 +49,16 @@ import { Route as ProjectsProjectIdAnalyticsRouteImport } from './routes/project
 const VendorsRoute = VendorsRouteImport.update({
   id: '/vendors',
   path: '/vendors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VehiclesRoute = VehiclesRouteImport.update({
+  id: '/vehicles',
+  path: '/vehicles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubcontractorsRoute = SubcontractorsRouteImport.update({
+  id: '/subcontractors',
+  path: '/subcontractors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -242,6 +254,8 @@ export interface FileRoutesByFullPath {
   '/payments': typeof PaymentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
+  '/subcontractors': typeof SubcontractorsRoute
+  '/vehicles': typeof VehiclesRoute
   '/vendors': typeof VendorsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
@@ -278,6 +292,8 @@ export interface FileRoutesByTo {
   '/payments': typeof PaymentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
+  '/subcontractors': typeof SubcontractorsRoute
+  '/vehicles': typeof VehiclesRoute
   '/vendors': typeof VendorsRoute
   '/projects': typeof ProjectsIndexRoute
   '/projects/$projectId/analytics': typeof ProjectsProjectIdAnalyticsRoute
@@ -314,6 +330,8 @@ export interface FileRoutesById {
   '/payments': typeof PaymentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
+  '/subcontractors': typeof SubcontractorsRoute
+  '/vehicles': typeof VehiclesRoute
   '/vendors': typeof VendorsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
@@ -352,6 +370,8 @@ export interface FileRouteTypes {
     | '/payments'
     | '/reports'
     | '/settings'
+    | '/subcontractors'
+    | '/vehicles'
     | '/vendors'
     | '/projects/$projectId'
     | '/projects/'
@@ -388,6 +408,8 @@ export interface FileRouteTypes {
     | '/payments'
     | '/reports'
     | '/settings'
+    | '/subcontractors'
+    | '/vehicles'
     | '/vendors'
     | '/projects'
     | '/projects/$projectId/analytics'
@@ -423,6 +445,8 @@ export interface FileRouteTypes {
     | '/payments'
     | '/reports'
     | '/settings'
+    | '/subcontractors'
+    | '/vehicles'
     | '/vendors'
     | '/projects/$projectId'
     | '/projects/'
@@ -460,6 +484,8 @@ export interface RootRouteChildren {
   PaymentsRoute: typeof PaymentsRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
+  SubcontractorsRoute: typeof SubcontractorsRoute
+  VehiclesRoute: typeof VehiclesRoute
   VendorsRoute: typeof VendorsRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
   ProjectsIndexRoute: typeof ProjectsIndexRoute
@@ -472,6 +498,20 @@ declare module '@tanstack/react-router' {
       path: '/vendors'
       fullPath: '/vendors'
       preLoaderRoute: typeof VendorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vehicles': {
+      id: '/vehicles'
+      path: '/vehicles'
+      fullPath: '/vehicles'
+      preLoaderRoute: typeof VehiclesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subcontractors': {
+      id: '/subcontractors'
+      path: '/subcontractors'
+      fullPath: '/subcontractors'
+      preLoaderRoute: typeof SubcontractorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -769,6 +809,8 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentsRoute: PaymentsRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
+  SubcontractorsRoute: SubcontractorsRoute,
+  VehiclesRoute: VehiclesRoute,
   VendorsRoute: VendorsRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
   ProjectsIndexRoute: ProjectsIndexRoute,

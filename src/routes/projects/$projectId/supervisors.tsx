@@ -52,6 +52,7 @@ function SupervisorsPage() {
   const { projectId } = Route.useParams();
   const { user } = useAuth();
   const admin = user?.role === "operations_admin" || user?.role === "super_admin";
+  const isSupervisor = user?.role === "supervisor";
   const qc = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,6 +101,7 @@ function SupervisorsPage() {
   // Check-In / Check-Out mutation
   const checkMutation = useMutation({
     mutationFn: async (action: "check-in" | "check-out") => {
+      if (!isSupervisor) throw new Error("Only supervisors can check in or out.");
       const location = await captureLocation();
       return api.post(`/supervisor/attendance/${action}`, { projectId, location });
     },
@@ -268,10 +270,10 @@ function SupervisorsPage() {
             FIELD MANAGEMENT
           </div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Supervisor Portal</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">{admin ? "Supervisor Attendance" : "My Check-In"}</h1>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
               <span className="size-2 rounded-full bg-emerald-500" />
-              Owner Overview (Company Admin)
+              {admin ? "Admin Overview" : "Supervisor Workspace"}
             </span>
           </div>
         </div>
@@ -453,6 +455,7 @@ function SupervisorsPage() {
             </div>
 
             {/* Live Check-In / Check-Out Controls for Logged-In Supervisor */}
+            {isSupervisor && <>
             <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="text-xs text-muted-foreground">
                 <span className="font-semibold text-foreground">Live Shift Status:</span>{" "}
@@ -500,6 +503,7 @@ function SupervisorsPage() {
                 {checkMutation.error.message}
               </p>
             )}
+            </>}
           </div>
 
           {/* Sub-Tabs Bar */}
