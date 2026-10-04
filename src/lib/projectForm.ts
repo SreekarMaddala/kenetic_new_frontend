@@ -2,6 +2,11 @@ export function localDate(now = new Date()): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
+export function appendSupervisor(existing: string[], employeeId: string): string[] {
+  if (!employeeId) throw new Error("Select a supervisor account.");
+  return [...new Set([...existing, employeeId])];
+}
+
 export function nextDate(value: string): string {
   if (!validDate(value)) return "";
   const date = new Date(`${value}T12:00:00`);

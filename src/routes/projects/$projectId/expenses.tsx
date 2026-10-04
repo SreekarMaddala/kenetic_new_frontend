@@ -20,13 +20,22 @@ import {
 import { PageHeader } from "../../../components/AppShell";
 import { api, type DomainRecord } from "../../../lib/api";
 import { exportToExcel } from "../../../lib/excel";
+import { postedExpenseTotal } from "../../../lib/spending";
 
 export const Route = createFileRoute("/projects/$projectId/expenses")({ component: Page });
 
 interface UnifiedExpense {
   id: string;
   date: string;
-  source: "Vendor Payment" | "Logistics Fuel" | "Rental Transit" | "Labour Advance" | "Direct Expense";
+  source:
+    | "Vendor Payment"
+    | "Logistics Fuel"
+    | "Rental Transit"
+    | "Labour Advance"
+    | "Direct Expense"
+    | "Payroll Settlement"
+    | "Daily Wage Payment"
+    | "Opening Balance";
   description: string;
   category: string;
   amount: number;
@@ -72,11 +81,16 @@ function Page() {
   const [expAmount, setExpAmount] = useState("");
   const [expDate, setExpDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [expPaidBy, setExpPaidBy] = useState("");
+  const [expenseRequestId, setExpenseRequestId] = useState(() => crypto.randomUUID());
 
   // Data Queries from all project modules
   const expensesQuery = useQuery({
     queryKey: ["expenses", projectId],
     queryFn: () => api.get<DomainRecord[]>(`/projects/${projectId}/expenses`),
+  });
+  const spendingQuery = useQuery({
+    queryKey: ["posted-spending", projectId],
+    queryFn: () => api.get<DomainRecord[]>(`/projects/${encodeURIComponent(projectId)}/spending`),
   });
 
   const paymentsQuery = useQuery({
@@ -96,8 +110,13 @@ function Page() {
 
   const createExpenseMutation = useMutation({
     mutationFn: async () => {
-      if (createExpenseMutation.isPending) return;
-      if (!expDesc.trim() || !expAmount || Number(expAmount) <= 0 || !expPaidBy.trim()) {
+      if (
+        !expDesc.trim() ||
+        !expAmount ||
+        !Number.isFinite(Number(expAmount)) ||
+        Number(expAmount) <= 0 ||
+        !expPaidBy.trim()
+      ) {
         throw new Error("Please fill in description, valid amount, and paid by name.");
       }
       return api.post(`/projects/${projectId}/expenses`, {
@@ -107,12 +126,15 @@ function Page() {
         amount: Number(expAmount),
         date: expDate,
         submittedBy: expPaidBy.trim(),
-        status: "Approved",
+        status: "Pending",
+        requestId: expenseRequestId,
       });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses", projectId] });
-      toast.success("Project expense logged successfully.");
+      qc.invalidateQueries({ queryKey: ["dashboard-analytics"] });
+      setExpenseRequestId(crypto.randomUUID());
+      toast.success("Project expense submitted for approval.");
       setIsAddModalOpen(false);
       setExpDesc("");
       setExpAmount("");
@@ -135,7 +157,7 @@ function Page() {
         category: String(exp.category ?? "Site Operations"),
         amount: Number(exp.amount ?? 0),
         paidBy: String(exp.submittedBy ?? "Operations Admin"),
-        status: String(exp.status ?? "Approved"),
+        status: String(exp.status ?? "Pending"),
         raw: exp,
       });
     });
@@ -150,7 +172,7 @@ function Page() {
         category: "Vendor & Material Bill",
         amount: Number(pay.amount ?? 0),
         paidBy: String(pay.reference ? `Ref: ${pay.reference}` : "Finance Admin"),
-        status: String(pay.status ?? "Approved"),
+        status: String(pay.status ?? "Pending"),
         raw: pay,
       });
     });
@@ -167,7 +189,7 @@ function Page() {
           category: "Fuel & Fleet Maintenance",
           amount: Number(log.total ?? 0),
           paidBy: String(log.notes ? `Receipt: ${log.notes}` : "Site Supervisor"),
-          status: "Approved",
+          status: "Activity",
           raw: log,
         });
       } else if (tripType === "rental") {
@@ -179,7 +201,7 @@ function Page() {
           category: "Rental Auto & Freight",
           amount: Number(log.total ?? 0),
           paidBy: "Site Supervisor",
-          status: "Approved",
+          status: "Activity",
           raw: log,
         });
       }
@@ -198,15 +220,36 @@ function Page() {
           category: String(ded.category ?? ded.expenseType ?? "Food & Mess Allowance"),
           amount: Number(ded.amount ?? 0),
           paidBy: "Site Supervisor",
-          status: "Approved",
+          status: "Activity",
           raw: ded,
         });
       });
     });
 
+    (spendingQuery.data ?? [])
+      .filter((entry) => !["Direct Expense", "Vendor Payment"].includes(String(entry.source)))
+      .forEach((entry) =>
+        list.push({
+          id: String(entry.id),
+          date: String(entry.date ?? ""),
+          source: entry.source as UnifiedExpense["source"],
+          description: String(entry.description),
+          category: String(entry.source),
+          amount: Number(entry.amount),
+          paidBy: "Recorded payment",
+          status: String(entry.status),
+          raw: entry,
+        }),
+      );
     // Sort by Date Descending
     return list.sort((a, b) => (a.date < b.date ? 1 : -1));
-  }, [expensesQuery.data, paymentsQuery.data, logisticsQuery.data, labourQuery.data]);
+  }, [
+    expensesQuery.data,
+    paymentsQuery.data,
+    logisticsQuery.data,
+    labourQuery.data,
+    spendingQuery.data,
+  ]);
 
   // Apply Time Range, Source, and Text Search Filters
   const filteredExpenses = useMemo(() => {
@@ -235,10 +278,7 @@ function Page() {
   }, [combinedExpenses, timeRange, sourceFilter, search]);
 
   // Metrics calculation
-  const totalSpending = useMemo(
-    () => filteredExpenses.reduce((sum, item) => sum + item.amount, 0),
-    [filteredExpenses],
-  );
+  const totalSpending = useMemo(() => postedExpenseTotal(filteredExpenses), [filteredExpenses]);
 
   const vendorPaymentsTotal = useMemo(
     () =>
@@ -268,13 +308,15 @@ function Page() {
     expensesQuery.isFetching ||
     paymentsQuery.isFetching ||
     logisticsQuery.isFetching ||
-    labourQuery.isFetching;
+    labourQuery.isFetching ||
+    spendingQuery.isFetching;
 
   const handleRefetch = () => {
     expensesQuery.refetch();
     paymentsQuery.refetch();
     logisticsQuery.refetch();
     labourQuery.refetch();
+    spendingQuery.refetch();
   };
 
   const handleExport = () => {
@@ -300,6 +342,7 @@ function Page() {
 
   const handleAddSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (createExpenseMutation.isPending) return;
     createExpenseMutation.mutate();
   };
 
@@ -341,6 +384,20 @@ function Page() {
 
   return (
     <section className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-up">
+      <p className="text-sm text-muted-foreground">
+        Posted spending includes approved expenses and vendor payments, paid daily wages, and
+        recorded payroll settlements. Logistics logs and labour deductions are shown as activity;
+        they are not posted expenses by themselves.
+      </p>
+      {(expensesQuery.isError ||
+        paymentsQuery.isError ||
+        spendingQuery.isError ||
+        logisticsQuery.isError ||
+        labourQuery.isError) && (
+        <p role="alert">
+          Some project records could not be loaded. Refresh before relying on totals or exporting.
+        </p>
+      )}
       <PageHeader
         title="Project Expenses & Expenditure Ledger"
         eyebrow="Consolidated Finance & Site Operations"
@@ -351,7 +408,9 @@ function Page() {
               disabled={isFetchingAny}
               className="h-9 px-3 border border-border rounded-xl text-xs font-semibold hover:bg-secondary transition-colors flex items-center gap-1.5 bg-[color:var(--surface)] text-foreground shadow-sm"
             >
-              <RotateCw className={`size-3.5 ${isFetchingAny ? "animate-spin text-primary" : ""}`} />
+              <RotateCw
+                className={`size-3.5 ${isFetchingAny ? "animate-spin text-primary" : ""}`}
+              />
               Refresh
             </button>
             <button
@@ -373,7 +432,8 @@ function Page() {
       />
 
       <p className="text-xs text-muted-foreground -mt-2 leading-relaxed">
-        Unified project expenditure ledger mixing direct site expenses, vendor payments, fuel/rental logistics costs, and daily labour cash advances.
+        Unified project expenditure ledger mixing direct site expenses, vendor payments, fuel/rental
+        logistics costs, and daily labour cash advances.
       </p>
 
       {/* Top 4 Summary Metric Cards */}
@@ -381,10 +441,20 @@ function Page() {
         <div className="p-4 rounded-2xl border border-border bg-[color:var(--surface)] shadow-sm flex items-center justify-between">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Total Spending ({timeRange === "week" ? "This Week" : timeRange === "month" ? "This Month" : "All Time"})
+              Posted Spending (
+              {timeRange === "week"
+                ? "This Week"
+                : timeRange === "month"
+                  ? "This Month"
+                  : "All Time"}
+              )
             </div>
             <div className="text-2xl font-black text-foreground mt-0.5">
-              ₹{totalSpending.toLocaleString("en-IN")}
+              {spendingQuery.isPending || expensesQuery.isPending || paymentsQuery.isPending
+                ? "Loading…"
+                : spendingQuery.isError || expensesQuery.isError || paymentsQuery.isError
+                  ? "Unavailable"
+                  : `₹${totalSpending.toLocaleString("en-IN")}`}
             </div>
           </div>
           <div className="size-10 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center">
@@ -484,6 +554,9 @@ function Page() {
             <option value="Rental Transit">🚚 Rental Transit</option>
             <option value="Labour Advance">🍱 Labour Advances</option>
             <option value="Direct Expense">⚡ Direct Expenses</option>
+            <option value="Payroll Settlement">Payroll Settlements</option>
+            <option value="Daily Wage Payment">Daily Wage Payments</option>
+            <option value="Opening Balance">Opening Balance</option>
           </select>
 
           <div className="relative w-full md:w-64">
@@ -508,7 +581,8 @@ function Page() {
 
       <div className="text-xs text-muted-foreground font-mono flex items-center justify-between px-1">
         <span>
-          Showing <strong className="text-foreground">{filteredExpenses.length}</strong> of {combinedExpenses.length} total project entries
+          Showing <strong className="text-foreground">{filteredExpenses.length}</strong> of{" "}
+          {combinedExpenses.length} total project entries
         </span>
         <span>
           Filter: <strong className="text-orange-600 uppercase font-bold">{timeRange}</strong>
@@ -542,7 +616,9 @@ function Page() {
                   <td className="py-3.5 px-4 font-mono font-black text-foreground whitespace-nowrap text-sm">
                     ₹{e.amount.toLocaleString("en-IN")}
                   </td>
-                  <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">{e.paidBy}</td>
+                  <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
+                    {e.paidBy}
+                  </td>
                   <td className="py-3.5 px-4 text-right whitespace-nowrap">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 uppercase tracking-wider">
                       <span className="size-1.5 rounded-full bg-emerald-500" />
@@ -569,8 +645,8 @@ function Page() {
                           {isFetchingAny
                             ? "Fetching latest entries from vendor payments, logistics, and site operations..."
                             : search || sourceFilter !== "ALL" || timeRange !== "all"
-                            ? `No records match your selected filters (${timeRange.toUpperCase()} time range, ${sourceFilter} source). Try clearing filters.`
-                            : "There are currently no items recorded under project expenses. Click the Log Expense button above to log a new record."}
+                              ? `No records match your selected filters (${timeRange.toUpperCase()} time range, ${sourceFilter} source). Try clearing filters.`
+                              : "There are currently no items recorded under project expenses. Click the Log Expense button above to log a new record."}
                         </p>
                       </div>
                       {!isFetchingAny && (

@@ -71,7 +71,19 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
   const siteWorkers = workers.filter((worker) => worker.allocatedProjectId === projectId);
   const present = siteWorkers.filter((worker) => worker.status === "Present");
   const halfDay = siteWorkers.filter((worker) => worker.status === "Half Day");
-  const wages = siteWorkers.reduce((sum, worker) => sum + Number(worker.dailyWage ?? (worker.status === "Half Day" ? Number(worker.rate) * 0.5 : worker.status === "Present" ? worker.rate : 0)), 0);
+  const wages = siteWorkers.reduce(
+    (sum, worker) =>
+      sum +
+      Number(
+        worker.dailyWage ??
+          (worker.status === "Half Day"
+            ? Number(worker.rate) * 0.5
+            : worker.status === "Present"
+              ? worker.rate
+              : 0),
+      ),
+    0,
+  );
   const paid = siteWorkers
     .filter((worker) => worker.paymentStatus === "Paid")
     .reduce((sum, worker) => sum + Number(worker.dailyWage ?? worker.rate), 0);
@@ -185,7 +197,11 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
       )}
       {admin && (
         <p className="text-sm text-muted-foreground">
-          Register workers from the <Link to="/workers" className="text-primary underline">Workers page</Link>, then allocate them here.
+          Register workers from the{" "}
+          <Link to="/workers" className="text-primary underline">
+            Workers page
+          </Link>
+          , then allocate them here.
         </p>
       )}
     </>
@@ -207,7 +223,12 @@ function WorkerRow({
   refresh: () => Promise<void>;
 }) {
   const [target, setTarget] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ status: string; paymentStatus: string; nightShift: boolean } | null>(null);
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [draft, setDraft] = useState<{
+    status: string;
+    paymentStatus: string;
+    nightShift: boolean;
+  } | null>(null);
   const allocation = target ?? String(worker.allocatedProjectId ?? projectId);
   const status = draft?.status ?? String(worker.status ?? "Absent");
   const payment = draft?.paymentStatus ?? String(worker.paymentStatus ?? "Not paid");
@@ -222,11 +243,18 @@ function WorkerRow({
         operation,
         ...(operation === "allocate"
           ? { targetProjectId: allocation }
-          : { status, paymentStatus: payment, nightShift }),
+          : {
+              status,
+              paymentStatus: payment,
+              nightShift,
+              expectedVersion: worker.attendanceVersion ?? 0,
+              correctionReason: correctionReason.trim(),
+            }),
       }),
     onSuccess: async (_, operation) => {
       setDraft(null);
       setTarget(null);
+      setCorrectionReason("");
       await refresh();
       toast.success(
         operation === "allocate"
@@ -292,7 +320,7 @@ function WorkerRow({
                 setDraft({
                   status: value,
                   paymentStatus: value === "Absent" ? "Not paid" : payment,
-                  nightShift,
+                  nightShift: value === "Absent" ? false : nightShift,
                 })
               }
               className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-40 ${status === value ? (value === "Present" ? "bg-emerald-600 text-white" : value === "Half Day" ? "bg-amber-600 text-white" : "bg-slate-600 text-white") : "text-muted-foreground"}`}
@@ -306,7 +334,9 @@ function WorkerRow({
             type="checkbox"
             checked={nightShift}
             disabled={!enabled || status === "Absent" || save.isPending}
-            onChange={(event) => setDraft({ status, paymentStatus: payment, nightShift: event.target.checked })}
+            onChange={(event) =>
+              setDraft({ status, paymentStatus: payment, nightShift: event.target.checked })
+            }
           />
           Night shift (2× wage)
         </label>
@@ -327,9 +357,27 @@ function WorkerRow({
         </select>
       </td>
       <td className="p-4 whitespace-nowrap font-semibold">
-        {money(enabled && payment !== "Paid" ? Number(worker.rate) * (status === "Half Day" ? 0.5 : status === "Present" ? 1 : 0) * (nightShift && status !== "Absent" ? 2 : 1) : 0)}
+        {money(
+          enabled && payment !== "Paid"
+            ? Number(worker.rate) *
+                (status === "Half Day" ? 0.5 : status === "Present" ? 1 : 0) *
+                (nightShift && status !== "Absent" ? 2 : 1)
+            : 0,
+        )}
       </td>
       <td className="p-4">
+        {worker.paymentStatus === "Paid" && (
+          <label className="grid gap-1 text-xs mb-2">
+            Reason for changing a paid wage
+            <input
+              className={input}
+              value={correctionReason}
+              maxLength={500}
+              disabled={save.isPending}
+              onChange={(event) => setCorrectionReason(event.target.value)}
+            />
+          </label>
+        )}
         <button
           className={button}
           disabled={!enabled || save.isPending}

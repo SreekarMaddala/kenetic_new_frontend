@@ -5,7 +5,13 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as permissions from "../src/lib/permissions.ts";
 
-function harness({ challenge = false, serverStatus = 200, role = "operations_admin" } = {}) {
+function harness({
+  challenge = false,
+  serverStatus = 200,
+  role = "operations_admin",
+  networkFailure = false,
+  backendOrg = "org1",
+} = {}) {
   const calls = [];
   const payload = {
     sub: "u1",
@@ -74,10 +80,11 @@ function harness({ challenge = false, serverStatus = 200, role = "operations_adm
     AbortSignal,
     fetch: async (url, options) => {
       calls.push({ url, options });
+      if (networkFailure) throw new Error("Network unavailable");
       return {
         ok: serverStatus === 200,
         json: async () => ({
-          data: { sub: "u1", orgId: "org1", role },
+          data: { sub: "u1", orgId: backendOrg, role },
           error: { message: "Account disabled" },
         }),
       };
@@ -115,4 +122,19 @@ test("logout cancels a pending invitation challenge", async () => {
   await assert.rejects(auth.signIn("user@example.com", "temporary"));
   auth.clearTokens();
   await assert.rejects(auth.completeNewPassword("New-password-123!"), /expired/);
+});
+
+test("account lookup failures cannot establish a session from cached claims", async () => {
+  for (const options of [{ serverStatus: 500 }, { networkFailure: true }]) {
+    const { auth, calls } = harness(options);
+    await assert.rejects(auth.signIn("user@example.com", "password"));
+    assert.ok(calls.includes("signOut"));
+    assert.equal(await auth.getCurrentUser(), null);
+  }
+});
+
+test("backend identity must agree with the signed tenant claims", async () => {
+  const { auth, calls } = harness({ backendOrg: "other-org" });
+  await assert.rejects(auth.signIn("user@example.com", "password"), /permissions changed/);
+  assert.ok(calls.includes("signOut"));
 });

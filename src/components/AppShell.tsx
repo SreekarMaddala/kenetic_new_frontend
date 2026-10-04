@@ -142,6 +142,8 @@ const GLOBAL_NAV = [
   { to: "/employees", label: "Employees", icon: usersIcon },
   { to: "/workers", label: "Workers", icon: usersIcon },
   { to: "/vendors", label: "Vendors", icon: usersIcon },
+  { to: "/inventory", label: "Inventory Catalog", icon: inventoryIcon },
+  { to: "/my-salary", label: "My Salary", icon: usersIcon },
   { to: "/subcontractors", label: "Subcontractors", icon: usersIcon },
   { to: "/vehicles", label: "Vehicles", icon: cartIcon },
   { to: "/reports", label: "Reports", icon: reportIcon },
@@ -197,11 +199,17 @@ const getProjectNav = (projectId: string, role?: string) => {
         { to: `/projects/${projectId}/bills`, label: "Bills", icon: fileIcon },
         { to: `/projects/${projectId}/payments`, label: "Vendor Payments", icon: cartIcon },
         { to: `/projects/${projectId}/expenses`, label: "Weekly Expenses", icon: reportIcon },
+        { to: `/projects/${projectId}/payroll`, label: "Payroll", icon: usersIcon },
       ],
     },
     {
       subLabel: "Site Operations",
       items: [
+        {
+          to: `/projects/${projectId}/warehouse`,
+          label: "Warehouse Receipts & Issues",
+          icon: inventoryIcon,
+        },
         {
           to: `/projects/${projectId}/supervisors`,
           label: "Supervisor Attendance",
@@ -233,6 +241,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "/employees",
     "/workers",
     "/vendors",
+    "/inventory",
     "/subcontractors",
     "/vehicles",
     "/settings",
@@ -244,7 +253,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "Site Operations",
     "Reports",
   ],
-  supervisor: ["/projects", "Workforce", "Inventory & Logistics"],
+  supervisor: ["/projects", "/my-salary", "Workforce", "Inventory & Logistics"],
 };
 
 export function AppShell({ children }: { children: ReactNode }) {

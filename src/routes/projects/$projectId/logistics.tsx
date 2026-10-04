@@ -66,7 +66,8 @@ function LogisticsPage() {
   const logisticsQuery = useQuery({
     queryKey: ["logistics-trips", projectId, user?.sub, user?.role, period.month],
     refetchInterval: 60000,
-    queryFn: () => api.get<DomainRecord[]>(endpoint),
+    queryFn: () =>
+      api.get<DomainRecord[]>(`${endpoint}?projectId=${encodeURIComponent(projectId)}`),
   });
 
   const rawLogs = useMemo(

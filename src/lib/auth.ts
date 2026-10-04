@@ -11,6 +11,7 @@ const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID as string;
 export const userPool =
   poolId && clientId ? new CognitoUserPool({ UserPoolId: poolId, ClientId: clientId }) : null;
 let pendingUser: CognitoUser | null = null;
+type CognitoError = { code?: string; message?: string };
 
 export interface AuthUser {
   email: string;
@@ -35,28 +36,23 @@ async function userFromSession(session: CognitoUserSession): Promise<AuthUser> {
     ? "/api"
     : ((import.meta.env.VITE_API_BASE_URL as string) ?? "").replace(/\/+$/, "");
 
-  try {
-    const response = await fetch(`${baseUrl}/auth/me`, {
-      headers: { Authorization: `Bearer ${session.getIdToken().getJwtToken()}` },
-      signal: AbortSignal.timeout(10_000),
-      cache: "no-store",
-    });
-    if (response.ok) {
-      const body = await response.json();
-      if (body?.data) {
-        return {
-          sub: body.data.sub || identity.sub || String(payload.sub ?? ""),
-          orgId: body.data.orgId || identity.orgId || "default-org",
-          role: (body.data.role as AppRole) || identity.role || "operations_admin",
-          email: String(payload.email ?? body.data.email ?? ""),
-          name: String(payload.name ?? body.data.name ?? payload.email ?? "User"),
-        };
-      }
-    }
-  } catch (err) {
-    console.warn("Backend /auth/me lookup skipped, using identity token claims:", err);
+  const response = await fetch(`${baseUrl}/auth/me`, {
+    headers: { Authorization: `Bearer ${session.getIdToken().getJwtToken()}` },
+    signal: AbortSignal.timeout(10_000),
+    cache: "no-store",
+  });
+  const body = await response.json();
+  if (!response.ok)
+    throw new Error(body?.error?.message ?? "Unable to validate your account. Please try again.");
+  if (
+    body?.data?.sub !== identity.sub ||
+    body?.data?.orgId !== identity.orgId ||
+    body?.data?.role !== identity.role
+  ) {
+    throw new Error(
+      "Your account permissions changed. Sign in again or contact your administrator.",
+    );
   }
-
   return {
     ...identity,
     email: String(payload.email ?? ""),
@@ -100,25 +96,48 @@ function authenticate(
             reject(error);
           });
       },
-      onFailure: (error: any) => {
+      onFailure: (error: CognitoError) => {
         const errCode = error?.code || "";
         const errMsg = error?.message || "";
         if (errCode === "NotAuthorizedException") {
-          if (errMsg.toLowerCase().includes("temporary password has expired") || errMsg.toLowerCase().includes("expired")) {
-            reject(new Error("Your temporary password has expired. Please ask your administrator for a new temporary password."));
+          if (
+            errMsg.toLowerCase().includes("temporary password has expired") ||
+            errMsg.toLowerCase().includes("expired")
+          ) {
+            reject(
+              new Error(
+                "Your temporary password has expired. Please ask your administrator for a new temporary password.",
+              ),
+            );
           } else if (errMsg.toLowerCase().includes("password reset required")) {
-            reject(new Error("Password reset required. Please click 'Forgot your password?' below."));
+            reject(
+              new Error("Password reset required. Please click 'Forgot your password?' below."),
+            );
           } else {
-            reject(new Error("Incorrect email or password. Note: Temporary passwords are single-use. If you already set your permanent password, sign in with your new permanent password."));
+            reject(
+              new Error(
+                "Incorrect email or password. Note: Temporary passwords are single-use. If you already set your permanent password, sign in with your new permanent password.",
+              ),
+            );
           }
         } else if (errCode === "UserNotFoundException") {
           reject(new Error("Incorrect email or password. Please verify your email address."));
         } else if (errCode === "InvalidPasswordException") {
-          reject(new Error("Password does not meet security requirements. Use at least 8–12 characters with uppercase, lowercase, number, and symbol."));
+          reject(
+            new Error(
+              "Password does not meet security requirements. Use at least 8–12 characters with uppercase, lowercase, number, and symbol.",
+            ),
+          );
         } else if (errCode === "LimitExceededException") {
-          reject(new Error("Too many sign-in attempts. Please wait a few minutes before trying again."));
+          reject(
+            new Error("Too many sign-in attempts. Please wait a few minutes before trying again."),
+          );
         } else if (errCode === "UserNotConfirmedException") {
-          reject(new Error("Account is not confirmed. Please check your email for activation instructions."));
+          reject(
+            new Error(
+              "Account is not confirmed. Please check your email for activation instructions.",
+            ),
+          );
         } else {
           reject(new Error(errMsg || "Sign in failed. Please check your credentials."));
         }
@@ -156,11 +175,14 @@ export function completeNewPassword(password: string): Promise<AuthUser> {
   const user = pendingUser;
   if (!user)
     return Promise.reject(
-      new Error("Your invitation session expired. Please sign in with your temporary password again."),
+      new Error(
+        "Your invitation session expired. Please sign in with your temporary password again.",
+      ),
     );
-  const challengeAttrs = (user as any).challengeParam?.requiredAttributes || [];
   const userAttributes: Record<string, string> = {};
-  return authenticate((callbacks) => user.completeNewPasswordChallenge(password, userAttributes, callbacks));
+  return authenticate((callbacks) =>
+    user.completeNewPasswordChallenge(password, userAttributes, callbacks),
+  );
 }
 export function clearTokens(): void {
   pendingUser = null;
@@ -186,14 +208,16 @@ export function forgotPassword(email: string): Promise<void> {
     user.forgotPassword({
       onSuccess: () => resolve(),
       inputVerificationCode: () => resolve(),
-      onFailure: (err: any) => {
+      onFailure: (err: CognitoError) => {
         const errCode = err?.code || "";
         const errMsg = err?.message || "";
         if (errCode === "UserNotFoundException") {
           // Resolve silently to prevent email enumeration, standard security practice
           resolve();
         } else if (errCode === "LimitExceededException") {
-          reject(new Error("Too many reset attempts. Please wait a few minutes before trying again."));
+          reject(
+            new Error("Too many reset attempts. Please wait a few minutes before trying again."),
+          );
         } else {
           reject(new Error(errMsg || "Unable to request password reset code."));
         }
@@ -209,7 +233,7 @@ export function resetPassword(email: string, code: string, password: string): Pr
   return new Promise((resolve, reject) =>
     user.confirmPassword(code.trim(), password, {
       onSuccess: () => resolve(),
-      onFailure: (err: any) => {
+      onFailure: (err: CognitoError) => {
         const errCode = err?.code || "";
         const errMsg = err?.message || "";
         if (errCode === "CodeMismatchException") {

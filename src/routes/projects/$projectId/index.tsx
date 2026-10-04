@@ -1,4 +1,4 @@
-import { allocationEnd, nextDate, validDate } from "../../../lib/projectForm";
+import { allocationEnd, nextDate, validDate, appendSupervisor } from "../../../lib/projectForm";
 import { projectApi } from "../../../lib/api";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
@@ -119,7 +119,7 @@ function ProjectDetailsPage() {
     if (todayExpenses.length > 0) {
       return todayExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
     }
-    return expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    return 0;
   }, [expenses]);
 
   const openIssuesCount = React.useMemo(() => {
@@ -203,31 +203,25 @@ function ProjectDetailsPage() {
         (s as any).id === detailTimelineName,
     );
 
-    const existingSupervisorIds = (selectedProject as any)?.supervisorIds || [];
-    const updatedSupervisorIds = Array.isArray(existingSupervisorIds)
-      ? [...existingSupervisorIds]
-      : [];
-
-    const targetId =
-      (selectedSuper as any)?.id ||
-      (selectedSuper as any)?.sub ||
-      selectedSuper?.employeeId ||
-      selectedSuper?.email;
-    if (targetId && !updatedSupervisorIds.includes(targetId)) {
-      updatedSupervisorIds.push(targetId);
+    if (
+      !selectedSuper?.employeeId ||
+      selectedSuper.role !== "supervisor" ||
+      selectedSuper.status !== "Active"
+    ) {
+      toast.error("Select an active supervisor account.");
+      return;
     }
-    if (selectedSuper?.employeeId && !updatedSupervisorIds.includes(selectedSuper.employeeId)) {
-      updatedSupervisorIds.push(selectedSuper.employeeId);
-    }
-    if (selectedSuper?.email && !updatedSupervisorIds.includes(selectedSuper.email)) {
-      updatedSupervisorIds.push(selectedSuper.email);
-    }
+    const updatedSupervisorIds = appendSupervisor(
+      rawProject?.supervisorIds ?? [],
+      selectedSuper.employeeId,
+    );
 
     setSavingAllocation(true);
     try {
       await projectApi.update(projectId!, {
         supervisorsTimeline: [...localTimeline, newItem],
         supervisorIds: updatedSupervisorIds,
+        expectedVersion: Number((rawProject as unknown as Record<string, unknown>)?.version ?? 0),
       } as Parameters<typeof projectApi.update>[1]);
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });

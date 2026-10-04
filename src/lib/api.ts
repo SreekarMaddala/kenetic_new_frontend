@@ -111,7 +111,8 @@ export const projectApi = {
   list: () => api.get<Project[]>("/projects"),
   get: (id: string) => api.get<Project>(`/projects/${id}`),
   create: (body: CreateProjectBody) => api.post<Project>("/projects", body),
-  update: (id: string, body: Partial<Project>) => api.put<Project>(`/projects/${id}`, body),
+  update: (id: string, body: Partial<Project> & { expectedVersion?: number }) =>
+    api.put<Project>(`/projects/${id}`, body),
   delete: (id: string) => api.delete<{ deleted: boolean }>(`/projects/${id}`),
 };
 
