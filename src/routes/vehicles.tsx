@@ -40,9 +40,8 @@ function VehiclesPage() {
     }
     registerMutation.mutate({
       tripType: "vehicle_registration",
-      vehicle: plateNo ? `${model} (${plateNo})` : model,
-      model,
-      plateNo,
+      vehicle: model,
+      registrationNumber: plateNo,
     });
   }
   return (
@@ -85,7 +84,12 @@ function VehiclesPage() {
                         {String(vehicle.model ?? vehicle.vehicle ?? "Vehicle")}
                       </td>
                       <td className="py-3">
-                        {String(vehicle.plateNo ?? vehicle.registrationNo ?? "?") || "?"}
+                        {String(
+                          vehicle.registrationNumber ??
+                            vehicle.plateNo ??
+                            vehicle.registrationNo ??
+                            "?",
+                        ) || "?"}
                       </td>
                     </tr>
                   ))}

@@ -99,7 +99,7 @@ function LogisticsPage() {
       .map((r) => {
         const rawVehicle = String(r.vehicle ?? r.model ?? "Vehicle");
         const model = String(r.model ?? rawVehicle);
-        const plate = String(r.plateNo ?? r.registrationNo ?? "");
+        const plate = String(r.registrationNumber ?? r.plateNo ?? r.registrationNo ?? "");
         const label = plate
           ? rawVehicle.endsWith(`(${plate})`)
             ? rawVehicle
