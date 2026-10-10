@@ -5,7 +5,7 @@ import { api, employeeApi, governanceApi, type DomainRecord } from "../../../lib
 import { payrollItems } from "../../../lib/payroll";
 import { localDate } from "../../../lib/projectForm";
 import { exportToExcel } from "../../../lib/excel";
-import { PageHeader } from "../../../components/AppShell";
+import { PayrollCyclePanel } from "../../../components/PayrollCyclePanel";
 import { WorkflowLedger } from "../../../components/WorkflowLedger";
 import { useAuth } from "../../../contexts/AuthContext";
 import { toast } from "sonner";
@@ -97,72 +97,32 @@ function Payroll({ projectId }: { projectId: string }) {
   const unavailable =
     cycles.isPending || cycles.isError || operation.isPending || !/^\d{4}-\d{2}$/.test(month);
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-      <PageHeader title="Project Payroll" eyebrow="Monthly wages and salary settlement" />
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="grid gap-1 text-sm">
-          Payroll month
-          <input
-            aria-label="Payroll month"
-            type="month"
-            value={month}
-            disabled={operation.isPending}
-            onChange={(event) => {
-              setMonth(event.target.value);
-              setReference("");
-            }}
-            className={input}
-          />
-        </label>
-        <button
-          className={button}
-          disabled={unavailable || !!cycle}
-          onClick={() => operation.mutate({ kind: "generate", selectedMonth: month })}
-        >
-          Generate payroll
-        </button>
-        <button
-          className={input}
-          disabled={unavailable || !cycle || !items.length}
-          onClick={() =>
-            exportToExcel(
-              items.map((item) => ({ ...item, month })),
-              `Payroll_${projectId}_${month}`,
-            )
-          }
-        >
-          Export register
-        </button>
-        {cycle?.status === "Pending" && (
-          <button
-            className={input}
-            disabled={unavailable}
-            onClick={() => operation.mutate({ kind: "reopen", selectedMonth: month })}
-          >
-            Reopen unpaid cycle
-          </button>
-        )}
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Generation locks attendance and deductions for this month. The register uses the saved
-        payroll snapshot. Daily wage payments are deducted before calculating the remaining
-        settlement.
-      </p>
-      {cycles.isPending && <p role="status">Loading payroll...</p>}
-      {cycles.isError && (
-        <p role="alert">
-          Unable to load payroll: {cycles.error.message}{" "}
-          <button className="underline" onClick={() => cycles.refetch()}>
-            Retry
-          </button>
-        </p>
-      )}
-      {!unavailable && !cycle && (
-        <p>
-          No cycle has been generated for {month}. Configure salaries below and save worker
-          attendance before generating payroll.
-        </p>
-      )}
+    <div className="payroll-page">
+      <PayrollCyclePanel
+        month={month}
+        onMonthChange={(value) => {
+          setMonth(value);
+          setReference("");
+          operation.reset();
+        }}
+        status={cycle ? String(cycle.status) : undefined}
+        entries={items.length}
+        loading={cycles.isPending}
+        error={cycles.error?.message}
+        busy={operation.isPending ? operation.variables?.kind : undefined}
+        unavailable={unavailable}
+        onGenerate={() => operation.mutate({ kind: "generate", selectedMonth: month })}
+        onExport={() =>
+          exportToExcel(
+            items.map((item) => ({ ...item, month })),
+            `Payroll_${projectId}_${month}`,
+          )
+        }
+        onReopen={() => operation.mutate({ kind: "reopen", selectedMonth: month })}
+        onRetry={() => {
+          void cycles.refetch();
+        }}
+      />
       {cycle && !cycles.isError && (
         <>
           <div className="grid gap-4 sm:grid-cols-4">
@@ -172,7 +132,7 @@ function Payroll({ projectId }: { projectId: string }) {
               ["Daily wages already paid", total("dailyPaid")],
               ["Remaining settlement", total("netPay")],
             ].map(([label, value]) => (
-              <div key={String(label)} className="rounded-xl border border-border p-5">
+              <div key={String(label)} className="payroll-summary-card">
                 <p className="text-sm text-muted-foreground">{label}</p>
                 <p className="mt-2 text-xl font-semibold">{money(Number(value))}</p>
               </div>
@@ -182,7 +142,7 @@ function Payroll({ projectId }: { projectId: string }) {
             Status: <strong>{String(cycle.status)}</strong>
             {cycle.paymentReference ? ` · Receipt: ${cycle.paymentReference}` : ""}
           </p>
-          <div className="overflow-auto rounded-xl border border-border">
+          <div className="payroll-register overflow-auto rounded-xl border border-border">
             <table className="w-full text-sm text-left">
               <thead>
                 <tr>
