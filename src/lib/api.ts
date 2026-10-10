@@ -448,6 +448,7 @@ export interface CreateVendorBody {
   email: string;
   phone: string;
   materialIds?: string[];
+  materialsSupplied?: string;
 }
 
 export interface InventoryItem {

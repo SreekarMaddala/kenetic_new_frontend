@@ -16,7 +16,7 @@ import {
   X,
   History,
 } from "lucide-react";
-import { vendorApi, api, type Vendor, type CreateVendorBody, type InventoryItem } from "../lib/api";
+import { vendorApi, type Vendor, type CreateVendorBody } from "../lib/api";
 
 export const Route = createFileRoute("/vendors")({
   component: VendorsPage,
@@ -68,17 +68,13 @@ function VendorsPage() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
-  const materials = useQuery({
-    queryKey: ["material-catalog"],
-    queryFn: () => api.get<InventoryItem[]>("/inventory?catalog=true"),
-  });
   const [historyVendor, setHistoryVendor] = useState<Vendor | null>(null);
   // Onboard Vendor form state
   const [name, setName] = useState("");
   const [type, setType] = useState("Materials & Supplies");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [materialIds, setMaterialIds] = useState<string[]>([]);
+  const [materialsSupplied, setMaterialsSupplied] = useState("");
 
   const { data: rawVendors = [], isLoading } = useQuery({
     queryKey: ["vendors"],
@@ -99,7 +95,7 @@ function VendorsPage() {
       setName("");
       setEmail("");
       setPhone("");
-      setMaterialIds([]);
+      setMaterialsSupplied("");
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -144,7 +140,7 @@ function VendorsPage() {
       type,
       email,
       phone,
-      materialIds,
+      materialsSupplied: materialsSupplied.trim(),
     });
   };
 
@@ -170,7 +166,7 @@ function VendorsPage() {
               setEmail("");
               setPhone("");
               setType("Materials & Supplies");
-              setMaterialIds([]);
+              setMaterialsSupplied("");
               setShowModal(true);
             }}
             className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
@@ -327,7 +323,9 @@ function VendorsPage() {
                         setType(ven.type);
                         setEmail(ven.email === "—" ? "" : ven.email);
                         setPhone(ven.phone === "—" ? "" : ven.phone);
-                        setMaterialIds(ven.materialIds ?? []);
+                        setMaterialsSupplied(
+                          ven.materialsSupplied === "—" ? "" : (ven.materialsSupplied ?? ""),
+                        );
                         setShowModal(true);
                       }}
                       className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-all"
@@ -470,59 +468,18 @@ function VendorsPage() {
                 <label className="font-semibold text-muted-foreground mb-1 block">
                   Materials Supplied
                 </label>
-                <select
-                  aria-label="Add supplied material"
-                  value=""
-                  disabled={materials.isPending || materials.isError}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    if (id) setMaterialIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
-                  }}
+                <input
+                  type="text"
+                  aria-label="Materials Supplied"
+                  placeholder="e.g. Cement, sand, TMT steel"
+                  value={materialsSupplied}
+                  onChange={(e) => setMaterialsSupplied(e.target.value)}
+                  maxLength={4000}
                   className="w-full h-9 px-3 bg-secondary/20 border border-border rounded-md text-xs focus:outline-none focus:border-primary"
-                >
-                  <option value="">
-                    {materials.isPending ? "Loading materials..." : "Select a material to add"}
-                  </option>
-                  {(materials.data ?? [])
-                    .filter((item) => !materialIds.includes(item.itemId))
-                    .map((item) => (
-                      <option key={item.itemId} value={item.itemId}>
-                        {item.name} ({item.unit})
-                      </option>
-                    ))}
-                </select>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {materialIds.map((id) => {
-                    const item = materials.data?.find((m) => m.itemId === id);
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        aria-label={`Remove ${item?.name ?? id}`}
-                        onClick={() => setMaterialIds((ids) => ids.filter((value) => value !== id))}
-                        className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1"
-                      >
-                        {item ? `${item.name} (${item.unit})` : id}
-                        <X className="size-3" />
-                      </button>
-                    );
-                  })}
-                </div>
+                />
                 <p className="mt-2 text-muted-foreground">
-                  {materials.isError ? (
-                    "Unable to load materials. Refresh and try again."
-                  ) : (
-                    "Select the available materials this vendor supplies."
-                  )}
+                  Enter the materials this vendor supplies, separated by commas.
                 </p>
-                {editingVendor &&
-                  !editingVendor.materialIds?.length &&
-                  editingVendor.materialsSupplied !== "—" && (
-                    <p className="mt-2 text-muted-foreground">
-                      Previous material text: {editingVendor.materialsSupplied}. Select matching
-                      catalog materials to replace it.
-                    </p>
-                  )}
               </div>
             </div>
 

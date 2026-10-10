@@ -277,8 +277,9 @@ export type VendorCreateRequest = {
   type?: string;
   email?: string;
   phone?: string;
+  materialsSupplied?: string;
   status?: "Active" | "Inactive";
-  materialIds: string[];
+  materialIds?: string[];
   vendorId?: string;
 };
 
