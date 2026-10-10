@@ -1,16 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, Menu, Play, Plus, X } from "lucide-react";
-import siteCranes from "../assets/site-cranes.jpg";
-import siteSlab from "../assets/site-slab.jpg";
-import siteSteel from "../assets/site-steel.jpg";
+import siteCranes from "../assets/site-cranes-4k.jpg";
+import siteSlab from "../assets/site-slab-4k.jpg";
+import siteSteel from "../assets/site-steel-4k.jpg";
 import kineticDemo from "../assets/kinetic-demo.mp4";
 import "../styles/landing.css";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kinetic — Every site. In sync." },
+      { title: "Kenetic" },
       {
         name: "description",
         content:
@@ -61,9 +61,9 @@ const OPERATIONS = [
 ];
 const QUESTIONS = [
   {
-    question: "What can I manage with Kinetic?",
+    question: "What can I manage with Kenetic?",
     answer:
-      "Kinetic brings project tracking, BOQs, site activity, workers, attendance, materials, inventory, logistics, bills, payments and payroll into a shared construction workspace.",
+      "Kenetic brings project tracking, BOQs, site activity, workers, attendance, materials, inventory, logistics, bills, payments and payroll into a shared construction workspace.",
   },
   {
     question: "Can our site and office teams work together?",
@@ -83,12 +83,10 @@ const QUESTIONS = [
 ];
 function Brand() {
   return (
-    <a href="#top" className="kl-brand" aria-label="Kinetic home">
-      <svg viewBox="0 0 40 44" fill="none" aria-hidden="true">
-        <path d="M3 3h8v38H3zM15 22 29 3h10L24 22l15 19H29z" fill="currentColor" />
-      </svg>
+    <a href="#top" className="kl-brand" aria-label="Kenetic home">
+      <img src="/logo.png" alt="" width={44} height={44} />
       <span>
-        KINETIC<span className="kl-brand-caption">CONSTRUCTION OPERATIONS</span>
+        KENETIC<span className="kl-brand-caption">CONSTRUCTION OPERATIONS</span>
       </span>
     </a>
   );
@@ -204,7 +202,7 @@ function LandingPage() {
                 <button
                   className="kl-play"
                   onClick={() => dialogRef.current?.showModal()}
-                  aria-label="Watch the Kinetic platform film"
+                  aria-label="Watch the Kenetic platform film"
                 >
                   <span>
                     <Play size={19} fill="currentColor" />
@@ -214,7 +212,7 @@ function LandingPage() {
               </div>
               <div className="kl-hero-baseline">
                 <a href="#platform">
-                  Explore Kinetic <ArrowDown size={16} />
+                  Explore Kenetic <ArrowDown size={16} />
                 </a>
                 <span>PROJECTS / PEOPLE / PROGRESS</span>
               </div>
@@ -244,7 +242,7 @@ function LandingPage() {
               ✳
             </span>
             <p>
-              Construction moves fast. Your information should keep up. Kinetic brings your
+              Construction moves fast. Your information should keep up. Kenetic brings your
               projects, people, materials and finances together, so the whole team can move forward
               with a shared view.
             </p>
@@ -329,7 +327,7 @@ function LandingPage() {
                 loading="lazy"
               />
               <div className="kl-visual-caption">
-                <span className="kl-eyebrow">KINETIC / 0{activeOperation + 1}</span>
+                <span className="kl-eyebrow">KENETIC / 0{activeOperation + 1}</span>
                 <p>{OPERATIONS[activeOperation].label}</p>
                 <span className="kl-visual-mark" aria-hidden="true">
                   K.
@@ -353,7 +351,7 @@ function LandingPage() {
               Keep the day's work connected to the people making it happen.
             </p>
             <button className="kl-text-link" onClick={() => dialogRef.current?.showModal()}>
-              See Kinetic in motion <Play size={16} />
+              See Kenetic in motion <Play size={16} />
             </button>
           </div>
         </section>
@@ -444,32 +442,11 @@ function LandingPage() {
           <div className="kl-cta-bottom">
             <p>Have an account? Step into your workspace.</p>
             <Link to="/login" className="kl-text-link">
-              Sign in to Kinetic <ArrowRight size={18} />
+              Sign in to Kenetic <ArrowRight size={18} />
             </Link>
           </div>
         </section>
       </main>
-      <footer className="kl-footer kl-container">
-        <div className="kl-footer-top">
-          <Brand />
-          <p>
-            Built for the people.
-            <br />
-            Behind the progress.
-          </p>
-          <a href="#top" className="kl-text-link">
-            Back to top <ArrowUpRight size={16} />
-          </a>
-        </div>
-        <div className="kl-footer-bottom">
-          <span>© {new Date().getFullYear()} KINETIC</span>
-          <span>CONSTRUCTION OPERATIONS, CONNECTED.</span>
-          <Link to="/login">Enter workspace ↗</Link>
-        </div>
-        <div className="kl-footer-word" aria-hidden="true">
-          KINETIC
-        </div>
-      </footer>
       <dialog
         ref={dialogRef}
         className="kl-film-dialog"
@@ -481,7 +458,7 @@ function LandingPage() {
       >
         <div className="kl-film-inner">
           <div className="kl-film-header">
-            <h2 id="film-title">KINETIC / THE PLATFORM FILM</h2>
+            <h2 id="film-title">KENETIC / THE PLATFORM FILM</h2>
             <button onClick={closeDemo} aria-label="Close platform film" autoFocus>
               <X />
             </button>
@@ -492,7 +469,7 @@ function LandingPage() {
             controls
             playsInline
             preload="none"
-            aria-label="Kinetic platform overview video"
+            aria-label="Kenetic platform overview video"
           />
           <p>Explore the platform. Sign in to access your organization's workspace.</p>
         </div>

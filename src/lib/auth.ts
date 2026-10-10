@@ -42,9 +42,18 @@ async function userFromSession(session: CognitoUserSession): Promise<AuthUser> {
     signal: AbortSignal.timeout(10_000),
     cache: "no-store",
   });
-  const body = await response.json();
+  const body = await response.json().catch(() => {
+    if (response.ok)
+      throw new Error("The backend returned an invalid account response. Please try again.");
+    return null;
+  });
   if (!response.ok)
-    throw new Error(body?.error?.message ?? "Unable to validate your account. Please try again.");
+    throw new Error(
+      body?.error?.message ??
+        (response.status >= 500
+          ? `Unable to reach the backend (HTTP ${response.status}). Please check the API URL and deployment.`
+          : `Unable to validate your account (HTTP ${response.status}). Please try again.`),
+    );
   if (
     body?.data?.sub !== identity.sub ||
     body?.data?.orgId !== identity.orgId ||

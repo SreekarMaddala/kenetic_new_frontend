@@ -11,6 +11,7 @@ function harness({
   role = "operations_admin",
   networkFailure = false,
   backendOrg = "org1",
+  invalidJson = false,
 } = {}) {
   const calls = [];
   const payload = {
@@ -83,10 +84,14 @@ function harness({
       if (networkFailure) throw new Error("Network unavailable");
       return {
         ok: serverStatus === 200,
-        json: async () => ({
-          data: { sub: "u1", orgId: backendOrg, role },
-          error: { message: "Account disabled" },
-        }),
+        status: serverStatus,
+        json: async () => {
+          if (invalidJson) throw new SyntaxError("Unexpected end of JSON input");
+          return {
+            data: { sub: "u1", orgId: backendOrg, role },
+            error: { message: "Account disabled" },
+          };
+        },
       };
     },
   });
@@ -137,4 +142,21 @@ test("backend identity must agree with the signed tenant claims", async () => {
   const { auth, calls } = harness({ backendOrg: "other-org" });
   await assert.rejects(auth.signIn("user@example.com", "password"), /permissions changed/);
   assert.ok(calls.includes("signOut"));
+});
+
+test("empty gateway errors explain backend connectivity and reject the session", async () => {
+  const { auth, calls } = harness({ serverStatus: 502, invalidJson: true });
+  await assert.rejects(
+    auth.signIn("user@example.com", "password"),
+    /Unable to reach the backend \(HTTP 502\)/,
+  );
+  assert.ok(calls.includes("signOut"));
+  assert.equal(await auth.getCurrentUser(), null);
+});
+
+test("invalid successful account responses cannot establish a session", async () => {
+  const { auth, calls } = harness({ invalidJson: true });
+  await assert.rejects(auth.signIn("user@example.com", "password"), /invalid account response/);
+  assert.ok(calls.includes("signOut"));
+  assert.equal(await auth.getCurrentUser(), null);
 });

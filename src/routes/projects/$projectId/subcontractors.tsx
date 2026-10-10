@@ -11,12 +11,14 @@ export const Route = createFileRoute("/projects/$projectId/subcontractors")({
 function Page() {
   const { projectId } = Route.useParams();
   const endpoint = `/projects/${projectId}/subcontractors`;
+  // Selectors return arrays; ledger queries cache paginated InfiniteData.
+  // Keep their keys separate even when they read the same endpoint.
   const registry = useQuery({
-    queryKey: ["ledger", "/subcontractors"],
+    queryKey: ["subcontractor-options", "/subcontractors"],
     queryFn: () => api.get<DomainRecord[]>("/subcontractors"),
   });
   const assignments = useQuery({
-    queryKey: ["ledger", endpoint],
+    queryKey: ["subcontractor-options", endpoint],
     queryFn: () => api.get<DomainRecord[]>(endpoint),
   });
   const contractors = (assignments.data ?? []).filter((r) => r.type !== "Procurement");

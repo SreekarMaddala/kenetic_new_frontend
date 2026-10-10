@@ -90,7 +90,7 @@ function ProjectsPage() {
   const [newProjLoc, setNewProjLoc] = React.useState("");
   const [newProjPhase, setNewProjPhase] = React.useState("");
   const [newProjProgress, setNewProjProgress] = React.useState("0");
-  const [newProjStatus, setNewProjStatus] = React.useState("On Track");
+  const [newProjStatus, setNewProjStatus] = React.useState("Planning");
   const [newProjBudget, setNewProjBudget] = React.useState("");
   const [newProjSpent, setNewProjSpent] = React.useState("");
   const [newProjDeadline, setNewProjDeadline] = React.useState("");
@@ -132,7 +132,7 @@ function ProjectsPage() {
       setNewProjLoc("");
       setNewProjPhase("");
       setNewProjProgress("0");
-      setNewProjStatus("On Track");
+      setNewProjStatus("Planning");
       setNewProjBudget("");
       setNewProjSpent("");
       setNewProjDeadline("");
@@ -270,9 +270,12 @@ function ProjectsPage() {
                     onChange={(e) => setNewProjStatus(e.target.value)}
                     className="w-full p-2.5 bg-background border border-border rounded-lg text-sm text-foreground"
                   >
-                    <option value="On Track">On Track</option>
-                    <option value="Delayed">Delayed</option>
-                    <option value="At Risk">At Risk</option>
+                    <option value="Planning">Planning</option>
+                    <option value="Planned">Planned</option>
+                    <option value="Active">Active</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="Completed">Completed</option>
                   </select>
                 </div>
 
