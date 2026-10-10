@@ -221,6 +221,9 @@ function SalaryConfiguration({ projectId, endpoint }: { projectId: string; endpo
     <>
       {employees.isError && <p role="alert">Unable to load employees: {employees.error.message}</p>}
       <WorkflowLedger
+        className="payroll-salary-ledger"
+        showSummary={false}
+        eyebrow="SALARY SETTINGS"
         title="Staff Salary Configuration"
         description="Changes apply to future generated cycles. Existing payroll snapshots retain their original salary amounts."
         endpoint={`${endpoint}/staff`}

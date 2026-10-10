@@ -401,6 +401,14 @@ export interface DashboardAnalytics {
 }
 
 export interface Project {
+  supervisorsTimeline?: {
+    name: string;
+    phase: string;
+    start: string;
+    end: string;
+    untilProjectEnd?: boolean;
+    status: string;
+  }[];
   projectId: string;
   name: string;
   status: string;

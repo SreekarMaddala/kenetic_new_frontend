@@ -44,6 +44,9 @@ export type LedgerAction = {
 };
 
 type Props = {
+  className?: string;
+  showSummary?: boolean;
+  eyebrow?: string;
   title: string;
   description?: string;
   endpoint: string;
@@ -125,6 +128,9 @@ export function reversalActions(endpoint: string, idKey: string): LedgerAction[]
 }
 
 export function WorkflowLedger({
+  className = "",
+  showSummary = true,
+  eyebrow = "Project Operations & Ledger",
   title,
   description,
   endpoint,
@@ -336,10 +342,10 @@ export function WorkflowLedger({
   };
 
   return (
-    <section className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-up">
+    <section className={`p-6 max-w-7xl mx-auto space-y-6 animate-fade-up ${className}`}>
       <PageHeader
         title={title}
-        eyebrow="Project Operations & Ledger"
+        eyebrow={eyebrow}
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -385,52 +391,53 @@ export function WorkflowLedger({
       {description && <p className="text-xs text-muted-foreground -mt-2">{description}</p>}
 
       {/* Top Metric Cards Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl border border-border bg-[color:var(--surface)] shadow-sm flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Loaded Records
-            </div>
-            <div className="text-xl font-black text-foreground mt-0.5">{filtered.length}</div>
-          </div>
-          <div className="size-9 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center">
-            <Layers className="size-4" />
-          </div>
-        </div>
-
-        {totalAmount > 0 && (
+      {showSummary && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="p-4 rounded-2xl border border-border bg-[color:var(--surface)] shadow-sm flex items-center justify-between">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Accumulated Value
+                Loaded Records
               </div>
-              <div className="text-xl font-black text-emerald-600 mt-0.5">
-                ₹{totalAmount.toLocaleString("en-IN")}
-              </div>
+              <div className="text-xl font-black text-foreground mt-0.5">{filtered.length}</div>
             </div>
-            <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-              <FileSpreadsheet className="size-4" />
+            <div className="size-9 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center">
+              <Layers className="size-4" />
             </div>
           </div>
-        )}
 
-        <div className="p-4 rounded-2xl border border-border bg-[color:var(--surface)] shadow-sm flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Status Overview
+          {totalAmount > 0 && (
+            <div className="p-4 rounded-2xl border border-border bg-[color:var(--surface)] shadow-sm flex items-center justify-between">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Accumulated Value
+                </div>
+                <div className="text-xl font-black text-emerald-600 mt-0.5">
+                  ₹{totalAmount.toLocaleString("en-IN")}
+                </div>
+              </div>
+              <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                <FileSpreadsheet className="size-4" />
+              </div>
             </div>
-            <div className="text-xs font-semibold text-foreground mt-1 flex items-center gap-2">
-              <span className="text-emerald-600 font-bold">{approvedCount} Approved</span>
-              <span>·</span>
-              <span className="text-amber-600 font-bold">{pendingCount} Pending</span>
+          )}
+
+          <div className="p-4 rounded-2xl border border-border bg-[color:var(--surface)] shadow-sm flex items-center justify-between">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Status Overview
+              </div>
+              <div className="text-xs font-semibold text-foreground mt-1 flex items-center gap-2">
+                <span className="text-emerald-600 font-bold">{approvedCount} Approved</span>
+                <span>·</span>
+                <span className="text-amber-600 font-bold">{pendingCount} Pending</span>
+              </div>
             </div>
-          </div>
-          <div className="size-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-            <Sparkles className="size-4" />
+            <div className="size-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+              <Sparkles className="size-4" />
+            </div>
           </div>
         </div>
-      </div>
-
+      )}
       {/* Toolbar / Search, Project & Month Level Analytics Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 flex-1">

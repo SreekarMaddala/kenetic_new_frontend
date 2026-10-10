@@ -217,9 +217,11 @@ function ProjectDetailsPage() {
     );
 
     setSavingAllocation(true);
+    const savedTimeline = (rawProject?.supervisorsTimeline as TimelineItem[] | undefined) ?? [];
+    const updatedTimeline = [...savedTimeline, newItem];
     try {
       await projectApi.update(projectId!, {
-        supervisorsTimeline: [...localTimeline, newItem],
+        supervisorsTimeline: updatedTimeline,
         supervisorIds: updatedSupervisorIds,
         expectedVersion: Number((rawProject as unknown as Record<string, unknown>)?.version ?? 0),
       } as Parameters<typeof projectApi.update>[1]);
@@ -231,7 +233,7 @@ function ProjectDetailsPage() {
     } finally {
       setSavingAllocation(false);
     }
-    setLocalTimeline([...localTimeline, newItem]);
+    setLocalTimeline(updatedTimeline);
     setDetailTimelinePhase("");
     setDetailTimelineStart("");
     setDetailTimelineEnd("");

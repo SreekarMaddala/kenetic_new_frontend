@@ -48,6 +48,7 @@ export type ProjectCreateRequest = {
   endDate?: string;
   status?: "Active" | "Planning" | "Planned" | "In Progress" | "On Hold" | "Completed" | "Archived";
   supervisorIds?: string[];
+  supervisorsTimeline?: Array<{ name: string; phase: string; start: string; end: string; untilProjectEnd?: boolean; status: "Active" | "Upcoming" | "Completed" }>;
 };
 
 export type BoqCreateRequest = {
