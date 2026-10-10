@@ -132,7 +132,8 @@ export type LabourAttendanceCreateRequest = {
   workerId?: string;
   labourAttendanceId?: string;
   targetProjectId?: string;
-  operation?: "register" | "allocate" | "attendance" | "debit";
+  advanceId?: string;
+  operation?: "register" | "allocate" | "attendance" | "debit" | "advance" | "advance_clear" | "advance_delete";
   status?: "Present" | "Half Day" | "Absent";
   paymentStatus?: "Paid" | "Not paid";
   nightShift?: boolean;

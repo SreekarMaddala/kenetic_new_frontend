@@ -14,6 +14,8 @@ import {
 import { RegistryTable, RecordIdentity } from "../components/RegistryTable";
 import { api, type DomainRecord } from "../lib/api";
 import { WorkerProfile } from "../components/WorkerProfile";
+import { WorkerAdvanceDialog } from "../components/WorkerAdvanceDialog";
+import { useAuth } from "../contexts/AuthContext";
 import { workerId } from "../lib/workerAttendance";
 import "../styles/workers.css";
 
@@ -24,6 +26,9 @@ const money = (value: number) =>
 
 function WorkersPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const admin = user?.role === "operations_admin" || user?.role === "super_admin";
+  const [advance, setAdvance] = useState<DomainRecord | null>(null);
   const [profile, setProfile] = useState<DomainRecord | null>(null);
   const [name, setName] = useState("");
   const [rate, setRate] = useState("800");
@@ -174,6 +179,13 @@ function WorkersPage() {
           onClose={() => setProfile(null)}
         />
       )}
+      {advance && (
+        <WorkerAdvanceDialog
+          id={workerId(advance)}
+          name={String(advance.name)}
+          onClose={() => setAdvance(null)}
+        />
+      )}
       <RegistryTable
         title="Registered workers"
         description="Your workforce directory. Select a worker to view their profile."
@@ -197,6 +209,21 @@ function WorkersPage() {
             value: (worker) => Number(worker.rate),
             render: (worker) => money(Number(worker.rate)),
           },
+          ...(admin
+            ? [
+                {
+                  key: "advance",
+                  label: "Advance payment",
+                  value: () => "",
+                  render: (worker: DomainRecord) => (
+                    <button className="worker-advance-trigger" onClick={() => setAdvance(worker)}>
+                      <Wallet size={15} />
+                      Record advance
+                    </button>
+                  ),
+                },
+              ]
+            : []),
         ]}
         rowKey={(worker) => String(worker.labourAttendanceId)}
         searchText={(worker) => String(worker.name)}

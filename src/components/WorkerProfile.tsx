@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, projectApi } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
+import { WorkerAdvanceDialog } from "./WorkerAdvanceDialog";
+import { WorkerAdvanceList, type WorkerAdvance } from "./WorkerAdvanceList";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
 type Profile = {
   worker: { workerId: string; name: string; type?: string; rate: number };
+  recordedAdvances?: number;
+  advances?: WorkerAdvance[];
+  advancesHasMore?: boolean;
   attendance: {
     date: string;
     status: string;
@@ -38,6 +44,9 @@ export function WorkerProfile({
   day?: string;
   onClose: () => void;
 }) {
+  const { user } = useAuth();
+  const admin = user?.role === "operations_admin" || user?.role === "super_admin";
+  const [advanceOpen, setAdvanceOpen] = useState(false);
   const [project, setProject] = useState(fixedProjectId ?? "");
   const [month, setMonth] = useState(() => {
     const today = new Date();
@@ -100,6 +109,11 @@ export function WorkerProfile({
               className="border rounded-lg bg-background p-2"
             />
           </label>
+          {admin && (
+            <button className="worker-advance-trigger" onClick={() => setAdvanceOpen(true)}>
+              Record advance
+            </button>
+          )}
         </div>
         {projects.error && <p role="alert">Unable to load projects: {projects.error.message}</p>}
         {profile.isLoading && <p>Loading worker profile...</p>}
@@ -138,6 +152,15 @@ export function WorkerProfile({
                   ))}
                 </div>
                 <p className="text-sm">Payroll: {totals.payrollStatus}</p>
+                <WorkerAdvanceList
+                  key={`${project}-${month}`}
+                  workerId={id}
+                  projectId={project}
+                  advances={profile.data.advances ?? []}
+                  total={profile.data.recordedAdvances ?? 0}
+                  hasMore={profile.data.advancesHasMore}
+                  admin={admin}
+                />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm text-left">
                     <thead>
@@ -175,6 +198,21 @@ export function WorkerProfile({
           </>
         )}
       </DialogContent>
+      {advanceOpen && (
+        <WorkerAdvanceDialog
+          id={id}
+          name={name}
+          projectId={project || undefined}
+          day={
+            day?.startsWith(month)
+              ? day
+              : new Date().toLocaleDateString("en-CA").startsWith(month)
+                ? undefined
+                : `${month}-01`
+          }
+          onClose={() => setAdvanceOpen(false)}
+        />
+      )}
     </Dialog>
   );
 }

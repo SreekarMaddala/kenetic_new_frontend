@@ -1,0 +1,130 @@
+.worker-advance-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100svh - 32px);
+  overflow-y: auto;
+  border-radius: 20px;
+  padding: 28px;
+  color: #20342e;
+  background: #fff;
+}
+.advance-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #eaf1eb;
+  color: #285842;
+  margin-bottom: 10px;
+}
+.advance-fields {
+  display: grid;
+  gap: 18px;
+  margin: 6px 0 20px;
+  min-width: 0;
+}
+.advance-fields label {
+  display: grid;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+}
+.advance-fields input,
+.advance-fields select,
+.advance-fields textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d6dfd5;
+  border-radius: 9px;
+  padding: 11px 12px;
+  background: #f8faf7;
+  font-weight: 400;
+  outline-color: #285842;
+}
+.advance-fields textarea {
+  resize: vertical;
+}
+.advance-pair,
+.advance-balance {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.advance-balance {
+  padding: 14px;
+  border: 1px solid #d6dfd5;
+  border-radius: 10px;
+  background: #f8faf7;
+  font-size: 12px;
+  color: #63746c;
+}
+.advance-balance strong {
+  display: block;
+  color: #20342e;
+  font-size: 18px;
+  margin-top: 4px;
+}
+.advance-note {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #63746c;
+  margin: 16px 0;
+}
+.advance-error {
+  color: #a32b22;
+  background: #fff3ef;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin: 12px 0;
+}
+.advance-error button {
+  text-decoration: underline;
+}
+.advance-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  border-top: 1px solid #e2e8df;
+  padding-top: 18px;
+}
+.advance-footer button,
+.worker-advance-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #d6dfd5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.advance-footer .advance-save {
+  color: white;
+  background: #285842;
+  border-color: #285842;
+}
+.advance-footer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.worker-advance-trigger {
+  color: #285842;
+  background: #edf3ee;
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .worker-advance-dialog {
+    padding: 22px 18px;
+  }
+  .advance-pair {
+    grid-template-columns: 1fr;
+  }
+  .advance-footer button {
+    flex: 1;
+    padding-inline: 9px;
+  }
+}
