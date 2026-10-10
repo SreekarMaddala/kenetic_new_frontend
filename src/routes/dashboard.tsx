@@ -146,7 +146,6 @@ function DashboardPage() {
   const handleReject = (id: string, _title: string) =>
     approvalMutation.mutate({ id, status: "Rejected" });
 
-
   if (analyticsLoading) {
     return (
       <div className="p-8 max-w-7xl mx-auto w-full space-y-6 animate-fade-up">
@@ -235,8 +234,8 @@ function DashboardPage() {
           <CardContent>
             <div className="text-3xl font-display font-semibold">{pendingApprovalsCount}</div>
             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-              <span className="text-primary font-medium">{approvals.length} pending</span> items
-              await sign-off
+              <span className="text-primary font-medium">{pendingApprovalsCount} pending</span>{" "}
+              items await sign-off
             </p>
           </CardContent>
         </Card>
@@ -382,11 +381,13 @@ function DashboardPage() {
                   Action Needed: Approvals
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
-                  High & medium priority transactions pending project head authorization
+                  {analytics?.approvalsLimited
+                    ? "Showing a preview. Open the corresponding ledger for all pending transactions."
+                    : "Transactions pending project head authorization"}
                 </CardDescription>
               </div>
               <span className="text-[10px] font-mono text-muted-foreground">
-                {approvals.length} PENDING
+                {approvals.length} SHOWN
               </span>
             </div>
           </CardHeader>

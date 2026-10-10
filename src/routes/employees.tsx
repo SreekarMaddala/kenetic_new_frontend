@@ -119,7 +119,7 @@ function EmployeesPage() {
       render: (employee) => {
         const manageable =
           employee.role !== "super_admin" &&
-          employee.employeeId !== user?.sub &&
+          employee.employeeId !== (user?.employeeId ?? user?.sub) &&
           (platform || employee.role === "supervisor");
         return (
           <RecordActions name={employee.name} id={employee.employeeId}>

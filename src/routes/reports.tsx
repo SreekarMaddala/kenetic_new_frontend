@@ -157,15 +157,15 @@ function ReportsPage() {
       let rows: Record<string, unknown>[];
       if (selectedReport === "REP-FIN") {
         const report = await reportsApi.executive(range);
-        if (!Array.isArray(report.projectSummaries)) {
-          throw new Error("Financial report data is unavailable. Please sync data and try again.");
-        }
-        rows = report.projectSummaries.map((p) => ({
-          "Project ID": p.projectId,
-          "Project Name": p.name,
-          "Project Budget (INR)": p.budget,
-          "Spend in selected period (INR)": p.spent,
-          Status: p.status,
+        if (!Array.isArray(report.projectSummaries))
+          throw new Error("The financial report is incomplete. Please try again.");
+        rows = report.projectSummaries.map((project) => ({
+          "Project ID": project.projectId,
+          "Project Name": project.name,
+          "Budget (INR)": project.budget,
+          "Spend in selected period (INR)": project.spent,
+          Status: project.status,
+          "Progress (%)": project.progress ?? "",
         }));
       } else if (selectedReport === "REP-PROJ") {
         rows = (await projectApi.list())
@@ -483,7 +483,11 @@ function ReportsPage() {
                 className="rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
               >
                 <Download className="size-4" />
-                {exporting ? "Generating..." : "Download Excel"}
+                {exporting
+                  ? "Generating..."
+                  : selectedReport === "REP-FIN"
+                    ? "Download CSV"
+                    : "Download Excel"}
               </button>
             </DialogFooter>
           </form>

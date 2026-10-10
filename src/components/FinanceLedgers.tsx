@@ -1,4 +1,4 @@
-import { WorkflowLedger, reviewActions, type Field } from "./WorkflowLedger";
+import { WorkflowLedger, reviewActions, reversalActions, type Field } from "./WorkflowLedger";
 import { useProject } from "../lib/ProjectContext";
 import { useQuery } from "@tanstack/react-query";
 import { vendorApi, api, type DomainRecord, type InventoryItem } from "../lib/api";
@@ -96,7 +96,7 @@ export function PaymentLedger() {
           projectName: projects.find((p) => p.projectId === r.projectId)?.name ?? r.projectId,
         }))
       }
-      actions={reviewActions(endpoint, "paymentId")}
+      actions={[...reviewActions(endpoint, "paymentId"), ...reversalActions(endpoint, "paymentId")]}
     />
   );
 }
@@ -133,7 +133,10 @@ export function GlobalExpenseLedger() {
           projectName: projects.find((p) => p.projectId === r.projectId)?.name ?? r.projectId,
         }))
       }
-      actions={reviewActions("/expenses", "expenseId")}
+      actions={[
+        ...reviewActions("/expenses", "expenseId"),
+        ...reversalActions("/expenses", "expenseId"),
+      ]}
     />
   );
 }

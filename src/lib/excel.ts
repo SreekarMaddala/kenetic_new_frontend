@@ -44,7 +44,7 @@ export function exportToExcel(
 
   // Data rows
   for (const row of rows) {
-    lines.push(keys.map((k) => escapeCsv(String(row[k] ?? ""))).join(","));
+    lines.push(keys.map((k) => escapeCsv(row[k] ?? "")).join(","));
   }
 
   // Footer summary
@@ -69,9 +69,15 @@ export function exportToExcel(
   URL.revokeObjectURL(url);
 }
 
-function escapeCsv(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+function escapeCsv(value: unknown): string {
+  let text = String(value);
+  // Keep user-entered names and references from becoming spreadsheet formulas.
+  // Actual numeric values retain their number representation, including negatives.
+  if (typeof value === "string" && (/^\s*[=+\-@]/.test(value) || /^[\t\r\n]/.test(value))) {
+    text = "'" + text;
   }
-  return value;
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
 }

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, employeeApi, type DomainRecord } from "../../../lib/api";
+import { api, employeeApi, governanceApi, type DomainRecord } from "../../../lib/api";
 import { payrollItems } from "../../../lib/payroll";
 import { localDate } from "../../../lib/projectForm";
 import { exportToExcel } from "../../../lib/excel";
@@ -38,8 +38,8 @@ function Payroll({ projectId }: { projectId: string }) {
   const [reference, setReference] = useState("");
   const endpoint = `/projects/${encodeURIComponent(projectId)}/payroll`;
   const cycles = useQuery({
-    queryKey: ["payroll-cycle", projectId],
-    queryFn: () => api.get<DomainRecord[]>(endpoint),
+    queryKey: ["payroll-cycle", projectId, month],
+    queryFn: () => api.get<DomainRecord[]>(`${endpoint}?month=${encodeURIComponent(month)}`),
   });
   const cycle = cycles.data?.find((item) => item.month === month);
   const items = payrollItems(cycles.data ?? [], month);
@@ -58,6 +58,7 @@ function Payroll({ projectId }: { projectId: string }) {
       createdAt?: unknown;
     }) => {
       if (kind === "reopen") return api.delete(`${endpoint}/${selectedMonth}`);
+      if (kind === "generate") return governanceApi.generatePayroll(projectId, selectedMonth);
       return api.post(kind === "settle" ? `${endpoint}/disburse` : endpoint, {
         month: selectedMonth,
         ...(kind === "settle" ? { reference: receipt, expectedCreatedAt: createdAt } : {}),

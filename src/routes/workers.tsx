@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { PageHeader } from "../components/AppShell";
 import { RegistryTable, RecordIdentity } from "../components/RegistryTable";
 import { api, type DomainRecord } from "../lib/api";
+import { WorkerProfile } from "../components/WorkerProfile";
+import { workerId } from "../lib/workerAttendance";
 
 export const Route = createFileRoute("/workers")({ component: WorkersPage });
 const endpoint = "/supervisor/labour/attendance";
@@ -14,6 +16,7 @@ const money = (value: number) =>
 
 function WorkersPage() {
   const qc = useQueryClient();
+  const [profile, setProfile] = useState<DomainRecord | null>(null);
   const [name, setName] = useState("");
   const [rate, setRate] = useState("800");
   const workers = useQuery({
@@ -21,11 +24,12 @@ function WorkersPage() {
     queryFn: () => api.get<DomainRecord[]>(endpoint),
   });
   const register = useMutation({
-    mutationFn: () => api.post(endpoint, {
-      operation: "register",
-      name: name.trim(),
-      rate: Number(rate),
-    }),
+    mutationFn: () =>
+      api.post(endpoint, {
+        operation: "register",
+        name: name.trim(),
+        rate: Number(rate),
+      }),
     onSuccess: async () => {
       setName("");
       await Promise.all([
@@ -40,7 +44,8 @@ function WorkersPage() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto w-full space-y-6">
       <PageHeader title="Workers" eyebrow="Organization workforce" />
       <p className="text-sm text-muted-foreground">
-        Register workers for your organization, then allocate them to projects from Daily Site Attendance.
+        Register workers for your organization, then allocate them to projects from Daily Site
+        Attendance.
       </p>
       <form
         className="rounded-2xl border border-border bg-card p-6 space-y-4"
@@ -53,13 +58,25 @@ function WorkersPage() {
         <div className="flex flex-wrap items-end gap-4">
           <label className="grid gap-2 text-sm">
             Worker name
-            <input required maxLength={128} className={input} value={name}
-              onChange={(event) => setName(event.target.value)} />
+            <input
+              required
+              maxLength={128}
+              className={input}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
           </label>
           <label className="grid gap-2 text-sm">
             Daily wage (₹)
-            <input required type="number" min="0.01" step="0.01" className={input}
-              value={rate} onChange={(event) => setRate(event.target.value)} />
+            <input
+              required
+              type="number"
+              min="0.01"
+              step="0.01"
+              className={input}
+              value={rate}
+              onChange={(event) => setRate(event.target.value)}
+            />
           </label>
           <button
             className="rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold disabled:opacity-40"
@@ -69,15 +86,34 @@ function WorkersPage() {
           </button>
         </div>
       </form>
+      {profile && (
+        <WorkerProfile
+          id={workerId(profile)}
+          name={String(profile.name)}
+          onClose={() => setProfile(null)}
+        />
+      )}
       <RegistryTable
         title="Registered workers"
         description="Workers available for allocation across your organization's projects."
         rows={workers.data ?? []}
         columns={[
-          { key: "name", label: "Worker", value: (worker) => String(worker.name),
-            render: (worker) => <RecordIdentity name={String(worker.name)} /> },
-          { key: "rate", label: "Daily wage", value: (worker) => Number(worker.rate),
-            render: (worker) => money(Number(worker.rate)) },
+          {
+            key: "name",
+            label: "Worker",
+            value: (worker) => String(worker.name),
+            render: (worker) => (
+              <button className="text-left hover:underline" onClick={() => setProfile(worker)}>
+                <RecordIdentity name={String(worker.name)} />
+              </button>
+            ),
+          },
+          {
+            key: "rate",
+            label: "Daily wage",
+            value: (worker) => Number(worker.rate),
+            render: (worker) => money(Number(worker.rate)),
+          },
         ]}
         rowKey={(worker) => String(worker.labourAttendanceId)}
         searchText={(worker) => String(worker.name)}

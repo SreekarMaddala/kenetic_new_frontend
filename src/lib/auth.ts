@@ -17,6 +17,7 @@ export interface AuthUser {
   email: string;
   name: string;
   sub: string;
+  employeeId?: string;
   orgId: string;
   role: AppRole;
 }
@@ -55,6 +56,7 @@ async function userFromSession(session: CognitoUserSession): Promise<AuthUser> {
   }
   return {
     ...identity,
+    ...(typeof body?.data?.employeeId === "string" ? { employeeId: body.data.employeeId } : {}),
     email: String(payload.email ?? ""),
     name: String(payload.name ?? payload.email ?? "User"),
   };

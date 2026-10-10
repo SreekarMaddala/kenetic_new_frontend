@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api, projectApi, type DomainRecord } from "../../../lib/api";
 import { PageHeader } from "../../../components/AppShell";
 import { exportToExcel } from "../../../lib/excel";
 import { toast } from "sonner";
+import { WorkerAllocationDialog } from "../../../components/WorkerAllocationDialog";
+import { WorkerProfile } from "../../../components/WorkerProfile";
+import { saveWorkerBatch, workerId } from "../../../lib/workerAttendance";
 
 export const Route = createFileRoute("/projects/$projectId/labour")({ component: Page });
 const money = (value: number) =>
@@ -48,18 +51,28 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
   const user = useAuth().user;
   const admin = user?.role === "operations_admin" || user?.role === "super_admin";
   const qc = useQueryClient();
+  const [allocationOpen, setAllocationOpen] = useState(false);
+  const [profile, setProfile] = useState<DomainRecord | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState("Present");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const projects = useQuery({ queryKey: ["projects"], queryFn: projectApi.list });
-  const query = useQuery({
+  const query = useInfiniteQuery({
     queryKey: ["labour", projectId, day, admin ? "allocation" : "attendance"],
-    queryFn: () =>
-      api.get<DomainRecord[]>(
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) =>
+      api.page<DomainRecord>(
         `/supervisor/labour/attendance?projectId=${encodeURIComponent(projectId)}&date=${day}${admin ? "&roster=true" : ""}`,
+        pageParam,
       ),
-    refetchInterval: 15000,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    staleTime: 60000,
   });
   async function refresh() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["labour"] }),
+      qc.invalidateQueries({ queryKey: ["worker-profile"] }),
       qc.invalidateQueries({ queryKey: ["employee-analytics"] }),
       qc.invalidateQueries({ queryKey: ["dashboard-analytics"] }),
       qc.invalidateQueries({ queryKey: ["projects"] }),
@@ -67,8 +80,43 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
       qc.invalidateQueries({ queryKey: ["payroll-cycle", projectId] }),
     ]);
   }
-  const workers = query.data ?? [];
+  const workers = query.data?.pages.flatMap((page) => page.items) ?? [];
   const siteWorkers = workers.filter((worker) => worker.allocatedProjectId === projectId);
+  const eligible = siteWorkers.filter(
+    (worker) => worker.allocationConfirmed && !worker.attendanceRecorded,
+  );
+  async function saveSelectedAttendance() {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    setBulkErrors([]);
+    try {
+      const chosen = eligible.filter((worker) => selected.has(workerId(worker)));
+      const result = await saveWorkerBatch(chosen, (worker) =>
+        api.post("/supervisor/labour/attendance", {
+          projectId,
+          date: day,
+          workerId: workerId(worker),
+          operation: "attendance",
+          status: bulkStatus,
+          paymentStatus: "Not paid",
+          nightShift: false,
+          expectedVersion: worker.attendanceVersion ?? 0,
+        }),
+      );
+      setSelected(new Set(result.failed.map((failure) => workerId(failure.item))));
+      setBulkErrors(result.failed.map((failure) => `${failure.item.name}: ${failure.message}`));
+      toast.success(`${result.succeeded.length} attendance record(s) saved.`);
+      await refresh();
+    } catch (error) {
+      setBulkErrors([
+        error instanceof Error
+          ? error.message
+          : "Unable to refresh attendance. Reload before retrying.",
+      ]);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
   const present = siteWorkers.filter((worker) => worker.status === "Present");
   const halfDay = siteWorkers.filter((worker) => worker.status === "Half Day");
   const wages = siteWorkers.reduce(
@@ -91,9 +139,36 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
     <>
       <p className="text-sm text-muted-foreground">
         {admin
-          ? "Choose each worker’s project and click Enter to confirm allocation for this date. The latest allocation is selected by default. After confirmation, you or the project supervisor can save attendance and payment status."
-          : "The admin must confirm your workers’ allocations for this date before you can save attendance. Mark Present or Absent, then Paid or Not paid for the daily wage."}
+          ? "Use Allocate workers to copy yesterday's team, adjust individual projects, and confirm today's allocations together. Supervisors then record attendance."
+          : "The admin must confirm your workers’ allocations for this date before you can save attendance. Select unmarked workers to save attendance together. Record Half Days, night shifts and payments individually when needed."}
       </p>
+      {admin && (
+        <button
+          className={button}
+          disabled={bulkBusy || !projects.data?.length}
+          onClick={() => setAllocationOpen(true)}
+        >
+          Allocate workers / copy yesterday
+        </button>
+      )}
+      {allocationOpen && (
+        <WorkerAllocationDialog
+          projectId={projectId}
+          day={day}
+          projects={projects.data ?? []}
+          refresh={refresh}
+          onClose={() => setAllocationOpen(false)}
+        />
+      )}
+      {profile && (
+        <WorkerProfile
+          id={workerId(profile)}
+          name={String(profile.name)}
+          projectId={projectId}
+          day={day}
+          onClose={() => setProfile(null)}
+        />
+      )}
       {query.error ? (
         <div role="alert" className="text-red-600">
           Unable to load attendance: {query.error.message}{" "}
@@ -105,6 +180,18 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
         <p>Loading workers...</p>
       ) : (
         <>
+          {query.hasNextPage && (
+            <div className="flex justify-between items-center gap-4 text-sm">
+              <p>Attendance counts and export cover {workers.length} loaded workers.</p>
+              <button
+                className={button}
+                disabled={query.isFetchingNextPage}
+                onClick={() => query.fetchNextPage()}
+              >
+                {query.isFetchingNextPage ? "Loading…" : "Load more workers"}
+              </button>
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-3">
             {[
               ["Present at this project", `${present.length} / ${siteWorkers.length}`],
@@ -117,6 +204,51 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
                 <p className="text-2xl font-bold mt-2">{value}</p>
               </div>
             ))}
+          </div>
+          <div className="rounded-xl border p-4 space-y-3">
+            <p className="text-sm">
+              Select unmarked workers below and save their attendance together. Bulk saves leave
+              wages unpaid and night shifts off; use individual rows for exceptions.
+            </p>
+            <div className="flex flex-wrap gap-3 items-center">
+              <button
+                className={input}
+                disabled={bulkBusy || !eligible.length}
+                onClick={() => setSelected(new Set(eligible.map(workerId)))}
+              >
+                Select loaded unmarked workers
+              </button>
+              <button className={input} disabled={bulkBusy} onClick={() => setSelected(new Set())}>
+                Clear selection
+              </button>
+              <select
+                aria-label="Attendance for selected workers"
+                className={input}
+                value={bulkStatus}
+                disabled={bulkBusy}
+                onChange={(event) => setBulkStatus(event.target.value)}
+              >
+                {["Present", "Half Day", "Absent"].map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </select>
+              <button
+                className={button}
+                disabled={bulkBusy || !eligible.some((worker) => selected.has(workerId(worker)))}
+                onClick={saveSelectedAttendance}
+              >
+                {bulkBusy
+                  ? "Saving attendance..."
+                  : `Save selected (${eligible.filter((worker) => selected.has(workerId(worker))).length})`}
+              </button>
+            </div>
+            {!!bulkErrors.length && (
+              <ul role="alert" className="text-red-600 text-sm list-disc pl-5">
+                {bulkErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="rounded-2xl border border-border bg-card overflow-hidden">
             <div className="p-5 flex flex-wrap justify-between gap-3 items-center">
@@ -134,10 +266,7 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
                       Attendance: worker.attendanceRecorded ? worker.status : "Not marked",
                       Payment: worker.paymentStatus,
                       Wage: worker.dailyWage,
-                      Unpaid:
-                        worker.status === "Present" && worker.paymentStatus !== "Paid"
-                          ? worker.dailyWage
-                          : 0,
+                      Unpaid: worker.paymentStatus !== "Paid" ? worker.dailyWage : 0,
                     })),
                     `attendance-${projectId}-${day}`,
                   )
@@ -151,6 +280,7 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
                 <thead className="bg-secondary">
                   <tr>
                     {[
+                      "Select",
                       "Worker",
                       "Daily wage",
                       "Project allocation",
@@ -175,6 +305,17 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
                       projectId={projectId}
                       day={day}
                       refresh={refresh}
+                      openProfile={() => setProfile(worker)}
+                      blocked={bulkBusy}
+                      selected={selected.has(workerId(worker))}
+                      onSelect={(checked) =>
+                        setSelected((previous) => {
+                          const next = new Set(previous);
+                          if (checked) next.add(workerId(worker));
+                          else next.delete(workerId(worker));
+                          return next;
+                        })
+                      }
                     />
                   ))}
                 </tbody>
@@ -214,6 +355,10 @@ function WorkerRow({
   projectId,
   day,
   refresh,
+  openProfile,
+  blocked,
+  selected,
+  onSelect,
 }: {
   worker: DomainRecord;
   admin: boolean;
@@ -221,6 +366,10 @@ function WorkerRow({
   projectId: string;
   day: string;
   refresh: () => Promise<void>;
+  openProfile: () => void;
+  blocked: boolean;
+  selected: boolean;
+  onSelect: (checked: boolean) => void;
 }) {
   const [target, setTarget] = useState<string | null>(null);
   const [correctionReason, setCorrectionReason] = useState("");
@@ -233,7 +382,7 @@ function WorkerRow({
   const status = draft?.status ?? String(worker.status ?? "Absent");
   const payment = draft?.paymentStatus ?? String(worker.paymentStatus ?? "Not paid");
   const nightShift = draft?.nightShift ?? Boolean(worker.nightShift);
-  const enabled = !!worker.allocationConfirmed;
+  const enabled = !!worker.allocationConfirmed && !blocked;
   const save = useMutation({
     mutationFn: (operation: "allocate" | "attendance") =>
       api.post("/supervisor/labour/attendance", {
@@ -242,7 +391,7 @@ function WorkerRow({
         labourAttendanceId: worker.labourAttendanceId,
         operation,
         ...(operation === "allocate"
-          ? { targetProjectId: allocation }
+          ? { targetProjectId: allocation, expectedVersion: worker.allocationVersion ?? 0 }
           : {
               status,
               paymentStatus: payment,
@@ -266,7 +415,20 @@ function WorkerRow({
   });
   return (
     <tr className="border-t border-border">
-      <td className="p-4 font-semibold">{String(worker.name)}</td>
+      <td className="p-4">
+        <input
+          type="checkbox"
+          aria-label={`Select attendance for ${worker.name}`}
+          checked={selected}
+          disabled={!enabled || !!worker.attendanceRecorded || save.isPending}
+          onChange={(event) => onSelect(event.target.checked)}
+        />
+      </td>
+      <td className="p-4 font-semibold">
+        <button className="text-primary underline underline-offset-4" onClick={openProfile}>
+          {String(worker.name)}
+        </button>
+      </td>
       <td className="p-4 whitespace-nowrap">{money(Number(worker.rate))}</td>
       <td className="p-4">
         <div className="flex gap-2 items-center">
@@ -276,7 +438,7 @@ function WorkerRow({
                 aria-label={`Project for ${worker.name}`}
                 className={input}
                 value={allocation}
-                disabled={save.isPending || !!worker.allocationStarted}
+                disabled={blocked || save.isPending || !!worker.allocationStarted}
                 onChange={(event) => setTarget(event.target.value)}
               >
                 {!projects.some((project) => project.projectId === allocation) && (
@@ -290,10 +452,10 @@ function WorkerRow({
               </select>
               <button
                 className={button}
-                disabled={save.isPending || !!worker.allocationStarted}
+                disabled={blocked || save.isPending || !!worker.allocationStarted}
                 onClick={() => save.mutate("allocate")}
               >
-                Enter
+                Assign
               </button>
             </>
           ) : (

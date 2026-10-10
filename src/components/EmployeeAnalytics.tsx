@@ -36,7 +36,7 @@ export function EmployeeAnalytics({ projectId: fixedProjectId }: { projectId?: s
   const report = useQuery({
     queryKey: ["employee-analytics", projectId, month],
     enabled: !!projectId && /^\d{4}-\d{2}$/.test(month),
-    refetchInterval: 15000,
+    staleTime: 60000,
     queryFn: async () => {
       const [workers, cycles] = await Promise.all([
         api.get<DomainRecord[]>(

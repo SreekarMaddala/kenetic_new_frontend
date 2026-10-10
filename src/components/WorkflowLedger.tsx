@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type FormEvent } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   RotateCw,
@@ -21,6 +21,7 @@ import { PageHeader } from "./AppShell";
 import { api, type DomainRecord } from "../lib/api";
 import { exportToExcel } from "../lib/excel";
 import { useProject } from "../lib/ProjectContext";
+import type { ReversalRequest } from "../lib/generated/contracts";
 
 export type Field = {
   key: string;
@@ -68,7 +69,7 @@ export function readLedgerForm(
     const value = String(form.get(field.key) ?? "").trim();
     if (field.required && !value) throw new Error(`${field.label} is required.`);
     const options = field.optionsByValue
-      ? field.optionsByValue[String(form.get(field.dependsOn ?? "") ?? "")] ?? []
+      ? (field.optionsByValue[String(form.get(field.dependsOn ?? "") ?? "")] ?? [])
       : field.options;
     if (value && options && !options.some((option) => option.value === value))
       throw new Error(`Select a valid ${field.label.toLowerCase()}.`);
@@ -96,6 +97,31 @@ export function reviewActions(endpoint: string, idKey: string, lowercase = false
         status: lowercase ? status.toLowerCase() : status,
       }),
   }));
+}
+
+export function reversalActions(endpoint: string, idKey: string): LedgerAction[] {
+  return [
+    {
+      label: "Reverse",
+      visible: (row) => row.status === "Approved",
+      run: async (row) => {
+        const reason = window.prompt("Reason for reversing this approved transaction:")?.trim();
+        if (!reason) return;
+        const reference = window
+          .prompt("Reference for the refund or correcting transaction:")
+          ?.trim();
+        if (!reference) return;
+        const [path, query] = recordUrl(endpoint, row[idKey]).split("?");
+        const body: ReversalRequest = {
+          reason,
+          reference,
+          expectedVersion: Number(row.version),
+          requestId: crypto.randomUUID(),
+        };
+        return api.post(`${path}/reverse${query ? `?${query}` : ""}`, body);
+      },
+    },
+  ];
 }
 
 export function WorkflowLedger({
@@ -128,11 +154,15 @@ export function WorkflowLedger({
     setMonthFilter("ALL");
   }, [endpoint]);
 
-  useEffect(() => { setSelections({}); }, [open, endpoint]);
+  useEffect(() => {
+    setSelections({});
+  }, [open, endpoint]);
 
-  const query = useQuery({
+  const query = useInfiniteQuery({
     queryKey: ["ledger", endpoint],
-    queryFn: () => api.get<DomainRecord[]>(endpoint),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => api.page<DomainRecord>(endpoint, pageParam),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
 
   const mutation = useMutation({
@@ -145,7 +175,8 @@ export function WorkflowLedger({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const rows = transform ? transform(query.data ?? []) : (query.data ?? []);
+  const loaded = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const rows = transform ? transform(loaded) : loaded;
 
   // Compute available unique projects from records
   const availableProjects = useMemo(() => {
@@ -290,7 +321,10 @@ export function WorkflowLedger({
       );
     }
 
-    if (["amount", "cost", "total", "price", "budget", "contractvalue"].includes(key.toLowerCase()) && typeof val === "number") {
+    if (
+      ["amount", "cost", "total", "price", "budget", "contractvalue"].includes(key.toLowerCase()) &&
+      typeof val === "number"
+    ) {
       return <span className="font-bold text-foreground">₹{val.toLocaleString("en-IN")}</span>;
     }
 
@@ -313,7 +347,9 @@ export function WorkflowLedger({
               onClick={() => query.refetch()}
               disabled={query.isFetching}
             >
-              <RotateCw className={`size-3.5 ${query.isFetching ? "animate-spin text-primary" : ""}`} />
+              <RotateCw
+                className={`size-3.5 ${query.isFetching ? "animate-spin text-primary" : ""}`}
+              />
               Refresh
             </button>
             <button
@@ -353,7 +389,7 @@ export function WorkflowLedger({
         <div className="p-4 rounded-2xl border border-border bg-[color:var(--surface)] shadow-sm flex items-center justify-between">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Total Records
+              Loaded Records
             </div>
             <div className="text-xl font-black text-foreground mt-0.5">{filtered.length}</div>
           </div>
@@ -464,7 +500,8 @@ export function WorkflowLedger({
         </div>
 
         <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">
-          Showing <strong className="text-foreground">{filtered.length}</strong> of {rows.length} entries
+          Showing <strong className="text-foreground">{filtered.length}</strong> of {rows.length}{" "}
+          entries
         </div>
       </div>
 
@@ -490,10 +527,7 @@ export function WorkflowLedger({
             </thead>
             <tbody className="divide-y divide-border/60">
               {filtered.map((r, i) => (
-                <tr
-                  key={String(r[idKey] ?? i)}
-                  className="hover:bg-secondary/30 transition-colors"
-                >
+                <tr key={String(r[idKey] ?? i)} className="hover:bg-secondary/30 transition-colors">
                   {columns.map((c) => (
                     <td key={c.key} className="py-3.5 px-4 whitespace-pre-wrap text-foreground">
                       {renderCellContent(c.key, r[c.key])}
@@ -534,21 +568,26 @@ export function WorkflowLedger({
 
               {!filtered.length && (
                 <tr>
-                  <td colSpan={columns.length + (actions.length > 0 ? 1 : 0)} className="p-12 text-center">
+                  <td
+                    colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
+                    className="p-12 text-center"
+                  >
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="size-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 shadow-sm">
                         <Inbox className="size-7" />
                       </div>
                       <div className="space-y-1">
                         <h4 className="font-bold text-sm text-foreground">
-                          {query.isLoading ? "Loading Ledger Records..." : `No ${title} Records Found`}
+                          {query.isLoading
+                            ? "Loading Ledger Records..."
+                            : `No ${title} Records Found`}
                         </h4>
                         <p className="text-xs text-muted-foreground max-w-sm">
                           {query.isLoading
                             ? "Fetching latest entries from project operations ledger..."
                             : search
-                            ? `No records match your search filter "${search}". Try clearing the search query.`
-                            : `There are currently no items recorded under ${title.toLowerCase()}. Use the action button above to log a new record.`}
+                              ? `No records match your search filter "${search}". Try clearing the search query.`
+                              : `There are currently no items recorded under ${title.toLowerCase()}. Use the action button above to log a new record.`}
                         </p>
                       </div>
                       {fields && !query.isLoading && (
@@ -568,6 +607,21 @@ export function WorkflowLedger({
               )}
             </tbody>
           </table>
+          {query.hasNextPage && (
+            <div className="p-4 flex items-center justify-between gap-4">
+              <p className="text-xs text-muted-foreground">
+                Counts, filters and export cover the {rows.length} loaded records.
+              </p>
+              <button
+                type="button"
+                className="text-sm text-primary"
+                disabled={query.isFetchingNextPage}
+                onClick={() => query.fetchNextPage()}
+              >
+                {query.isFetchingNextPage ? "Loading…" : "Load more records"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -598,15 +652,20 @@ export function WorkflowLedger({
 
                 {field.options || field.optionsByValue ? (
                   <select
-                    key={field.dependsOn ? selections[field.dependsOn] ?? "" : field.key}
+                    key={field.dependsOn ? (selections[field.dependsOn] ?? "") : field.key}
                     name={field.key}
                     required={field.required}
                     defaultValue={field.defaultValue ?? ""}
-                    onChange={(e) => setSelections((values) => ({ ...values, [field.key]: e.target.value }))}
+                    onChange={(e) =>
+                      setSelections((values) => ({ ...values, [field.key]: e.target.value }))
+                    }
                     className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                   >
                     <option value="">Select option...</option>
-                    {(field.optionsByValue ? field.optionsByValue[selections[field.dependsOn ?? ""]] ?? [] : field.options ?? []).map((o) => (
+                    {(field.optionsByValue
+                      ? (field.optionsByValue[selections[field.dependsOn ?? ""]] ?? [])
+                      : (field.options ?? [])
+                    ).map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
                       </option>

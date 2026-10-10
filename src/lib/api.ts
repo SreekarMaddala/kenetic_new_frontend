@@ -13,7 +13,9 @@ const BASE_URL = import.meta.env.DEV
 
 // ── Core fetch wrapper ────────────────────────────────────────────────────────
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export type CollectionPage<T> = { items: T[]; nextCursor: string | null };
+
+async function request<T>(path: string, options: RequestInit = {}, pageOnly = false): Promise<T> {
   const token = await refreshSession();
 
   const headers: Record<string, string> = {
@@ -47,6 +49,27 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(msg);
   }
 
+  if (pageOnly) {
+    if (!Array.isArray(json.data)) throw new Error("This endpoint is not a collection.");
+    return { items: json.data, nextCursor: json.pagination?.nextCursor ?? null } as T;
+  }
+  if (options.method === "GET" && Array.isArray(json.data) && json.pagination?.nextCursor) {
+    const items = [...json.data];
+    let cursor: string | null = json.pagination.nextCursor;
+    // Existing selectors and exports require complete results. Ledger views use
+    // api.page below, loading more only when requested by the user.
+    for (let count = 0; cursor; count++) {
+      if (count >= 200)
+        throw new Error("Too many records for this view. Use a narrower project or date range.");
+      const url = new URL(path, "https://pagination.local");
+      url.searchParams.set("cursor", cursor);
+      const next: CollectionPage<unknown> = await request(url.pathname + url.search, options, true);
+      items.push(...next.items);
+      cursor = next.nextCursor;
+    }
+    return items as T;
+  }
+
   // Backend wraps in { success: true, data: ... }
   return (json.data ?? json) as T;
 }
@@ -55,6 +78,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
+  page: <T>(path: string, cursor?: string | null) => {
+    const url = new URL(path, "https://pagination.local");
+    url.searchParams.set("limit", "50");
+    if (cursor) url.searchParams.set("cursor", cursor);
+    return request<CollectionPage<T>>(url.pathname + url.search, { method: "GET" }, true);
+  },
 
   post: <T>(path: string, body: unknown) =>
     request<T>(path, { method: "POST", body: JSON.stringify(body) }),
@@ -113,7 +142,7 @@ export const projectApi = {
   create: (body: CreateProjectBody) => api.post<Project>("/projects", body),
   update: (id: string, body: Partial<Project> & { expectedVersion?: number }) =>
     api.put<Project>(`/projects/${id}`, body),
-  delete: (id: string) => api.delete<{ deleted: boolean }>(`/projects/${id}`),
+  delete: (id: string) => api.patch<Project>(`/projects/${id}`, { status: "Archived" }),
 };
 
 // Vendors
@@ -174,7 +203,8 @@ export const projectCommercialApi = {
     api.post<DomainRecord>(`/projects/${projectId}/boq`, body),
   updateBoq: (projectId: string, id: string, body: DomainRecord) =>
     api.put<DomainRecord>(`/projects/${projectId}/boq/${id}`, body),
-  deleteBoq: (projectId: string, id: string) => api.delete(`/projects/${projectId}/boq/${id}`),
+  deleteBoq: (projectId: string, id: string) =>
+    api.patch(`/projects/${projectId}/boq/${id}`, { status: "Archived" }),
   listSubcontractors: (projectId: string) =>
     api.get<DomainRecord[]>(`/projects/${projectId}/subcontractors`),
   createSubcontractor: (projectId: string, body: DomainRecord) =>
@@ -188,7 +218,7 @@ export const projectCommercialApi = {
   updateMilestone: (projectId: string, id: string, body: DomainRecord) =>
     api.put<DomainRecord>(`/projects/${projectId}/milestones/${id}`, body),
   deleteMilestone: (projectId: string, id: string) =>
-    api.delete(`/projects/${projectId}/milestones/${id}`),
+    api.patch(`/projects/${projectId}/milestones/${id}`, { status: "Archived" }),
 };
 
 export const workforceApi = {
@@ -263,12 +293,12 @@ export const documentControlApi = {
   createDrawing: (projectId: string, body: DomainRecord) =>
     api.post<DomainRecord>(`/projects/${projectId}/drawings`, body),
   deleteDrawing: (projectId: string, id: string) =>
-    api.delete(`/projects/${projectId}/drawings/${id}`),
+    api.patch(`/projects/${projectId}/drawings/${id}`, { status: "Archived" }),
   listDocuments: (projectId: string) => api.get<DomainRecord[]>(`/projects/${projectId}/documents`),
   createDocument: (projectId: string, body: DomainRecord) =>
     api.post<DomainRecord>(`/projects/${projectId}/documents`, body),
   deleteDocument: (projectId: string, id: string) =>
-    api.delete(`/projects/${projectId}/documents/${id}`),
+    api.patch(`/projects/${projectId}/documents/${id}`, { status: "Archived" }),
 };
 
 export const warehouseApi = {
@@ -294,6 +324,8 @@ export const financeDomainApi = {
 
 export const governanceApi = {
   listPayroll: (projectId: string) => api.get<DomainRecord[]>(`/projects/${projectId}/payroll`),
+  generatePayroll: (projectId: string, month: string) =>
+    api.post<DomainRecord>(`/projects/${encodeURIComponent(projectId)}/payroll`, { month }),
   disbursePayroll: (projectId: string, body: DomainRecord) =>
     api.post<DomainRecord>(`/projects/${projectId}/payroll/disburse`, body),
 };
@@ -363,6 +395,7 @@ export interface DashboardAnalytics {
   totalBudget?: number;
   totalSpent?: number;
   pendingApprovals?: number;
+  approvalsLimited?: boolean;
   stockAlerts?: number;
   approvals?: DomainRecord[];
 }
@@ -510,6 +543,7 @@ export interface ExecutiveReport {
     budget: number;
     spent: number;
     status: string;
+    progress?: number;
   }>;
   vendorSummaries?: Array<{ vendorId: string; name: string; totalPaid: number }>;
   generatedAt?: string;
