@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, Menu, Play, Plus, X } from "lucide-react";
 import siteCranes from "../assets/site-cranes-4k.jpg";
 import siteSlab from "../assets/site-slab-4k.jpg";
-import siteSteel from "../assets/site-steel-4k.jpg";
+import projectControl from "../assets/operation-project-control.jpg";
+import peoplePayroll from "../assets/operation-people-payroll.jpg";
+import materialsMovement from "../assets/operation-materials-movement.jpg";
+import financeApprovals from "../assets/operation-finance-approvals.jpg";
 import kineticDemo from "../assets/kinetic-demo.mp4";
 import "../styles/landing.css";
 
@@ -28,8 +31,8 @@ const OPERATIONS = [
     description:
       "Keep site progress, BOQs, inspections and issues connected to the project. Give your office and site teams a shared view of the work ahead.",
     tags: ["Projects & BOQ", "Daily progress", "Site inspections"],
-    image: siteCranes,
-    alt: "Tower cranes above an active construction site",
+    image: projectControl,
+    alt: "Construction engineers reviewing architectural drawings at a project site",
   },
   {
     title: "People & payroll",
@@ -37,8 +40,8 @@ const OPERATIONS = [
     description:
       "Manage workers, project allocations, attendance and payroll in one place. Follow daily wages and outstanding payments without losing the detail behind them.",
     tags: ["Worker allocation", "Attendance", "Payroll & wages"],
-    image: siteSlab,
-    alt: "Construction work on a concrete slab",
+    image: peoplePayroll,
+    alt: "Construction workers reviewing their daily roster with a supervisor on a tablet",
   },
   {
     title: "Materials & movement",
@@ -46,8 +49,8 @@ const OPERATIONS = [
     description:
       "Connect material requests, warehouse stock, vendors and site logistics. Follow receipts and approvals so your team knows what is needed and what has arrived.",
     tags: ["Inventory", "Material approvals", "Transport & logistics"],
-    image: siteSteel,
-    alt: "Structural steel at a construction site",
+    image: materialsMovement,
+    alt: "A forklift moving a pallet through an organized construction materials yard",
   },
   {
     title: "Finance & approvals",
@@ -55,8 +58,8 @@ const OPERATIONS = [
     description:
       "Bring expenses, vendor bills, payments and documents into a shared workflow. Review project spending, manage approvals and trace changes through the audit history.",
     tags: ["Bills & payments", "Spending reports", "Document control"],
-    image: siteCranes,
-    alt: "Construction project with tower cranes",
+    image: financeApprovals,
+    alt: "Colleagues reviewing construction invoices with a laptop and calculator",
   },
 ];
 const QUESTIONS = [
@@ -85,9 +88,7 @@ function Brand() {
   return (
     <a href="#top" className="kl-brand" aria-label="Kenetic home">
       <img src="/logo.png" alt="" width={44} height={44} />
-      <span>
-        KENETIC<span className="kl-brand-caption">CONSTRUCTION OPERATIONS</span>
-      </span>
+      <span>KENETIC</span>
     </a>
   );
 }
@@ -271,9 +272,7 @@ function LandingPage() {
           </div>
           <div className="kl-section-heading kl-reveal">
             <h2 id="operations-title">
-              THE WORK.
-              <br />
-              <span>CONNECTED.</span>
+              THE WORK. <span>CONNECTED.</span>
             </h2>
             <p>
               A clear view of the big picture.
