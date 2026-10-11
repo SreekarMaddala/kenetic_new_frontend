@@ -76,13 +76,29 @@ test("ledger form retains scope and zero while validating positive amounts", () 
 test("material selection must belong to the selected vendor", () => {
   const { readLedgerForm } = harness();
   const fields = [
-    { key: "vendorId", label: "Vendor", required: true, options: [{ value: "a", label: "A" }, { value: "b", label: "B" }] },
-    { key: "materialId", label: "Material", required: true, dependsOn: "vendorId", optionsByValue: {
-      a: [{ value: "cement", label: "Cement" }], b: [{ value: "sand", label: "Sand" }],
-    } },
+    {
+      key: "vendorId",
+      label: "Vendor",
+      required: true,
+      options: [
+        { value: "a", label: "A" },
+        { value: "b", label: "B" },
+      ],
+    },
+    {
+      key: "materialId",
+      label: "Material",
+      required: true,
+      dependsOn: "vendorId",
+      optionsByValue: {
+        a: [{ value: "cement", label: "Cement" }],
+        b: [{ value: "sand", label: "Sand" }],
+      },
+    },
   ];
   const form = new FormData();
-  form.set("vendorId", "a"); form.set("materialId", "cement");
+  form.set("vendorId", "a");
+  form.set("materialId", "cement");
   assert.equal(readLedgerForm(fields, form).materialId, "cement");
   form.set("vendorId", "b");
   assert.throws(() => readLedgerForm(fields, form), /Select a valid material/);
@@ -90,4 +106,22 @@ test("material selection must belong to the selected vendor", () => {
   assert.throws(() => readLedgerForm(fields, form), /Material is required/);
   form.set("materialId", "sand");
   assert.equal(readLedgerForm(fields, form).materialId, "sand");
+});
+
+test("cash reference is optional while other payment modes require it", () => {
+  const { readLedgerForm } = harness();
+  const fields = [
+    { key: "mode", label: "Mode", required: true },
+    { key: "reference", label: "Reference", requiredWhen: (values) => values.mode !== "Cash" },
+  ];
+  const form = new FormData();
+  form.set("mode", "Cash");
+  assert.equal(readLedgerForm(fields, form).reference, undefined);
+  for (const mode of ["NEFT", "RTGS", "Cheque", "UPI"]) {
+    form.set("mode", mode);
+    form.set("reference", "   ");
+    assert.throws(() => readLedgerForm(fields, form), /Reference is required/);
+    form.set("reference", " TXN-123 ");
+    assert.equal(readLedgerForm(fields, form).reference, "TXN-123");
+  }
 });

@@ -28,6 +28,7 @@ export type Field = {
   label: string;
   type?: "number" | "date" | "month" | "textarea" | "file";
   required?: boolean;
+  requiredWhen?: (values: Record<string, string>) => boolean;
   options?: { value: string; label: string }[];
   dependsOn?: string;
   optionsByValue?: Record<string, { value: string; label: string }[]>;
@@ -67,10 +68,14 @@ export function readLedgerForm(
   defaults: DomainRecord = {},
 ): DomainRecord {
   const body = { ...defaults };
+  const values = Object.fromEntries(
+    Array.from(form.entries(), ([key, value]) => [key, String(value)]),
+  );
   for (const field of fields) {
     if (field.type === "file") continue;
     const value = String(form.get(field.key) ?? "").trim();
-    if (field.required && !value) throw new Error(`${field.label} is required.`);
+    if ((field.requiredWhen?.(values) ?? field.required) && !value)
+      throw new Error(`${field.label} is required.`);
     const options = field.optionsByValue
       ? (field.optionsByValue[String(form.get(field.dependsOn ?? "") ?? "")] ?? [])
       : field.options;
@@ -654,14 +659,18 @@ export function WorkflowLedger({
               <div key={field.key} className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground block">
                   {field.label}
-                  {field.required ? <span className="text-orange-600 font-bold ml-1">*</span> : ""}
+                  {(field.requiredWhen?.(selections) ?? field.required) ? (
+                    <span className="text-orange-600 font-bold ml-1">*</span>
+                  ) : (
+                    ""
+                  )}
                 </label>
 
                 {field.options || field.optionsByValue ? (
                   <select
                     key={field.dependsOn ? (selections[field.dependsOn] ?? "") : field.key}
                     name={field.key}
-                    required={field.required}
+                    required={field.requiredWhen?.(selections) ?? field.required}
                     defaultValue={field.defaultValue ?? ""}
                     onChange={(e) =>
                       setSelections((values) => ({ ...values, [field.key]: e.target.value }))
@@ -682,7 +691,7 @@ export function WorkflowLedger({
                   <textarea
                     name={field.key}
                     rows={3}
-                    required={field.required}
+                    required={field.requiredWhen?.(selections) ?? field.required}
                     placeholder={field.placeholder}
                     className="w-full p-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
@@ -690,7 +699,7 @@ export function WorkflowLedger({
                   <input
                     name={field.key}
                     type={field.type ?? "text"}
-                    required={field.required}
+                    required={field.requiredWhen?.(selections) ?? field.required}
                     min={field.type === "number" ? (field.min ?? 0) : undefined}
                     step={field.type === "number" ? "any" : undefined}
                     defaultValue={field.defaultValue}

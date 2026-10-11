@@ -360,7 +360,7 @@ export type PaymentCreateRequest = {
   requestId: string;
   expectedVersion?: number;
   description?: string;
-  reference: string;
+  reference?: string;
   amount: number;
   date?: string;
   vendorId: string;

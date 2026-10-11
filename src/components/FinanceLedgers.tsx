@@ -60,7 +60,12 @@ export function PaymentLedger() {
       required: true,
       options: ["NEFT", "RTGS", "Cheque", "Cash", "UPI"].map((value) => ({ value, label: value })),
     },
-    { key: "reference", label: "Transaction / receipt reference", required: true },
+    {
+      key: "reference",
+      label: "Transaction / receipt reference",
+      requiredWhen: (values) => values.mode !== "Cash",
+      helperText: "Optional for cash payments. Required for other payment modes.",
+    },
     { key: "description", label: "Remarks", type: "textarea" },
   ];
   if (!projectId) return null;

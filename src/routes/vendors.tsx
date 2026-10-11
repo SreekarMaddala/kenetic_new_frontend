@@ -16,7 +16,7 @@ import {
   X,
   History,
 } from "lucide-react";
-import { vendorApi, type Vendor, type CreateVendorBody } from "../lib/api";
+import { api, vendorApi, type InventoryItem, type Vendor, type CreateVendorBody } from "../lib/api";
 
 export const Route = createFileRoute("/vendors")({
   component: VendorsPage,
@@ -75,6 +75,11 @@ function VendorsPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [materialsSupplied, setMaterialsSupplied] = useState("");
+  const [materialIds, setMaterialIds] = useState<string[]>([]);
+  const materials = useQuery({
+    queryKey: ["material-catalog"],
+    queryFn: () => api.get<InventoryItem[]>("/inventory?catalog=true"),
+  });
 
   const { data: rawVendors = [], isLoading } = useQuery({
     queryKey: ["vendors"],
@@ -96,12 +101,13 @@ function VendorsPage() {
       setEmail("");
       setPhone("");
       setMaterialsSupplied("");
+      setMaterialIds([]);
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
   const vendors: Vendor[] = (Array.isArray(rawVendors) ? rawVendors : []).map(
-    (v: any, idx: number) => ({
+    (v: Vendor & { recordId?: string; category?: string; materials?: string }, idx: number) => ({
       vendorId: v.vendorId || v.recordId || `VEN-${idx + 1}`,
       name: v.name || `Vendor ${idx + 1}`,
       type: v.type || v.category || "Supplier",
@@ -140,7 +146,10 @@ function VendorsPage() {
       type,
       email,
       phone,
-      materialsSupplied: materialsSupplied.trim(),
+      materialIds,
+      ...(materialIds.length === 0 && !editingVendor?.materialIds?.length
+        ? { materialsSupplied: materialsSupplied.trim() }
+        : {}),
     });
   };
 
@@ -167,6 +176,7 @@ function VendorsPage() {
               setPhone("");
               setType("Materials & Supplies");
               setMaterialsSupplied("");
+              setMaterialIds([]);
               setShowModal(true);
             }}
             className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
@@ -319,6 +329,7 @@ function VendorsPage() {
                       aria-label={`Edit ${ven.name}`}
                       onClick={() => {
                         setEditingVendor(ven);
+                        setMaterialIds(ven.materialIds ?? []);
                         setName(ven.name);
                         setType(ven.type);
                         setEmail(ven.email === "—" ? "" : ven.email);
@@ -391,7 +402,7 @@ function VendorsPage() {
         <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleCreateVendor}
-            className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-fade-up"
+            className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md max-h-[85vh] overflow-y-auto animate-fade-up"
           >
             <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/30">
               <h3 className="font-semibold text-sm">
@@ -468,18 +479,56 @@ function VendorsPage() {
                 <label className="font-semibold text-muted-foreground mb-1 block">
                   Materials Supplied
                 </label>
-                <input
-                  type="text"
+                <div
+                  className="max-h-44 overflow-y-auto border border-border rounded-md p-2 space-y-2"
+                  role="group"
                   aria-label="Materials Supplied"
-                  placeholder="e.g. Cement, sand, TMT steel"
-                  value={materialsSupplied}
-                  onChange={(e) => setMaterialsSupplied(e.target.value)}
-                  maxLength={4000}
-                  className="w-full h-9 px-3 bg-secondary/20 border border-border rounded-md text-xs focus:outline-none focus:border-primary"
-                />
+                >
+                  {materials.isPending ? (
+                    <p>Loading materials...</p>
+                  ) : materials.isError ? (
+                    <p>
+                      Unable to load materials.{" "}
+                      <button
+                        type="button"
+                        onClick={() => materials.refetch()}
+                        className="underline"
+                      >
+                        Try again
+                      </button>
+                    </p>
+                  ) : (materials.data ?? []).length === 0 ? (
+                    <p>Add materials in Inventory before assigning them to a vendor.</p>
+                  ) : (
+                    (materials.data ?? []).map((item) => (
+                      <label key={item.itemId} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={materialIds.includes(item.itemId)}
+                          disabled={!materialIds.includes(item.itemId) && materialIds.length >= 100}
+                          onChange={(e) =>
+                            setMaterialIds((ids) =>
+                              e.target.checked
+                                ? [...ids, item.itemId]
+                                : ids.filter((id) => id !== item.itemId),
+                            )
+                          }
+                        />
+                        {item.name} ({item.unit})
+                      </label>
+                    ))
+                  )}
+                </div>
                 <p className="mt-2 text-muted-foreground">
-                  Enter the materials this vendor supplies, separated by commas.
+                  Select all materials this vendor supplies. These will appear when recording
+                  payments.
                 </p>
+                {materialsSupplied && !editingVendor?.materialIds?.length && (
+                  <p className="mt-2 text-muted-foreground">
+                    Previously entered: {materialsSupplied}. Select the matching catalog materials
+                    above to use them in payments.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -493,7 +542,9 @@ function VendorsPage() {
               </button>
               <button
                 type="submit"
-                disabled={createVendorMutation.isPending}
+                disabled={
+                  createVendorMutation.isPending || materials.isPending || materials.isError
+                }
                 className="px-4 py-2 text-xs font-semibold bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity disabled:opacity-40 disabled:pointer-events-none"
               >
                 {createVendorMutation.isPending
