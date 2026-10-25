@@ -152,7 +152,7 @@ export function PayrollCyclePanel({
               title: "Settle",
               detail: "Record external payment",
               done: ready && status === "Paid",
-              active: ready && status === "Pending",
+              active: ready && (status === "Pending" || status === "Partially Paid"),
             },
           ].map((step, index) => (
             <li
@@ -225,8 +225,9 @@ export function PayrollCyclePanel({
         <div className="payroll-cycle-note">
           <LockKeyhole size={14} />
           <p>
-            Generating payroll locks attendance and payroll deductions for this month. Daily wage
-            payments reduce the remaining settlement. Worker advance records stay separate.
+            Generating payroll locks attendance, advances and deductions for this month. Final wages
+            subtract remaining advances and daily wages already paid. Reopen an unpaid cycle to
+            correct entries.
           </p>
         </div>
       </div>

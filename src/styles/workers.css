@@ -5,6 +5,60 @@
   padding: 28px 32px 36px;
   color: #253b30;
 }
+.workers-gangs {
+  border: 1px solid #dde5dc;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 22px;
+  background: #fff;
+}
+.workers-gangs-heading {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.workers-gangs h2 {
+  font-size: 17px;
+  font-weight: 650;
+}
+.workers-gangs p {
+  font-size: 13px;
+  color: #758176;
+  margin-top: 6px;
+}
+.workers-gang-create {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.workers-gang-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.workers-gang-card {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  border: 1px solid #dce4dd;
+  border-radius: 9px;
+  padding: 14px 18px;
+  min-width: 160px;
+}
+.workers-gang-card strong {
+  font-size: 14px;
+}
+.workers-gang-card span {
+  font-size: 12px;
+  color: #758176;
+}
+.workers-gang-card[aria-pressed="true"] {
+  border-color: #2d5b43;
+  background: #edf3ed;
+}
 .workers-header {
   display: flex;
   justify-content: space-between;

@@ -29,6 +29,8 @@ interface UnifiedExpense {
   date: string;
   source:
     | "Vendor Payment"
+    | "Subcontractor Payment"
+    | "Worker Advance"
     | "Logistics Fuel"
     | "Rental Transit"
     | "Labour Advance"
@@ -167,9 +169,9 @@ function Page() {
       list.push({
         id: String(pay.paymentId ?? `pay-${idx}`),
         date: String(pay.date ?? new Date().toISOString().slice(0, 10)),
-        source: "Vendor Payment",
-        description: `Vendor Payment: ${String(pay.vendorName ?? pay.vendorId ?? "Supplier")} (${String(pay.mode ?? "Bank Transfer")})`,
-        category: "Vendor & Material Bill",
+        source: pay.contractorId ? "Subcontractor Payment" : "Vendor Payment",
+        description: `${pay.contractorId ? "Subcontractor" : "Vendor"} Payment: ${String(pay.contractorName ?? pay.vendorName ?? pay.vendorId ?? "Supplier")} (${String(pay.mode ?? "Bank Transfer")})`,
+        category: pay.contractorId ? "Subcontractor" : "Vendor & Material Bill",
         amount: Number(pay.amount ?? 0),
         paidBy: String(pay.reference ? `Ref: ${pay.reference}` : "Finance Admin"),
         status: String(pay.status ?? "Pending"),
@@ -227,7 +229,12 @@ function Page() {
     });
 
     (spendingQuery.data ?? [])
-      .filter((entry) => !["Direct Expense", "Vendor Payment"].includes(String(entry.source)))
+      .filter(
+        (entry) =>
+          !["Direct Expense", "Vendor Payment", "Subcontractor Payment"].includes(
+            String(entry.source),
+          ),
+      )
       .forEach((entry) =>
         list.push({
           id: String(entry.id),
@@ -299,7 +306,7 @@ function Page() {
   const labourAdvancesTotal = useMemo(
     () =>
       filteredExpenses
-        .filter((i) => i.source === "Labour Advance")
+        .filter((i) => i.source === "Worker Advance")
         .reduce((sum, i) => sum + i.amount, 0),
     [filteredExpenses],
   );
@@ -347,10 +354,10 @@ function Page() {
   };
 
   const renderSourceBadge = (source: UnifiedExpense["source"]) => {
-    if (source === "Vendor Payment") {
+    if (source === "Vendor Payment" || source === "Subcontractor Payment") {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20 uppercase tracking-wider">
-          <CreditCard className="size-3" /> Vendor Payment
+          <CreditCard className="size-3" /> {source}
         </span>
       );
     }
@@ -368,16 +375,16 @@ function Page() {
         </span>
       );
     }
-    if (source === "Labour Advance") {
+    if (source === "Labour Advance" || source === "Worker Advance") {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 uppercase tracking-wider">
-          <Users className="size-3" /> Labour Advance
+          <Users className="size-3" /> {source}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-500/20 uppercase tracking-wider">
-        <Zap className="size-3" /> Direct Expense
+        <Zap className="size-3" /> {source}
       </span>
     );
   };
@@ -385,9 +392,9 @@ function Page() {
   return (
     <section className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-up">
       <p className="text-sm text-muted-foreground">
-        Posted spending includes approved expenses and vendor payments, paid daily wages, and
-        recorded payroll settlements. Logistics logs and labour deductions are shown as activity;
-        they are not posted expenses by themselves.
+        Posted spending includes approved expenses, vendor and subcontractor payments, worker
+        advances, paid daily wages, and recorded payroll settlements. Logistics logs and labour
+        deductions are shown as activity; they are not posted expenses by themselves.
       </p>
       {(expensesQuery.isError ||
         paymentsQuery.isError ||
@@ -550,6 +557,8 @@ function Page() {
           >
             <option value="ALL">🍱 All Expense Sources</option>
             <option value="Vendor Payment">💳 Vendor Payments</option>
+            <option value="Subcontractor Payment">Subcontractor Payments</option>
+            <option value="Worker Advance">Worker Advances</option>
             <option value="Logistics Fuel">⛽ Logistics Fuel</option>
             <option value="Rental Transit">🚚 Rental Transit</option>
             <option value="Labour Advance">🍱 Labour Advances</option>

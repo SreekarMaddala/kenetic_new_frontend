@@ -77,6 +77,11 @@ test("project subcontractor selectors coexist with cached paginated ledgers", ()
         };
       if (name.endsWith("WorkflowLedger"))
         return { WorkflowLedger: Ledger, reviewActions: () => [], recordUrl: () => "" };
+      if (name.endsWith("FinanceLedgers"))
+        return {
+          SubcontractorPaymentLedger: () =>
+            React.createElement("div", null, "Subcontractor Payments"),
+        };
       if (name.endsWith("lib/api")) return { api: { get: async () => [] } };
       throw new Error(`Unexpected import: ${name}`);
     },
@@ -87,6 +92,11 @@ test("project subcontractor selectors coexist with cached paginated ledgers", ()
         React.createElement(QueryClientProvider, { client }, React.createElement(Page)),
       );
     assert.match(render(), /Assigned Subcontractors/);
+    assert.match(render(), /Subcontractor Payments/);
+    assert.deepEqual(
+      Array.from(ledgers[0].editFields, (field) => field.key),
+      ["scopeOfWork", "contractValue", "startDate", "endDate"],
+    );
     assert.equal(ledgers[0].rows.length, 1);
     assert.equal(ledgers[0].fields[0].options.length, 0);
     assert.equal(ledgers[1].fields[1].options[0].value, "sub_assignment");

@@ -50,6 +50,7 @@ function Page() {
 function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
   const user = useAuth().user;
   const admin = user?.role === "operations_admin" || user?.role === "super_admin";
+  const canRecordAttendance = user?.role === "supervisor";
   const qc = useQueryClient();
   const [allocationOpen, setAllocationOpen] = useState(false);
   const [profile, setProfile] = useState<DomainRecord | null>(null);
@@ -86,7 +87,7 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
     (worker) => worker.allocationConfirmed && !worker.attendanceRecorded,
   );
   async function saveSelectedAttendance() {
-    if (bulkBusy) return;
+    if (!canRecordAttendance || bulkBusy) return;
     setBulkBusy(true);
     setBulkErrors([]);
     try {
@@ -205,55 +206,61 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
               </div>
             ))}
           </div>
-          <div className="rounded-xl border p-4 space-y-3">
-            <p className="text-sm">
-              Select unmarked workers below and save their attendance together. Bulk saves leave
-              wages unpaid and night shifts off; use individual rows for exceptions.
-            </p>
-            <div className="flex flex-wrap gap-3 items-center">
-              <button
-                className={input}
-                disabled={bulkBusy || !eligible.length}
-                onClick={() => setSelected(new Set(eligible.map(workerId)))}
-              >
-                Select loaded unmarked workers
-              </button>
-              <button className={input} disabled={bulkBusy} onClick={() => setSelected(new Set())}>
-                Clear selection
-              </button>
-              <select
-                aria-label="Attendance for selected workers"
-                className={input}
-                value={bulkStatus}
-                disabled={bulkBusy}
-                onChange={(event) => setBulkStatus(event.target.value)}
-              >
-                {["Present", "Half Day", "Absent"].map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-              <button
-                className={button}
-                disabled={bulkBusy || !eligible.some((worker) => selected.has(workerId(worker)))}
-                onClick={saveSelectedAttendance}
-              >
-                {bulkBusy
-                  ? "Saving attendance..."
-                  : `Save selected (${eligible.filter((worker) => selected.has(workerId(worker))).length})`}
-              </button>
+          {canRecordAttendance && (
+            <div className="rounded-xl border p-4 space-y-3">
+              <p className="text-sm">
+                Select unmarked workers below and save their attendance together. Bulk saves leave
+                wages unpaid and night shifts off; use individual rows for exceptions.
+              </p>
+              <div className="flex flex-wrap gap-3 items-center">
+                <button
+                  className={input}
+                  disabled={bulkBusy || !eligible.length}
+                  onClick={() => setSelected(new Set(eligible.map(workerId)))}
+                >
+                  Select loaded unmarked workers
+                </button>
+                <button
+                  className={input}
+                  disabled={bulkBusy}
+                  onClick={() => setSelected(new Set())}
+                >
+                  Clear selection
+                </button>
+                <select
+                  aria-label="Attendance for selected workers"
+                  className={input}
+                  value={bulkStatus}
+                  disabled={bulkBusy}
+                  onChange={(event) => setBulkStatus(event.target.value)}
+                >
+                  {["Present", "Half Day", "Absent"].map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
+                </select>
+                <button
+                  className={button}
+                  disabled={bulkBusy || !eligible.some((worker) => selected.has(workerId(worker)))}
+                  onClick={saveSelectedAttendance}
+                >
+                  {bulkBusy
+                    ? "Saving attendance..."
+                    : `Save selected (${eligible.filter((worker) => selected.has(workerId(worker))).length})`}
+                </button>
+              </div>
+              {!!bulkErrors.length && (
+                <ul role="alert" className="text-red-600 text-sm list-disc pl-5">
+                  {bulkErrors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              )}
             </div>
-            {!!bulkErrors.length && (
-              <ul role="alert" className="text-red-600 text-sm list-disc pl-5">
-                {bulkErrors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            )}
-          </div>
+          )}
           <div className="rounded-2xl border border-border bg-card overflow-hidden">
             <div className="p-5 flex flex-wrap justify-between gap-3 items-center">
               <h2 className="font-semibold">
-                {admin ? "Worker Allocation & Attendance" : "Daily Attendance & Payment"}
+                {admin ? "Worker Allocation & Attendance Records" : "Daily Attendance & Payment"}
               </h2>
               <button
                 className={input}
@@ -301,6 +308,7 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
                       key={String(worker.labourAttendanceId)}
                       worker={worker}
                       admin={admin}
+                      canRecordAttendance={canRecordAttendance}
                       projects={projects.data ?? []}
                       projectId={projectId}
                       day={day}
@@ -351,6 +359,7 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
 function WorkerRow({
   worker,
   admin,
+  canRecordAttendance,
   projects,
   projectId,
   day,
@@ -362,6 +371,7 @@ function WorkerRow({
 }: {
   worker: DomainRecord;
   admin: boolean;
+  canRecordAttendance: boolean;
   projects: { projectId: string; name: string }[];
   projectId: string;
   day: string;
@@ -379,13 +389,17 @@ function WorkerRow({
     nightShift: boolean;
   } | null>(null);
   const allocation = target ?? String(worker.allocatedProjectId ?? projectId);
+  const allocationUnchanged =
+    !!worker.allocationConfirmed && allocation === worker.allocatedProjectId;
   const status = draft?.status ?? String(worker.status ?? "Absent");
   const payment = draft?.paymentStatus ?? String(worker.paymentStatus ?? "Not paid");
   const nightShift = draft?.nightShift ?? Boolean(worker.nightShift);
-  const enabled = !!worker.allocationConfirmed && !blocked;
+  const enabled = canRecordAttendance && !!worker.allocationConfirmed && !blocked;
   const save = useMutation({
-    mutationFn: (operation: "allocate" | "attendance") =>
-      api.post("/supervisor/labour/attendance", {
+    mutationFn: (operation: "allocate" | "attendance") => {
+      if (operation === "attendance" && !canRecordAttendance)
+        throw new Error("Only supervisors can record attendance.");
+      return api.post("/supervisor/labour/attendance", {
         projectId,
         date: day,
         labourAttendanceId: worker.labourAttendanceId,
@@ -399,7 +413,8 @@ function WorkerRow({
               expectedVersion: worker.attendanceVersion ?? 0,
               correctionReason: correctionReason.trim(),
             }),
-      }),
+      });
+    },
     onSuccess: async (_, operation) => {
       setDraft(null);
       setTarget(null);
@@ -416,13 +431,15 @@ function WorkerRow({
   return (
     <tr className="border-t border-border">
       <td className="p-4">
-        <input
-          type="checkbox"
-          aria-label={`Select attendance for ${worker.name}`}
-          checked={selected}
-          disabled={!enabled || !!worker.attendanceRecorded || save.isPending}
-          onChange={(event) => onSelect(event.target.checked)}
-        />
+        {canRecordAttendance && (
+          <input
+            type="checkbox"
+            aria-label={`Select attendance for ${worker.name}`}
+            checked={selected}
+            disabled={!enabled || !!worker.attendanceRecorded || save.isPending}
+            onChange={(event) => onSelect(event.target.checked)}
+          />
+        )}
       </td>
       <td className="p-4 font-semibold">
         <button className="text-primary underline underline-offset-4" onClick={openProfile}>
@@ -450,13 +467,23 @@ function WorkerRow({
                   </option>
                 ))}
               </select>
-              <button
-                className={button}
-                disabled={blocked || save.isPending || !!worker.allocationStarted}
-                onClick={() => save.mutate("allocate")}
-              >
-                Assign
-              </button>
+              {allocationUnchanged ? (
+                <span role="status" className="text-sm font-semibold text-primary">
+                  Assigned
+                </span>
+              ) : (
+                <button
+                  className={button}
+                  disabled={blocked || save.isPending || !!worker.allocationStarted}
+                  onClick={() => save.mutate("allocate")}
+                >
+                  {save.isPending
+                    ? "Assigning..."
+                    : worker.allocationConfirmed
+                      ? "Reassign"
+                      : "Assign"}
+                </button>
+              )}
             </>
           ) : (
             <span>
@@ -472,85 +499,108 @@ function WorkerRow({
         </p>
       </td>
       <td className="p-4">
-        <div className="inline-flex rounded-full border border-border p-1 gap-1">
-          {["Present", "Half Day", "Absent"].map((value) => (
-            <button
-              key={value}
-              aria-pressed={status === value}
-              disabled={!enabled || save.isPending}
-              onClick={() =>
-                setDraft({
-                  status: value,
-                  paymentStatus: value === "Absent" ? "Not paid" : payment,
-                  nightShift: value === "Absent" ? false : nightShift,
-                })
-              }
-              className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-40 ${status === value ? (value === "Present" ? "bg-emerald-600 text-white" : value === "Half Day" ? "bg-amber-600 text-white" : "bg-slate-600 text-white") : "text-muted-foreground"}`}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
-          <input
-            type="checkbox"
-            checked={nightShift}
-            disabled={!enabled || status === "Absent" || save.isPending}
-            onChange={(event) =>
-              setDraft({ status, paymentStatus: payment, nightShift: event.target.checked })
-            }
-          />
-          Night shift (2× wage)
-        </label>
-        {!worker.attendanceRecorded && (
-          <p className="text-xs text-muted-foreground mt-1">Not saved yet</p>
+        {canRecordAttendance ? (
+          <>
+            <div className="inline-flex rounded-full border border-border p-1 gap-1">
+              {["Present", "Half Day", "Absent"].map((value) => (
+                <button
+                  key={value}
+                  aria-pressed={status === value}
+                  disabled={!enabled || save.isPending}
+                  onClick={() =>
+                    setDraft({
+                      status: value,
+                      paymentStatus: value === "Absent" ? "Not paid" : payment,
+                      nightShift: value === "Absent" ? false : nightShift,
+                    })
+                  }
+                  className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-40 ${status === value ? (value === "Present" ? "bg-emerald-600 text-white" : value === "Half Day" ? "bg-amber-600 text-white" : "bg-slate-600 text-white") : "text-muted-foreground"}`}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
+              <input
+                type="checkbox"
+                checked={nightShift}
+                disabled={!enabled || status === "Absent" || save.isPending}
+                onChange={(event) =>
+                  setDraft({ status, paymentStatus: payment, nightShift: event.target.checked })
+                }
+              />
+              Night shift (2× wage)
+            </label>
+            {!worker.attendanceRecorded && (
+              <p className="text-xs text-muted-foreground mt-1">Not saved yet</p>
+            )}
+          </>
+        ) : (
+          <span>
+            {worker.attendanceRecorded ? String(worker.status) : "Not marked"}
+            {worker.nightShift ? " · Night shift" : ""}
+          </span>
         )}
       </td>
       <td className="p-4">
-        <select
-          aria-label={`Payment for ${worker.name}`}
-          className={input}
-          disabled={!enabled || status === "Absent" || save.isPending}
-          value={payment}
-          onChange={(event) => setDraft({ status, paymentStatus: event.target.value, nightShift })}
-        >
-          <option>Not paid</option>
-          <option>Paid</option>
-        </select>
+        {canRecordAttendance ? (
+          <select
+            aria-label={`Payment for ${worker.name}`}
+            className={input}
+            disabled={!enabled || status === "Absent" || save.isPending}
+            value={payment}
+            onChange={(event) =>
+              setDraft({ status, paymentStatus: event.target.value, nightShift })
+            }
+          >
+            <option>Not paid</option>
+            <option>Paid</option>
+          </select>
+        ) : (
+          <span>{String(worker.paymentStatus ?? "Not paid")}</span>
+        )}
       </td>
       <td className="p-4 whitespace-nowrap font-semibold">
         {money(
-          enabled && payment !== "Paid"
-            ? Number(worker.rate) *
+          !canRecordAttendance
+            ? worker.paymentStatus === "Paid"
+              ? 0
+              : Number(worker.dailyWage ?? 0)
+            : enabled && payment !== "Paid"
+              ? Number(worker.rate) *
                 (status === "Half Day" ? 0.5 : status === "Present" ? 1 : 0) *
                 (nightShift && status !== "Absent" ? 2 : 1)
-            : 0,
+              : 0,
         )}
       </td>
       <td className="p-4">
-        {worker.paymentStatus === "Paid" && (
-          <label className="grid gap-1 text-xs mb-2">
-            Reason for changing a paid wage
-            <input
-              className={input}
-              value={correctionReason}
-              maxLength={500}
-              disabled={save.isPending}
-              onChange={(event) => setCorrectionReason(event.target.value)}
-            />
-          </label>
-        )}
-        <button
-          className={button}
-          disabled={!enabled || save.isPending}
-          onClick={() => save.mutate("attendance")}
-        >
-          {save.isPending ? "Saving..." : "Save"}
-        </button>
-        {save.error && (
-          <p role="alert" className="text-xs text-red-600 mt-2">
-            {save.error.message}
-          </p>
+        {canRecordAttendance && (
+          <>
+            {worker.paymentStatus === "Paid" && (
+              <label className="grid gap-1 text-xs mb-2">
+                Reason for changing a paid wage
+                <input
+                  className={input}
+                  value={correctionReason}
+                  maxLength={500}
+                  disabled={save.isPending}
+                  onChange={(event) => setCorrectionReason(event.target.value)}
+                />
+              </label>
+            )}
+            <button
+              className={button}
+              disabled={!enabled || save.isPending}
+              onClick={() => save.mutate("attendance")}
+            >
+              {save.isPending ? "Saving..." : "Save"}
+            </button>
+            {save.error && (
+              <p role="alert" className="text-xs text-red-600 mt-2">
+                {save.error.message}
+              </p>
+            )}
+          </>
         )}
       </td>
     </tr>

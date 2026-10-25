@@ -19,7 +19,9 @@ export function employeeAnalytics(workers: DomainRecord[], cycles: DomainRecord[
     const deductions = Number(salary?.deductions ?? worker?.advanceDeductions ?? 0);
     const dailyPaid = Number(salary?.dailyPaid ?? worker?.dailyPaid ?? 0);
     const net = salary ? Number(salary.net) : Math.max(0, gross - deductions - dailyPaid);
-    const paid = !!salary && cycle?.status === "Paid";
+    const groupKey = salary?.salary ? "staff" : String(salary?.gangId || "ungrouped");
+    const receipt = (cycle?.paidGroups as Record<string, DomainRecord> | undefined)?.[groupKey];
+    const paid = !!salary && (cycle?.status === "Paid" || !!receipt);
     return {
       id,
       name: String(source?.name ?? id),
@@ -37,8 +39,8 @@ export function employeeAnalytics(workers: DomainRecord[], cycles: DomainRecord[
             : gross > 0
               ? "Not paid"
               : "No wages",
-      reference: paid ? String(cycle?.paymentReference ?? "") : "",
-      paidAt: paid ? String(cycle?.paidAt ?? "") : "",
+      reference: paid ? String(receipt?.reference ?? cycle?.paymentReference ?? "") : "",
+      paidAt: paid ? String(receipt?.paidAt ?? cycle?.paidAt ?? "") : "",
     };
   });
 }

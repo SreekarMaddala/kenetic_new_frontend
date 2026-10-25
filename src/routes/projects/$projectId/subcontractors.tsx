@@ -3,6 +3,7 @@ import { WorkflowLedger, reviewActions, recordUrl } from "../../../components/Wo
 import { api, type DomainRecord } from "../../../lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { SubcontractorPaymentLedger } from "../../../components/FinanceLedgers";
 
 export const Route = createFileRoute("/projects/$projectId/subcontractors")({
   component: Page,
@@ -53,6 +54,12 @@ function Page() {
         title="Assigned Subcontractors"
         description="Select an onboarded subcontractor and define their scope, contract value, and work dates for this project."
         createLabel="Assign subcontractor"
+        editFields={[
+          { key: "scopeOfWork", label: "Scope of work", type: "textarea", required: true },
+          { key: "contractValue", label: "Contract value (INR)", type: "number", min: 0 },
+          { key: "startDate", label: "Start date", type: "date" },
+          { key: "endDate", label: "End date", type: "date" },
+        ]}
         endpoint={endpoint}
         idKey="subcontractorId"
         defaults={{ type: "Contractor", status: "Active" }}
@@ -63,10 +70,7 @@ function Page() {
             label: "Subcontractor",
             required: true,
             options:
-              registry.isError ||
-              assignments.isError ||
-              registry.isPending ||
-              assignments.isPending
+              registry.isError || assignments.isError || registry.isPending || assignments.isPending
                 ? []
                 : available.map((r) => ({
                     value: String(r.subcontractorId),
@@ -105,6 +109,7 @@ function Page() {
           run: (row) => api.patch(recordUrl(endpoint, row.subcontractorId), { status }),
         }))}
       />
+      <SubcontractorPaymentLedger projectId={projectId} />
       <WorkflowLedger
         title="Procurement Requests"
         endpoint={endpoint}

@@ -11,6 +11,7 @@ type Profile = {
   recordedAdvances?: number;
   advances?: WorkerAdvance[];
   advancesHasMore?: boolean;
+  advancesLocked?: boolean;
   attendance: {
     date: string;
     status: string;
@@ -160,6 +161,7 @@ export function WorkerProfile({
                   total={profile.data.recordedAdvances ?? 0}
                   hasMore={profile.data.advancesHasMore}
                   admin={admin}
+                  locked={profile.data.advancesLocked}
                 />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm text-left">

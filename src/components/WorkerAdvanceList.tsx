@@ -22,6 +22,7 @@ export function WorkerAdvanceList({
   total,
   hasMore,
   admin,
+  locked = false,
 }: {
   workerId: string;
   projectId: string;
@@ -29,6 +30,7 @@ export function WorkerAdvanceList({
   total: number;
   hasMore?: boolean;
   admin: boolean;
+  locked?: boolean;
 }) {
   const qc = useQueryClient();
   const [selection, setSelection] = useState<{
@@ -62,7 +64,7 @@ export function WorkerAdvanceList({
     onSuccess: async () => {
       toast.success(selection?.mode === "delete" ? "Advance removed." : "Advance amount cleared.");
       setSelection(null);
-      await qc.invalidateQueries({ queryKey: ["worker-profile", workerId] });
+      await qc.invalidateQueries();
     },
   });
   const remaining = selection ? (selection.entry.remainingAmount ?? selection.entry.amount) : 0;
@@ -81,7 +83,9 @@ export function WorkerAdvanceList({
         <strong>Remaining {money(total)}</strong>
       </div>
       <p className="text-xs text-muted-foreground">
-        Clear any repaid amount or delete an entry. Wages and payroll stay unchanged.
+        {locked
+          ? "Advances are locked by this month's payroll register. Reopen an unpaid cycle to make corrections."
+          : "Clear money repaid by the worker or delete an incorrect entry. Remaining advances reduce this month's final wages."}
       </p>
       {advances.length ? (
         <div className="overflow-x-auto">
@@ -120,14 +124,14 @@ export function WorkerAdvanceList({
                       <div className="flex gap-2 whitespace-nowrap">
                         <button
                           className="worker-advance-trigger"
-                          disabled={save.isPending}
+                          disabled={save.isPending || locked}
                           onClick={() => choose(entry, "clear")}
                         >
                           Clear amount
                         </button>
                         <button
                           className="worker-advance-trigger text-red-700"
-                          disabled={save.isPending}
+                          disabled={save.isPending || locked}
                           onClick={() => choose(entry, "delete")}
                         >
                           Delete

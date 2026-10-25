@@ -53,6 +53,7 @@ type Props = {
   endpoint: string;
   idKey: string;
   fields?: Field[];
+  editFields?: Field[];
   columns: { key: string; label: string }[];
   createLabel?: string;
   defaults?: DomainRecord;
@@ -141,6 +142,7 @@ export function WorkflowLedger({
   endpoint,
   idKey,
   fields,
+  editFields,
   columns,
   createLabel = "Add record",
   defaults,
@@ -152,6 +154,7 @@ export function WorkflowLedger({
   const qc = useQueryClient();
   const { projectId } = useProject();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<DomainRecord | null>(null);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
@@ -160,6 +163,7 @@ export function WorkflowLedger({
 
   useEffect(() => {
     setOpen(false);
+    setEditing(null);
     setSearch("");
     setProjectFilter("ALL");
     setMonthFilter("ALL");
@@ -265,12 +269,23 @@ export function WorkflowLedger({
     const form = new FormData(e.currentTarget);
     let body: DomainRecord;
     try {
-      body = readLedgerForm(fields ?? [], form, { ...defaults, requestId });
+      body = readLedgerForm(
+        editing ? (editFields ?? []) : (fields ?? []),
+        form,
+        editing ? { expectedVersion: editing.version ?? 0 } : { ...defaults, requestId },
+      );
+      if (editing) {
+        for (const field of editFields ?? []) {
+          if (!field.required && field.type !== "number" && !form.get(field.key))
+            body[field.key] = "";
+        }
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Invalid form");
       return;
     }
     mutation.mutate(async () => {
+      if (editing) return api.patch(recordUrl(endpoint, editing[idKey]), body);
       if (upload) {
         const file = form.get("file") as File;
         if (!file?.size || file.size > 20 * 1024 * 1024)
@@ -381,6 +396,7 @@ export function WorkflowLedger({
               <button
                 className="h-9 px-4 bg-orange-600 text-white font-bold text-xs rounded-xl hover:bg-orange-700 transition-colors flex items-center gap-1.5 shadow-sm"
                 onClick={() => {
+                  setEditing(null);
                   setRequestId(crypto.randomUUID());
                   setOpen(true);
                 }}
@@ -534,7 +550,9 @@ export function WorkflowLedger({
                     {c.label}
                   </th>
                 ))}
-                {actions.length > 0 && <th className="py-3 px-4 text-right">Actions</th>}
+                {(actions.length > 0 || editFields) && (
+                  <th className="py-3 px-4 text-right">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
@@ -545,9 +563,21 @@ export function WorkflowLedger({
                       {renderCellContent(c.key, r[c.key])}
                     </td>
                   ))}
-                  {actions.length > 0 && (
+                  {(actions.length > 0 || editFields) && (
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex gap-1.5 justify-end flex-wrap">
+                        {editFields && (
+                          <button
+                            disabled={mutation.isPending}
+                            className="h-7 px-3 text-xs font-bold rounded-lg border border-border"
+                            onClick={() => {
+                              setEditing(r);
+                              setOpen(true);
+                            }}
+                          >
+                            Edit
+                          </button>
+                        )}
                         {actions
                           .filter((a) => !a.visible || a.visible(r))
                           .map((a) => {
@@ -581,7 +611,7 @@ export function WorkflowLedger({
               {!filtered.length && (
                 <tr>
                   <td
-                    colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
+                    colSpan={columns.length + (actions.length > 0 || editFields ? 1 : 0)}
                     className="p-12 text-center"
                   >
                     <div className="flex flex-col items-center justify-center space-y-3">
@@ -605,6 +635,7 @@ export function WorkflowLedger({
                       {fields && !query.isLoading && (
                         <button
                           onClick={() => {
+                            setEditing(null);
                             setRequestId(crypto.randomUUID());
                             setOpen(true);
                           }}
@@ -642,12 +673,18 @@ export function WorkflowLedger({
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={submit}
+            role="dialog"
+            aria-modal="true"
+            aria-label={editing ? `Edit ${title}` : createLabel}
             className="bg-[color:var(--surface)] border border-border rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200"
           >
             <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h3 className="font-bold text-base text-foreground">{createLabel}</h3>
+              <h3 className="font-bold text-base text-foreground">
+                {editing ? `Edit ${title}` : createLabel}
+              </h3>
               <button
                 type="button"
+                disabled={mutation.isPending}
                 onClick={() => setOpen(false)}
                 className="size-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               >
@@ -655,63 +692,68 @@ export function WorkflowLedger({
               </button>
             </div>
 
-            {(fields ?? []).map((field) => (
-              <div key={field.key} className="space-y-1.5">
-                <label className="text-xs font-bold text-foreground block">
-                  {field.label}
-                  {(field.requiredWhen?.(selections) ?? field.required) ? (
-                    <span className="text-orange-600 font-bold ml-1">*</span>
-                  ) : (
-                    ""
-                  )}
-                </label>
+            <fieldset disabled={mutation.isPending} className="space-y-4">
+              {(editing ? (editFields ?? []) : (fields ?? [])).map((field) => (
+                <div key={field.key} className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground block">
+                    {field.label}
+                    {(field.requiredWhen?.(selections) ?? field.required) ? (
+                      <span className="text-orange-600 font-bold ml-1">*</span>
+                    ) : (
+                      ""
+                    )}
+                  </label>
 
-                {field.options || field.optionsByValue ? (
-                  <select
-                    key={field.dependsOn ? (selections[field.dependsOn] ?? "") : field.key}
-                    name={field.key}
-                    required={field.requiredWhen?.(selections) ?? field.required}
-                    defaultValue={field.defaultValue ?? ""}
-                    onChange={(e) =>
-                      setSelections((values) => ({ ...values, [field.key]: e.target.value }))
-                    }
-                    className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-                  >
-                    <option value="">Select option...</option>
-                    {(field.optionsByValue
-                      ? (field.optionsByValue[selections[field.dependsOn ?? ""]] ?? [])
-                      : (field.options ?? [])
-                    ).map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : field.type === "textarea" ? (
-                  <textarea
-                    name={field.key}
-                    rows={3}
-                    required={field.requiredWhen?.(selections) ?? field.required}
-                    placeholder={field.placeholder}
-                    className="w-full p-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                ) : (
-                  <input
-                    name={field.key}
-                    type={field.type ?? "text"}
-                    required={field.requiredWhen?.(selections) ?? field.required}
-                    min={field.type === "number" ? (field.min ?? 0) : undefined}
-                    step={field.type === "number" ? "any" : undefined}
-                    defaultValue={field.defaultValue}
-                    placeholder={field.placeholder}
-                    className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                )}
-                {field.helperText && (
-                  <p className="text-[10px] text-muted-foreground">{field.helperText}</p>
-                )}
-              </div>
-            ))}
+                  {field.options || field.optionsByValue ? (
+                    <select
+                      key={field.dependsOn ? (selections[field.dependsOn] ?? "") : field.key}
+                      name={field.key}
+                      required={field.requiredWhen?.(selections) ?? field.required}
+                      defaultValue={
+                        editing ? String(editing[field.key] ?? "") : (field.defaultValue ?? "")
+                      }
+                      onChange={(e) =>
+                        setSelections((values) => ({ ...values, [field.key]: e.target.value }))
+                      }
+                      className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                    >
+                      <option value="">Select option...</option>
+                      {(field.optionsByValue
+                        ? (field.optionsByValue[selections[field.dependsOn ?? ""]] ?? [])
+                        : (field.options ?? [])
+                      ).map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : field.type === "textarea" ? (
+                    <textarea
+                      name={field.key}
+                      defaultValue={editing ? String(editing[field.key] ?? "") : field.defaultValue}
+                      rows={3}
+                      required={field.requiredWhen?.(selections) ?? field.required}
+                      placeholder={field.placeholder}
+                      className="w-full p-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  ) : (
+                    <input
+                      name={field.key}
+                      type={field.type ?? "text"}
+                      required={field.requiredWhen?.(selections) ?? field.required}
+                      min={field.type === "number" ? (field.min ?? 0) : undefined}
+                      step={field.type === "number" ? "any" : undefined}
+                      defaultValue={editing ? String(editing[field.key] ?? "") : field.defaultValue}
+                      placeholder={field.placeholder}
+                      className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  )}
+                  {field.helperText && (
+                    <p className="text-[10px] text-muted-foreground">{field.helperText}</p>
+                  )}
+                </div>
+              ))}
+            </fieldset>
 
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
               <button

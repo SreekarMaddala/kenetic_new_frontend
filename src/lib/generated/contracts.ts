@@ -134,10 +134,11 @@ export type LabourAttendanceCreateRequest = {
   labourAttendanceId?: string;
   targetProjectId?: string;
   advanceId?: string;
-  operation?: "register" | "allocate" | "attendance" | "debit" | "advance" | "advance_clear" | "advance_delete";
+  operation?: "register" | "allocate" | "attendance" | "debit" | "advance" | "advance_clear" | "advance_delete" | "gang_create";
   status?: "Present" | "Half Day" | "Absent";
   paymentStatus?: "Paid" | "Not paid";
   nightShift?: boolean;
+  gangId?: string;
 };
 
 export type DprCreateRequest = {
@@ -363,9 +364,10 @@ export type PaymentCreateRequest = {
   reference?: string;
   amount: number;
   date?: string;
-  vendorId: string;
-  materialId: string;
+  vendorId?: string;
+  materialId?: string;
   billId?: string;
+  contractorId?: string;
   mode: "NEFT" | "RTGS" | "Cheque" | "Cash" | "UPI";
   status?: "Draft" | "Pending" | "Approved" | "Rejected";
   paymentId?: string;
@@ -379,6 +381,7 @@ export type PayrollCreateRequest = {
   month?: string;
   reference?: string;
   expectedCreatedAt?: string;
+  settlementGroup?: string;
   basic?: number;
   hra?: number;
   conveyance?: number;

@@ -33,7 +33,7 @@ export function WorkerAdvanceDialog({
     queryKey: ["worker-profile", id, project, date.slice(0, 7)],
     enabled: !!project && /^\d{4}-\d{2}-\d{2}$/.test(date),
     queryFn: () =>
-      api.get<{ recordedAdvances?: number }>(
+      api.get<{ recordedAdvances?: number; advancesLocked?: boolean }>(
         `/supervisor/labour/attendance/${encodeURIComponent(id)}?projectId=${encodeURIComponent(project)}&month=${date.slice(0, 7)}`,
       ),
   });
@@ -50,12 +50,13 @@ export function WorkerAdvanceDialog({
         }),
       ),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["worker-profile"] });
+      void qc.invalidateQueries();
       toast.success(`${money(Number(amount))} advance recorded for ${name}.`);
       onClose();
     },
   });
   const valid =
+    !profile.data?.advancesLocked &&
     !!project &&
     !!date &&
     !!reason.trim() &&
@@ -157,8 +158,9 @@ export function WorkerAdvanceDialog({
             </div>
           )}
           <p className="advance-note">
-            Record money already given to the worker. This is a separate record; wages and payroll
-            remain unchanged.
+            {profile.data?.advancesLocked
+              ? "This month's payroll is locked. Reopen the unpaid cycle before recording an advance."
+              : "Record money already given to the worker. Remaining advances are deducted from this project's final wages for the selected month."}
           </p>
           {(projects.error || profile.error) && (
             <p role="alert" className="advance-error">

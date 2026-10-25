@@ -5,6 +5,8 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { api, projectApi, type DomainRecord } from "../../../lib/api";
 import { toast } from "sonner";
 import { logisticsPeriod } from "../../../lib/logisticsPeriod";
+import { logisticsReport } from "../../../lib/logisticsReport";
+import { exportToExcel } from "../../../lib/excel";
 import {
   Truck,
   Compass,
@@ -314,6 +316,25 @@ function LogisticsPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
+        <button
+          className="rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm disabled:opacity-40"
+          disabled={logisticsQuery.isFetching || logisticsQuery.isError || !logisticsQuery.data}
+          onClick={() => {
+            const report = logisticsReport(logisticsQuery.data ?? [], projectId, visibleMonth);
+            if (!report.length) {
+              toast.info("No transport or fuel records for this period.");
+              return;
+            }
+            exportToExcel(
+              report,
+              `Transport_Fuel_${projectId}_${visibleMonth}`,
+              undefined,
+              `Transport & Fuel — ${project.data?.name ?? projectId} — ${visibleMonth === "all" ? "All dates" : visibleMonth}`,
+            );
+          }}
+        >
+          Export transport & fuel report
+        </button>
         {isAdmin ? (
           <>
             <label className="text-sm font-semibold" htmlFor="logistics-period">

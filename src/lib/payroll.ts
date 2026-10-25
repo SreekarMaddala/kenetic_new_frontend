@@ -4,6 +4,12 @@ export interface PayrollItem {
   id: string;
   name: string;
   category: string;
+  groupKey: string;
+  group: string;
+  advanceRecovery: number;
+  reference: string;
+  paidAt: string;
+  remaining: number;
   basic: number;
   hra: number;
   allowances: number;
@@ -22,10 +28,19 @@ export function payrollItems(cycles: DomainRecord[], month: string): PayrollItem
   if (!cycle) return [];
   return ((cycle.staff ?? []) as DomainRecord[]).map((member) => {
     const salary = member.salary as DomainRecord | undefined;
+    const groupKey = salary ? "staff" : String(member.gangId || "ungrouped");
+    const receipt = (cycle.paidGroups as Record<string, DomainRecord> | undefined)?.[groupKey];
+    const paid = cycle.status === "Paid" || !!receipt;
     return {
       id: String(member.labourId),
       name: String(member.name),
       category: salary ? "Salaried staff" : String(member.type ?? "Labour"),
+      groupKey,
+      group: salary ? "Salaried staff" : String(member.gangName || "Individual workers"),
+      advanceRecovery: Number(member.advanceRecovery ?? 0),
+      reference: String(receipt?.reference ?? (paid ? (cycle.paymentReference ?? "") : "")),
+      paidAt: String(receipt?.paidAt ?? (paid ? (cycle.paidAt ?? "") : "")),
+      remaining: paid ? 0 : Number(member.net ?? 0),
       basic: salary ? Number(salary.basic ?? 0) : Number(member.gross ?? 0),
       hra: Number(salary?.hra ?? 0),
       allowances: ["conveyance", "medical"].reduce(
@@ -39,7 +54,7 @@ export function payrollItems(cycles: DomainRecord[], month: string): PayrollItem
       deductions: Number(member.deductions ?? 0),
       dailyPaid: Number(member.dailyPaid ?? 0),
       netPay: Number(member.net ?? 0),
-      status: String(cycle.status),
+      status: paid ? "Paid" : "Pending",
     };
   });
 }

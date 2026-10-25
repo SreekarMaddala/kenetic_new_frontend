@@ -55,15 +55,7 @@ function ProjectDetailsPage() {
         (item.image as string) ||
         "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80",
       supervisor: supervisorName,
-      supervisorsTimeline: (item.supervisorsTimeline as TimelineItem[]) || [
-        {
-          name: supervisorName || "Site Supervisor",
-          phase: "General Construction",
-          start: "Jul 2026",
-          end: rawProject.endDate || "Dec 2026",
-          status: "Active",
-        },
-      ],
+      supervisorsTimeline: (item.supervisorsTimeline as TimelineItem[]) || [],
       todaysLabour: (item.todaysLabour as number) || 0,
       openIssues: (item.openIssues as number) || 0,
     };
@@ -100,8 +92,13 @@ function ProjectDetailsPage() {
   });
 
   const supervisorList = React.useMemo(() => {
-    return rawEmployees.filter((e) => e.role === "supervisor" || e.role === "operations_admin");
-  }, [rawEmployees]);
+    return rawEmployees.filter(
+      (e) =>
+        e.role === "supervisor" &&
+        e.status === "Active" &&
+        (!rawProject?.orgId || e.orgId === rawProject.orgId),
+    );
+  }, [rawEmployees, rawProject?.orgId]);
 
   const expenses = rawExpenses.map((e) => ({
     id: e.expenseId,
@@ -533,8 +530,7 @@ function ProjectDetailsPage() {
                 })
               ) : (
                 <div className="text-center py-12 border border-dashed border-border rounded-xl text-xs text-muted-foreground bg-secondary/15">
-                  No custom phase timelines allocated to this project. Allocation defaults to the
-                  main supervisor.
+                  No phase supervisors allocated yet. Select a supervisor to create an allocation.
                 </div>
               )}
             </div>
@@ -564,7 +560,6 @@ function ProjectDetailsPage() {
                       {s.name} ({s.email}) {s.department ? `— ${s.department}` : ""}
                     </option>
                   ))}
-                  <option value="Site Supervisor">Site Supervisor (Default)</option>
                 </select>
               </div>
 

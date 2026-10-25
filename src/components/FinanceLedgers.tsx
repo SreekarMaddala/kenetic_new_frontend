@@ -96,11 +96,70 @@ export function PaymentLedger() {
         { key: "status", label: "Status" },
       ]}
       transform={(rows) =>
-        rows.map((r) => ({
-          ...r,
-          projectName: projects.find((p) => p.projectId === r.projectId)?.name ?? r.projectId,
-        }))
+        rows
+          .filter((r) => !r.contractorId)
+          .map((r) => ({
+            ...r,
+            projectName: projects.find((p) => p.projectId === r.projectId)?.name ?? r.projectId,
+          }))
       }
+      actions={[...reviewActions(endpoint, "paymentId"), ...reversalActions(endpoint, "paymentId")]}
+    />
+  );
+}
+export function SubcontractorPaymentLedger({ projectId }: { projectId: string }) {
+  const endpoint = `/projects/${projectId}/payments`;
+  const contractors = useQuery({
+    queryKey: ["subcontractor-payment-options", projectId],
+    queryFn: () => api.get<DomainRecord[]>(`/projects/${projectId}/subcontractors`),
+  });
+  return (
+    <WorkflowLedger
+      title="Subcontractor Payments"
+      description="Record payments made to assigned subcontractors, then approve them to post project spending."
+      endpoint={endpoint}
+      idKey="paymentId"
+      createLabel="Record subcontractor payment"
+      transform={(rows) => rows.filter((row) => !!row.contractorId)}
+      fields={[
+        {
+          key: "contractorId",
+          label: "Assigned subcontractor",
+          required: true,
+          options: (contractors.data ?? [])
+            .filter((row) => row.type === "Contractor" && row.status === "Active")
+            .map((row) => ({ value: String(row.subcontractorId), label: String(row.name) })),
+          helperText: contractors.isError
+            ? "Unable to load subcontractors. Refresh and try again."
+            : "Choose an active subcontractor assigned above.",
+        },
+        { key: "amount", label: "Amount paid", type: "number", min: 0.01, required: true },
+        { key: "date", label: "Payment date", type: "date", required: true },
+        {
+          key: "mode",
+          label: "Payment mode",
+          required: true,
+          options: ["NEFT", "RTGS", "Cheque", "Cash", "UPI"].map((value) => ({
+            value,
+            label: value,
+          })),
+        },
+        {
+          key: "reference",
+          label: "Transaction / receipt reference",
+          requiredWhen: (values) => values.mode !== "Cash",
+        },
+        { key: "description", label: "Remarks", type: "textarea" },
+      ]}
+      columns={[
+        { key: "date", label: "Date" },
+        { key: "contractorName", label: "Subcontractor" },
+        { key: "amount", label: "Amount" },
+        { key: "mode", label: "Mode" },
+        { key: "reference", label: "Reference" },
+        { key: "description", label: "Remarks" },
+        { key: "status", label: "Status" },
+      ]}
       actions={[...reviewActions(endpoint, "paymentId"), ...reversalActions(endpoint, "paymentId")]}
     />
   );

@@ -12,6 +12,14 @@ function Page() {
       endpoint="/subcontractors"
       idKey="subcontractorId"
       createLabel="Onboard subcontractor"
+      editFields={[
+        { key: "name", label: "Company", required: true },
+        { key: "contactPerson", label: "Contact person", required: true },
+        { key: "phone", label: "Phone" },
+        { key: "email", label: "Email" },
+        { key: "trade", label: "Trade", required: true },
+        { key: "address", label: "Address", type: "textarea" },
+      ]}
       defaults={{ type: "Contractor", status: "Active" }}
       fields={[
         { key: "name", label: "Company", required: true },

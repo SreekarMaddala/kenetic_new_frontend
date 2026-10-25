@@ -36,32 +36,43 @@ function Payroll({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
   const [month, setMonth] = useState(() => localDate().slice(0, 7));
   const [reference, setReference] = useState("");
+  const [settlementGroup, setSettlementGroup] = useState("all");
   const endpoint = `/projects/${encodeURIComponent(projectId)}/payroll`;
   const cycles = useQuery({
     queryKey: ["payroll-cycle", projectId, month],
     queryFn: () => api.get<DomainRecord[]>(`${endpoint}?month=${encodeURIComponent(month)}`),
   });
   const cycle = cycles.data?.find((item) => item.month === month);
-  const items = payrollItems(cycles.data ?? [], month);
-  const total = (field: "gross" | "deductions" | "dailyPaid" | "netPay") =>
-    items.reduce((sum, item) => sum + item[field], 0);
+  const allItems = payrollItems(cycles.data ?? [], month);
+  const items =
+    settlementGroup === "all"
+      ? allItems
+      : allItems.filter((item) => item.groupKey === settlementGroup);
+  const groupOptions = [...new Map(allItems.map((item) => [item.groupKey, item.group])).entries()];
+  const total = (
+    field: "gross" | "deductions" | "dailyPaid" | "netPay" | "remaining" | "advanceRecovery",
+  ) => items.reduce((sum, item) => sum + item[field], 0);
   const operation = useMutation({
     mutationFn: ({
       kind,
       selectedMonth,
       receipt,
       createdAt,
+      group,
     }: {
       kind: "generate" | "settle" | "reopen";
       selectedMonth: string;
       receipt?: string;
       createdAt?: unknown;
+      group?: string;
     }) => {
       if (kind === "reopen") return api.delete(`${endpoint}/${selectedMonth}`);
       if (kind === "generate") return governanceApi.generatePayroll(projectId, selectedMonth);
       return api.post(kind === "settle" ? `${endpoint}/disburse` : endpoint, {
         month: selectedMonth,
-        ...(kind === "settle" ? { reference: receipt, expectedCreatedAt: createdAt } : {}),
+        ...(kind === "settle"
+          ? { reference: receipt, expectedCreatedAt: createdAt, settlementGroup: group ?? "all" }
+          : {}),
       });
     },
     onSuccess: async (_, variables) => {
@@ -72,6 +83,10 @@ function Payroll({ projectId }: { projectId: string }) {
         qc.invalidateQueries({ queryKey: ["project", projectId] }),
         qc.invalidateQueries({ queryKey: ["dashboard-analytics"] }),
         qc.invalidateQueries({ queryKey: ["my-salary"] }),
+        qc.invalidateQueries({ queryKey: ["worker-profile"] }),
+        qc.invalidateQueries({ queryKey: ["ledger"] }),
+        qc.invalidateQueries({ queryKey: ["posted-spending", projectId] }),
+        qc.invalidateQueries({ queryKey: ["executive-report"] }),
       ]);
       setReference("");
       toast.success(
@@ -92,6 +107,7 @@ function Payroll({ projectId }: { projectId: string }) {
       selectedMonth: month,
       receipt: reference.trim(),
       createdAt: cycle?.createdAt,
+      group: settlementGroup,
     });
   }
   const unavailable =
@@ -103,10 +119,11 @@ function Payroll({ projectId }: { projectId: string }) {
         onMonthChange={(value) => {
           setMonth(value);
           setReference("");
+          setSettlementGroup("all");
           operation.reset();
         }}
         status={cycle ? String(cycle.status) : undefined}
-        entries={items.length}
+        entries={allItems.length}
         loading={cycles.isPending}
         error={cycles.error?.message}
         busy={operation.isPending ? operation.variables?.kind : undefined}
@@ -115,7 +132,23 @@ function Payroll({ projectId }: { projectId: string }) {
         onExport={() =>
           exportToExcel(
             items.map((item) => ({ ...item, month })),
-            `Payroll_${projectId}_${month}`,
+            `Payroll_${projectId}_${month}_${settlementGroup}`,
+            [
+              { key: "month", header: "Month" },
+              { key: "name", header: "Employee / worker" },
+              { key: "group", header: "Group" },
+              { key: "category", header: "Category" },
+              { key: "gross", header: "Gross wages (INR)" },
+              { key: "advanceRecovery", header: "Advances deducted (INR)" },
+              { key: "deductions", header: "Total deductions including advances (INR)" },
+              { key: "dailyPaid", header: "Daily wages already paid (INR)" },
+              { key: "netPay", header: "Final wages after deductions (INR)" },
+              { key: "remaining", header: "Remaining settlement (INR)" },
+              { key: "status", header: "Payment status" },
+              { key: "reference", header: "Payment reference" },
+              { key: "paidAt", header: "Paid at" },
+            ],
+            `Monthly wages — ${month} — ${settlementGroup === "all" ? "All groups" : (items[0]?.group ?? "Selected group")}`,
           )
         }
         onReopen={() => operation.mutate({ kind: "reopen", selectedMonth: month })}
@@ -125,12 +158,37 @@ function Payroll({ projectId }: { projectId: string }) {
       />
       {cycle && !cycles.isError && (
         <>
+          <label className="grid gap-1 text-sm max-w-sm">
+            Worker group / report filter
+            <select
+              className={input}
+              value={settlementGroup}
+              disabled={operation.isPending}
+              onChange={(event) => {
+                setSettlementGroup(event.target.value);
+                setReference("");
+              }}
+            >
+              <option value="all">All groups and staff</option>
+              {groupOptions.map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!cycle.advanceRecoveryVersion && (
+            <p className="text-sm text-amber-700">
+              This register predates automatic advance deductions. Reopen an unpaid cycle and
+              generate it again to include advances.
+            </p>
+          )}
           <div className="grid gap-4 sm:grid-cols-4">
             {[
               ["Gross", total("gross")],
               ["Deductions", total("deductions")],
               ["Daily wages already paid", total("dailyPaid")],
-              ["Remaining settlement", total("netPay")],
+              ["Remaining settlement", total("remaining")],
             ].map(([label, value]) => (
               <div key={String(label)} className="payroll-summary-card">
                 <p className="text-sm text-muted-foreground">{label}</p>
@@ -138,6 +196,9 @@ function Payroll({ projectId }: { projectId: string }) {
               </div>
             ))}
           </div>
+          <p className="text-sm">
+            Advances deducted: <strong>{money(total("advanceRecovery"))}</strong>
+          </p>
           <p>
             Status: <strong>{String(cycle.status)}</strong>
             {cycle.paymentReference ? ` · Receipt: ${cycle.paymentReference}` : ""}
@@ -149,13 +210,17 @@ function Payroll({ projectId }: { projectId: string }) {
                   {[
                     "Employee",
                     "Category",
+                    "Group",
                     "Basic / wage earnings",
                     "HRA",
                     "Other allowances",
                     "Gross",
                     "Deductions",
+                    "Advances in deductions",
                     "Daily paid",
                     "Settlement",
+                    "Payment status",
+                    "Receipt",
                   ].map((label) => (
                     <th key={label} className="p-3">
                       {label}
@@ -168,12 +233,14 @@ function Payroll({ projectId }: { projectId: string }) {
                   <tr key={item.id} className="border-t border-border">
                     <td className="p-3">{item.name}</td>
                     <td className="p-3">{item.category}</td>
+                    <td className="p-3">{item.group}</td>
                     {[
                       item.basic,
                       item.hra,
                       item.allowances,
                       item.gross,
                       item.deductions,
+                      item.advanceRecovery,
                       item.dailyPaid,
                       item.netPay,
                     ].map((value, index) => (
@@ -181,16 +248,22 @@ function Payroll({ projectId }: { projectId: string }) {
                         {money(value)}
                       </td>
                     ))}
+                    <td className="p-3">{item.status}</td>
+                    <td className="p-3">{item.reference || "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {cycle.status === "Pending" && (
+          {cycle.status !== "Paid" && items.some((item) => item.status !== "Paid") && (
             <form onSubmit={settle} className="rounded-xl border border-border p-5 space-y-3">
               <p className="text-sm">
-                After paying the remaining amount outside this app, record the bank transaction or
-                receipt reference here.
+                Pay {money(total("remaining"))} outside this app for{" "}
+                {settlementGroup === "all"
+                  ? "all remaining groups and staff"
+                  : (groupOptions.find(([key]) => key === settlementGroup)?.[1] ??
+                    "the selected group")}
+                , then record its bank transaction or receipt reference here.
               </p>
               <label className="grid gap-1 text-sm">
                 Payment reference
