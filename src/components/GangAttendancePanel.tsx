@@ -5,6 +5,7 @@ import { api, type DomainRecord } from "../lib/api";
 import { gangAttendancePlan, gangSummaries, type GangAction } from "../lib/gangAttendance";
 import { saveWorkerBatch } from "../lib/workerAttendance";
 import { exportToExcel } from "../lib/excel";
+import { ProjectGangOnboarding } from "./GangProjectOnboarding";
 
 const input = "rounded-lg border border-border bg-background px-3 py-2 text-sm";
 const button =
@@ -79,6 +80,7 @@ export function GangAttendancePanel(props: Props) {
           </button>
         </div>
       </div>
+      {admin && <ProjectGangOnboarding projectId={projectId} day={day} blocked={blocked} refresh={props.refresh} />}
       {query.isPending ? (
         <p>Loading all gang members...</p>
       ) : query.isError ? (
@@ -104,7 +106,7 @@ export function GangAttendancePanel(props: Props) {
       ) : (
         <p className="text-sm text-muted-foreground">
           {admin
-            ? "No gangs with labourers yet. Onboard labourers inside a gang on the Workers page, then allocate the gang here."
+            ? "No gang labourers yet. Use the form above to onboard them directly to this project."
             : "No gang members assigned to this project for this date. Ask your admin to allocate the gang."}
         </p>
       )}

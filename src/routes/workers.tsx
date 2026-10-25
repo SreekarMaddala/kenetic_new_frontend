@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -17,6 +17,8 @@ import { WorkerProfile } from "../components/WorkerProfile";
 import { WorkerAdvanceDialog } from "../components/WorkerAdvanceDialog";
 import { useAuth } from "../contexts/AuthContext";
 import { workerId } from "../lib/workerAttendance";
+import { createGangOnboardingRequest } from "../lib/gangOnboarding";
+import { GangProjectAllocation } from "../components/GangProjectOnboarding";
 import "../styles/workers.css";
 
 export const Route = createFileRoute("/workers")({ component: WorkersPage });
@@ -35,6 +37,10 @@ function WorkersPage() {
   const [gangName, setGangName] = useState("");
   const [gangId, setGangId] = useState("");
   const [view, setView] = useState<"workers" | "gangs">("workers");
+  const [gangProject, setGangProject] = useState("");
+  const [gangDay, setGangDay] = useState(() => new Date().toLocaleDateString("en-CA"));
+  const onboardingRequest = useRef(createGangOnboardingRequest());
+  const projects = useQuery({ queryKey: ["projects"], queryFn: () => api.get<DomainRecord[]>("/projects") });
   const gangs = useQuery({
     queryKey: ["worker-gangs"],
     queryFn: async () => {
@@ -83,22 +89,21 @@ function WorkersPage() {
   });
   const register = useMutation({
     mutationFn: () => {
-      return api.post(endpoint, {
-        operation: "register",
+      return api.post(endpoint, onboardingRequest.current({
         name: name.trim(),
         rate: Number(rate),
         ...(view === "gangs" && gangId ? { gangId } : {}),
-      });
+        ...(view === "gangs" && gangId && gangProject ? { projectId: gangProject, date: gangDay } : {}),
+      }));
     },
     onSuccess: async () => {
+      onboardingRequest.current = createGangOnboardingRequest();
       setName("");
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["workers"] }),
-        qc.invalidateQueries({ queryKey: ["labour"] }),
-        qc.invalidateQueries({ queryKey: ["gang-attendance"] }),
-      ]);
+      await qc.invalidateQueries();
       toast.success(
-        gangId
+        view === "gangs" && gangProject
+          ? "Labourer onboarded and allocated to the selected project and date."
+          : gangId
           ? "Worker added to this gang."
           : "Worker registered. Allocate them from a project's attendance page.",
       );
@@ -277,6 +282,29 @@ function WorkersPage() {
       {view === "gangs" && !selectedGang && !gangId && admin && (
         <p className="workers-form-note">Create or open a gang above to onboard its labourers.</p>
       )}
+      {view === "gangs" && selectedGang && admin && <section className="rounded-2xl border border-border bg-card p-5 space-y-4" aria-label="Gang project assignment">
+        <h2 className="font-semibold">Project for {String(selectedGang.name)}</h2>
+        <p className="text-sm text-muted-foreground">Choose a project and date to allocate this gang. New labourers onboarded below will be allocated there automatically.</p>
+        <div className="flex flex-wrap gap-4">
+          <label className="grid gap-1 text-sm">Project
+            <select className="workers-input" aria-label="Gang project" value={gangProject} disabled={register.isPending || projects.isPending || projects.isError}
+              onChange={(event) => setGangProject(event.target.value)}>
+              <option value="">Gang membership only</option>
+              {(projects.data ?? []).filter((project) => project.status !== "Archived")
+                .map((project) => <option key={String(project.projectId)} value={String(project.projectId)}>{String(project.name)}</option>)}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm">Allocation date
+            <input type="date" className="workers-input" aria-label="Gang allocation date" value={gangDay} required disabled={register.isPending}
+              onChange={(event) => setGangDay(event.target.value)} />
+          </label>
+        </div>
+        {projects.isError && <p role="alert">Unable to load projects. <button onClick={() => projects.refetch()}>Retry projects</button></p>}
+        {gangProject && gangDay && <>
+          <GangProjectAllocation gangId={String(selectedGang.gangId)} projectId={gangProject} day={gangDay} blocked={register.isPending} />
+          <Link to="/projects/$projectId/labour" params={{ projectId: gangProject }} className="text-primary underline">Open project attendance and wages</Link>
+        </>}
+      </section>}
       {(view === "workers" || selectedGang) && (
         <form
           className="workers-register"
@@ -296,7 +324,9 @@ function WorkersPage() {
               <UserPlus size={20} />
             </span>
             <h2>
-              {selectedGang
+              {selectedGang && gangProject
+                ? `Onboard labourer in ${selectedGang.name} and allocate to project`
+                : selectedGang
                 ? `Onboard labourer in ${selectedGang.name}`
                 : "Register individual worker"}
             </h2>
@@ -345,7 +375,7 @@ function WorkersPage() {
               {register.isPending
                 ? "Registering..."
                 : selectedGang
-                  ? "Onboard labourer"
+                  ? gangProject ? "Onboard & allocate" : "Onboard labourer"
                   : "Register worker"}
             </button>
             <p className="workers-form-note">
