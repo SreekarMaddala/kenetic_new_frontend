@@ -4,12 +4,13 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 
-function workforce() {
+function workforce(gangResponse = []) {
   const module = { exports: {} };
   const states = [];
   const gangs = [];
   const workers = [];
   const calls = [];
+  const queries = new Map();
   let pending = [];
   let cursor = 0;
   const jsx = (type, props) => ({ type, props });
@@ -52,6 +53,9 @@ function workforce() {
         if (name === "../lib/api")
           return {
             api: {
+              async get() {
+                return gangResponse;
+              },
               async post(path, body) {
                 calls.push({ path, body });
                 if (body.operation === "gang_create") {
@@ -73,10 +77,13 @@ function workforce() {
         if (name === "@tanstack/react-query")
           return {
             useQueryClient: () => ({ invalidateQueries: async () => {} }),
-            useQuery: ({ queryKey }) => ({
-              data: queryKey[0] === "worker-gangs" ? gangs : workers,
-              isSuccess: true,
-            }),
+            useQuery: ({ queryKey, queryFn }) => {
+              queries.set(queryKey[0], queryFn);
+              return {
+                data: queryKey[0] === "worker-gangs" ? gangs : workers,
+                isSuccess: true,
+              };
+            },
             useMutation: (options) => ({
               isPending: false,
               mutate: () => {
@@ -104,12 +111,53 @@ function workforce() {
   return {
     render,
     calls,
+    async loadGangs() {
+      const response = await queries.get("worker-gangs")();
+      gangs.splice(0, gangs.length, ...response);
+    },
     async flush() {
       await Promise.all(pending);
       pending = [];
     },
   };
 }
+
+test("public gang responses without internal metadata open the labourer onboarding form", async () => {
+  const app = workforce([{ gangId: "gng_saved", name: "Saved gang", status: "Active" }]);
+  let screen = app.render();
+  await app.loadGangs();
+  screen.find((node) => node.type === "button" && node.props.children === "Gangs").props.onClick();
+  screen = app.render();
+  screen.find((node) => node.props?.className === "workers-gang-card").props.onClick();
+  screen = app.render();
+  assert.ok(
+    screen.some(
+      (node) => node.type === "h2" && node.props.children === "Onboard labourer in Saved gang",
+    ),
+  );
+  screen
+    .find((node) => node.props?.placeholder === "e.g. Ravi Kumar")
+    .props.onChange({ target: { value: "Ravi" } });
+  screen = app.render();
+  screen
+    .find((node) => node.type === "form" && node.props.className === "workers-register")
+    .props.onSubmit({ preventDefault() {} });
+  await app.flush();
+  assert.equal(app.calls[0].body.operation, "register");
+  assert.equal(app.calls[0].body.gangId, "gng_saved");
+});
+
+test("worker responses are rejected even when workers belong to a gang", async () => {
+  for (const response of [
+    [{ workerId: "wor_1", name: "Individual worker" }],
+    [{ workerId: "wor_1", gangId: "gng_saved", name: "Gang member" }],
+    [{ gangId: "gng_saved" }],
+  ]) {
+    const app = workforce(response);
+    app.render();
+    await assert.rejects(app.loadGangs(), /unexpected response/);
+  }
+});
 
 test("create a gang first, then register workers directly inside it", async () => {
   const app = workforce();

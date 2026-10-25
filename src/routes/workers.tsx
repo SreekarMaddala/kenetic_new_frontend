@@ -39,9 +39,21 @@ function WorkersPage() {
     queryKey: ["worker-gangs"],
     queryFn: async () => {
       const groups = await api.get<DomainRecord[]>(`${endpoint}?gangs=true`);
-      if (groups.some((group) => !group.gangId || group.entityType !== "worker-gang")) {
+      // API responses omit storage metadata such as entityType. Validate the
+      // public gang fields and reject worker rows from unsupported endpoints.
+      if (
+        groups.some(
+          (group) =>
+            typeof group.gangId !== "string" ||
+            !group.gangId.trim() ||
+            typeof group.name !== "string" ||
+            !group.name.trim() ||
+            !!group.workerId ||
+            !!group.labourAttendanceId,
+        )
+      ) {
         throw new Error(
-          "The API is running an older backend. Deploy the backend gang update to manage gangs.",
+          "Unable to load gangs. The server returned an unexpected response. Refresh and try again.",
         );
       }
       return groups;
