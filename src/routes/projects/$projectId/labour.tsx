@@ -8,6 +8,7 @@ import { exportToExcel } from "../../../lib/excel";
 import { toast } from "sonner";
 import { WorkerAllocationDialog } from "../../../components/WorkerAllocationDialog";
 import { WorkerProfile } from "../../../components/WorkerProfile";
+import { GangAttendancePanel } from "../../../components/GangAttendancePanel";
 import { saveWorkerBatch, workerId } from "../../../lib/workerAttendance";
 
 export const Route = createFileRoute("/projects/$projectId/labour")({ component: Page });
@@ -79,6 +80,9 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
       qc.invalidateQueries({ queryKey: ["projects"] }),
       qc.invalidateQueries({ queryKey: ["project", projectId] }),
       qc.invalidateQueries({ queryKey: ["payroll-cycle", projectId] }),
+      qc.invalidateQueries({ queryKey: ["gang-attendance", projectId, day] }),
+      qc.invalidateQueries({ queryKey: ["posted-spending", projectId] }),
+      qc.invalidateQueries({ queryKey: ["executive-report"] }),
     ]);
   }
   const workers = query.data?.pages.flatMap((page) => page.items) ?? [];
@@ -140,8 +144,8 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
     <>
       <p className="text-sm text-muted-foreground">
         {admin
-          ? "Use Allocate workers to copy yesterday's team, adjust individual projects, and confirm today's allocations together. Supervisors then record attendance."
-          : "The admin must confirm your workers’ allocations for this date before you can save attendance. Select unmarked workers to save attendance together. Record Half Days, night shifts and payments individually when needed."}
+          ? "Allocate a whole gang below, or use Allocate workers to manage individual allocations. Supervisors then record gang attendance and wages."
+          : "Mark gang attendance and daily wage payments together below. The admin must confirm each member's allocation for this date first. Use individual records for member exceptions."}
       </p>
       {admin && (
         <button
@@ -170,6 +174,15 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
           onClose={() => setProfile(null)}
         />
       )}
+      <GangAttendancePanel
+        projectId={projectId}
+        day={day}
+        admin={admin}
+        canRecordAttendance={canRecordAttendance}
+        blocked={bulkBusy}
+        setBusy={setBulkBusy}
+        refresh={refresh}
+      />
       {query.error ? (
         <div role="alert" className="text-red-600">
           Unable to load attendance: {query.error.message}{" "}
@@ -206,58 +219,66 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
               </div>
             ))}
           </div>
-          {canRecordAttendance && (
-            <div className="rounded-xl border p-4 space-y-3">
-              <p className="text-sm">
-                Select unmarked workers below and save their attendance together. Bulk saves leave
-                wages unpaid and night shifts off; use individual rows for exceptions.
-              </p>
-              <div className="flex flex-wrap gap-3 items-center">
-                <button
-                  className={input}
-                  disabled={bulkBusy || !eligible.length}
-                  onClick={() => setSelected(new Set(eligible.map(workerId)))}
-                >
-                  Select loaded unmarked workers
-                </button>
-                <button
-                  className={input}
-                  disabled={bulkBusy}
-                  onClick={() => setSelected(new Set())}
-                >
-                  Clear selection
-                </button>
-                <select
-                  aria-label="Attendance for selected workers"
-                  className={input}
-                  value={bulkStatus}
-                  disabled={bulkBusy}
-                  onChange={(event) => setBulkStatus(event.target.value)}
-                >
-                  {["Present", "Half Day", "Absent"].map((value) => (
-                    <option key={value}>{value}</option>
-                  ))}
-                </select>
-                <button
-                  className={button}
-                  disabled={bulkBusy || !eligible.some((worker) => selected.has(workerId(worker)))}
-                  onClick={saveSelectedAttendance}
-                >
-                  {bulkBusy
-                    ? "Saving attendance..."
-                    : `Save selected (${eligible.filter((worker) => selected.has(workerId(worker))).length})`}
-                </button>
+          <details
+            open={!workers.some((worker) => worker.gangId)}
+            className="rounded-2xl border border-border bg-card overflow-hidden"
+          >
+            <summary className="p-5 cursor-pointer font-semibold">
+              Individual workers &amp; member corrections
+            </summary>
+            {canRecordAttendance && (
+              <div className="rounded-xl border p-4 space-y-3">
+                <p className="text-sm">
+                  Select unmarked workers below and save their attendance together. Bulk saves leave
+                  wages unpaid and night shifts off; use individual rows for exceptions.
+                </p>
+                <div className="flex flex-wrap gap-3 items-center">
+                  <button
+                    className={input}
+                    disabled={bulkBusy || !eligible.length}
+                    onClick={() => setSelected(new Set(eligible.map(workerId)))}
+                  >
+                    Select loaded unmarked workers
+                  </button>
+                  <button
+                    className={input}
+                    disabled={bulkBusy}
+                    onClick={() => setSelected(new Set())}
+                  >
+                    Clear selection
+                  </button>
+                  <select
+                    aria-label="Attendance for selected workers"
+                    className={input}
+                    value={bulkStatus}
+                    disabled={bulkBusy}
+                    onChange={(event) => setBulkStatus(event.target.value)}
+                  >
+                    {["Present", "Half Day", "Absent"].map((value) => (
+                      <option key={value}>{value}</option>
+                    ))}
+                  </select>
+                  <button
+                    className={button}
+                    disabled={
+                      bulkBusy || !eligible.some((worker) => selected.has(workerId(worker)))
+                    }
+                    onClick={saveSelectedAttendance}
+                  >
+                    {bulkBusy
+                      ? "Saving attendance..."
+                      : `Save selected (${eligible.filter((worker) => selected.has(workerId(worker))).length})`}
+                  </button>
+                </div>
+                {!!bulkErrors.length && (
+                  <ul role="alert" className="text-red-600 text-sm list-disc pl-5">
+                    {bulkErrors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {!!bulkErrors.length && (
-                <ul role="alert" className="text-red-600 text-sm list-disc pl-5">
-                  {bulkErrors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-          <div className="rounded-2xl border border-border bg-card overflow-hidden">
+            )}
             <div className="p-5 flex flex-wrap justify-between gap-3 items-center">
               <h2 className="font-semibold">
                 {admin ? "Worker Allocation & Attendance Records" : "Daily Attendance & Payment"}
@@ -336,7 +357,7 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
                   : "No workers allocated to this project. Ask your admin to allocate workers."}
               </p>
             )}
-          </div>
+          </details>
         </>
       )}
       {projects.error && (

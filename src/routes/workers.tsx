@@ -95,6 +95,7 @@ function WorkersPage() {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["workers"] }),
         qc.invalidateQueries({ queryKey: ["labour"] }),
+        qc.invalidateQueries({ queryKey: ["gang-attendance"] }),
       ]);
       toast.success(
         gangId

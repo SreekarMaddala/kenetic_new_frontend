@@ -31,11 +31,17 @@ export function copiedTeam(
     .map(workerId);
 }
 
-export async function saveWorkerBatch<T>(items: T[], save: (item: T) => Promise<unknown>) {
+export async function saveWorkerBatch<T>(
+  items: T[],
+  save: (item: T) => Promise<unknown>,
+  concurrency = 4,
+) {
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 4)
+    throw new Error("Batch concurrency must be between one and four.");
   const succeeded: T[] = [];
   const failed: { item: T; message: string }[] = [];
-  for (let index = 0; index < items.length; index += 4) {
-    const group = items.slice(index, index + 4);
+  for (let index = 0; index < items.length; index += concurrency) {
+    const group = items.slice(index, index + concurrency);
     const results = await Promise.allSettled(
       group.map((item) => Promise.resolve().then(() => save(item))),
     );
