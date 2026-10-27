@@ -56,13 +56,11 @@ export function WorkerAdvanceDialog({
     },
   });
   const valid =
-    !profile.data?.advancesLocked &&
     !!project &&
     !!date &&
     !!reason.trim() &&
     Number.isFinite(Number(amount)) &&
-    Number(amount) > 0 &&
-    Number(amount) <= 1e12;
+    Number(amount) > 0;
   return (
     <Dialog
       open
@@ -120,7 +118,6 @@ export function WorkerAdvanceDialog({
                   type="number"
                   inputMode="decimal"
                   min="0.01"
-                  max="1000000000000"
                   step="0.01"
                   placeholder="e.g. 2,000"
                   value={amount}
@@ -152,15 +149,16 @@ export function WorkerAdvanceDialog({
           {profile.data && (
             <div className="advance-balance">
               <span>
-                Remaining advances this month
+                Outstanding advances this month
                 <strong>{money(profile.data.recordedAdvances ?? 0)}</strong>
               </span>
             </div>
           )}
           <p className="advance-note">
+            Record money already given to the worker. There is no advance amount limit.
             {profile.data?.advancesLocked
-              ? "This month's payroll is locked. Reopen the unpaid cycle before recording an advance."
-              : "Record money already given to the worker. Remaining advances are deducted from this project's final wages for the selected month."}
+              ? " This month's payroll has already been generated. New advances are recorded separately and do not change that payroll."
+              : " Outstanding advances are deducted when this project's payroll is generated for the selected month."}
           </p>
           {(projects.error || profile.error) && (
             <p role="alert" className="advance-error">

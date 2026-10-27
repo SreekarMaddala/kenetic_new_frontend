@@ -134,7 +134,7 @@ export type LabourAttendanceCreateRequest = {
   labourAttendanceId?: string;
   targetProjectId?: string;
   advanceId?: string;
-  operation?: "register" | "allocate" | "attendance" | "debit" | "advance" | "advance_clear" | "advance_delete" | "gang_create";
+  operation?: "register" | "allocate" | "attendance" | "debit" | "advance" | "advance_clear" | "advance_delete" | "gang_create" | "register_allocate";
   status?: "Present" | "Half Day" | "Absent";
   paymentStatus?: "Paid" | "Not paid";
   nightShift?: boolean;

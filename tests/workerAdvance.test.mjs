@@ -22,7 +22,7 @@ test("retrying an advance, including after edits are reverted, preserves its ide
 });
 test("invalid advances cannot be submitted", () => {
   const request = createAdvanceRequest();
-  for (const amount of [0, -10, NaN, Infinity, 1e13])
+  for (const amount of [0, -10, NaN, Infinity])
     assert.throws(() => request({ ...details, amount }));
   for (const fields of [
     { workerId: "" },
@@ -32,4 +32,9 @@ test("invalid advances cannot be submitted", () => {
     { description: "x".repeat(4001) },
   ])
     assert.throws(() => request({ ...details, ...fields }));
+});
+
+test("advances have no configured amount cap", () => {
+  const request = createAdvanceRequest();
+  assert.equal(request({ ...details, amount: 1e13 }).amount, 1e13);
 });
