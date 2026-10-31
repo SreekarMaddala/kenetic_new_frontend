@@ -6,6 +6,7 @@ import { api, projectApi, type DomainRecord } from "../../../lib/api";
 import { toast } from "sonner";
 import { logisticsPeriod } from "../../../lib/logisticsPeriod";
 import { logisticsReport } from "../../../lib/logisticsReport";
+import { vehicleLabel } from "../../../lib/vehicleAnalysis";
 import { exportToExcel } from "../../../lib/excel";
 import {
   Truck,
@@ -99,14 +100,7 @@ function LogisticsPage() {
     return rawLogs
       .filter((r) => r.tripType === "vehicle_registration")
       .map((r) => {
-        const rawVehicle = String(r.vehicle ?? r.model ?? "Vehicle");
-        const model = String(r.model ?? rawVehicle);
-        const plate = String(r.registrationNumber ?? r.plateNo ?? r.registrationNo ?? "");
-        const label = plate
-          ? rawVehicle.endsWith(`(${plate})`)
-            ? rawVehicle
-            : `${model} (${plate})`
-          : rawVehicle;
+        const label = vehicleLabel(r);
 
         if (seen.has(label)) {
           return null;
@@ -200,7 +194,7 @@ function LogisticsPage() {
       return api.post("/supervisor/logistics/trips", body);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["logistics-trips", projectId] });
+      qc.invalidateQueries({ queryKey: ["logistics-trips"] });
       toast.success("Logistics record saved successfully.");
     },
     onError: (e: Error) => toast.error(e.message),
