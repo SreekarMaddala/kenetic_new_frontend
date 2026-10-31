@@ -1,15 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import {
+  CalendarDays,
+  Clock3,
+  Download,
+  UserCheck,
+  UserPlus,
+  UsersRound,
+  Wallet,
+} from "lucide-react";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api, projectApi, type DomainRecord } from "../../../lib/api";
-import { PageHeader } from "../../../components/AppShell";
 import { exportToExcel } from "../../../lib/excel";
 import { toast } from "sonner";
 import { WorkerAllocationDialog } from "../../../components/WorkerAllocationDialog";
 import { WorkerProfile } from "../../../components/WorkerProfile";
 import { GangAttendancePanel } from "../../../components/GangAttendancePanel";
 import { saveWorkerBatch, workerId } from "../../../lib/workerAttendance";
+import "../../../styles/attendance.css";
 
 export const Route = createFileRoute("/projects/$projectId/labour")({ component: Page });
 const money = (value: number) =>
@@ -24,27 +33,37 @@ function Page() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   });
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto w-full space-y-6">
-      <PageHeader
-        title="Daily Site Attendance"
-        eyebrow="Worker allocation & daily wages"
-        actions={
-          <label className="grid gap-1 text-xs">
-            Attendance date
-            <input
-              type="date"
-              className={input}
-              value={day}
-              onChange={(event) => setDay(event.target.value)}
-            />
-          </label>
-        }
-      />
-      {day ? (
-        <AttendanceDay key={`${projectId}-${day}`} projectId={projectId} day={day} />
-      ) : (
-        <p>Select an attendance date.</p>
-      )}
+    <div className="attendance-page">
+      <header className="attendance-header">
+        <div className="attendance-heading">
+          <span className="attendance-icon">
+            <UsersRound size={25} />
+          </span>
+          <div>
+            <span className="attendance-eyebrow">PEOPLE &amp; OPERATIONS</span>
+            <h1>Daily Site Attendance</h1>
+            <p>Track your teams. Record attendance. Keep daily wages clear.</p>
+          </div>
+        </div>
+        <label className="attendance-date">
+          <span>
+            <CalendarDays size={13} /> Attendance date
+          </span>
+          <input
+            type="date"
+            className={input}
+            value={day}
+            onChange={(event) => setDay(event.target.value)}
+          />
+        </label>
+      </header>
+      <div className="attendance-content">
+        {day ? (
+          <AttendanceDay key={`${projectId}-${day}`} projectId={projectId} day={day} />
+        ) : (
+          <p>Select an attendance date.</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -142,20 +161,23 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
     .reduce((sum, worker) => sum + Number(worker.dailyWage ?? worker.rate), 0);
   return (
     <>
-      <p className="text-sm text-muted-foreground">
-        {admin
-          ? "Assign gangs below. Supervisors record how many people worked; gang advances are deducted when you prepare payroll. Use worker allocation for individual workers."
-          : "Enter how many people worked in each gang below. Your admin manages gang advances and payments. Individual workers are listed separately."}
-      </p>
-      {admin && (
-        <button
-          className={button}
-          disabled={bulkBusy || !projects.data?.length}
-          onClick={() => setAllocationOpen(true)}
-        >
-          Allocate workers / copy yesterday
-        </button>
-      )}
+      <div className="attendance-toolbar">
+        <p>
+          {admin
+            ? "Assign gangs below. Supervisors record how many people worked; gang advances are deducted when you prepare payroll. Use worker allocation for individual workers."
+            : "Enter how many people worked in each gang below. Your admin manages gang advances and payments. Individual workers are listed separately."}
+        </p>
+        {admin && (
+          <button
+            className="attendance-allocate"
+            disabled={bulkBusy || !projects.data?.length}
+            onClick={() => setAllocationOpen(true)}
+          >
+            <UserPlus size={16} aria-hidden="true" />
+            <span>Allocate workers / copy yesterday</span>
+          </button>
+        )}
+      </div>
       {allocationOpen && (
         <WorkerAllocationDialog
           projectId={projectId}
@@ -173,6 +195,47 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
           day={day}
           onClose={() => setProfile(null)}
         />
+      )}
+      {!query.error && !query.isLoading && !!workers.length && (
+        <section className="attendance-metrics" aria-label="Individual worker summary">
+          {[
+            {
+              label: "Workers present",
+              value: `${present.length} / ${siteWorkers.length}`,
+              note: "Individual workers at this site",
+              icon: UserCheck,
+            },
+            {
+              label: "Half days",
+              value: `${halfDay.length}`,
+              note: "Individual workers on a half day",
+              icon: Clock3,
+            },
+            {
+              label: "Wages paid today",
+              value: money(paid),
+              note: "Individual worker payments",
+              icon: Wallet,
+            },
+            {
+              label: "Wages unpaid today",
+              value: money(wages - paid),
+              note: "Individual wages still to pay",
+              icon: CalendarDays,
+            },
+          ].map(({ label, value, note, icon: Icon }) => (
+            <article key={label}>
+              <span className="attendance-metric-icon">
+                <Icon size={20} />
+              </span>
+              <div>
+                <p>{label}</p>
+                <strong>{value}</strong>
+                <small>{note}</small>
+              </div>
+            </article>
+          ))}
+        </section>
       )}
       <GangAttendancePanel
         projectId={projectId}
@@ -206,26 +269,9 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
               </button>
             </div>
           )}
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              ["Individual workers present", `${present.length} / ${siteWorkers.length}`],
-              ["Individual workers · half days", `${halfDay.length}`],
-              ["Individual wages paid today", money(paid)],
-              ["Individual wages unpaid today", money(wages - paid)],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-border bg-card p-6">
-                <p className="text-xs uppercase text-muted-foreground">{label}</p>
-                <p className="text-2xl font-bold mt-2">{value}</p>
-              </div>
-            ))}
-          </div>
-          <details
-            open={!workers.some((worker) => worker.gangId)}
-            className="rounded-2xl border border-border bg-card overflow-hidden"
-          >
-            <summary className="p-5 cursor-pointer font-semibold">
-              Individual workers &amp; member corrections
-            </summary>
+
+          <details open={!workers.some((worker) => worker.gangId)} className="attendance-records">
+            <summary>Individual workers &amp; member corrections</summary>
             {canRecordAttendance && (
               <div className="rounded-xl border p-4 space-y-3">
                 <p className="text-sm">
@@ -279,12 +325,12 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
                 )}
               </div>
             )}
-            <div className="p-5 flex flex-wrap justify-between gap-3 items-center">
+            <div className="attendance-records-heading">
               <h2 className="font-semibold">
                 {admin ? "Worker Allocation & Attendance Records" : "Daily Attendance & Payment"}
               </h2>
               <button
-                className={input}
+                className="attendance-export"
                 disabled={!siteWorkers.length}
                 onClick={() =>
                   exportToExcel(
@@ -300,11 +346,11 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
                   )
                 }
               >
-                Export attendance
+                <Download size={14} /> Export attendance
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
+              <table className="attendance-table w-full text-sm text-left">
                 <thead className="bg-secondary">
                   <tr>
                     {[
