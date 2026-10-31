@@ -1,202 +1,270 @@
+/* -- Workers Page -- */
 .workers-page {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 28px 32px 36px;
-  color: #253b30;
+  color: hsl(220 25% 10%);
 }
-.workers-gangs {
-  border: 1px solid #dde5dc;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 22px;
-  background: #fff;
-}
-.workers-gangs-heading {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.workers-gangs h2 {
-  font-size: 17px;
-  font-weight: 650;
-}
-.workers-gangs p {
-  font-size: 13px;
-  color: #758176;
-  margin-top: 6px;
-}
-.workers-gang-create {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.workers-gang-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.workers-gang-card {
-  display: grid;
-  gap: 6px;
-  text-align: left;
-  border: 1px solid #dce4dd;
-  border-radius: 9px;
-  padding: 14px 18px;
-  min-width: 160px;
-}
-.workers-gang-card strong {
-  font-size: 14px;
-}
-.workers-gang-card span {
-  font-size: 12px;
-  color: #758176;
-}
-.workers-gang-card[aria-pressed="true"] {
-  border-color: #2d5b43;
-  background: #edf3ed;
-}
+
+/* -- Hero Banner -- */
 .workers-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  margin-bottom: 24px;
+  padding: 28px 32px 26px;
+  background: linear-gradient(135deg, hsl(22 90% 48%) 0%, hsl(32 95% 55%) 50%, hsl(14 85% 42%) 100%);
+  position: relative;
+  overflow: hidden;
 }
+.workers-header::before {
+  content: "";
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  pointer-events: none;
+}
+.workers-header::after {
+  content: "";
+  position: absolute;
+  bottom: -60px; right: 220px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+.workers-header > div:first-child {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Icon badge */
+.workers-header-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+}
+
+.workers-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .workers-eyebrow {
-  color: #648171;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.75);
+  text-transform: uppercase;
 }
+
 .workers-header h1 {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 14px;
-  margin: 8px 0;
-  font-size: 30px;
-  font-weight: 650;
-  letter-spacing: -0.04em;
+  gap: 12px;
+  margin: 5px 0 4px;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   line-height: 1.2;
+  color: white;
 }
+
 .workers-header h1 span {
-  border: 1px solid #dae5dc;
-  background: #edf3ed;
-  color: #54715c;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.95);
   border-radius: 20px;
-  padding: 5px 10px;
+  padding: 4px 10px;
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
+
 .workers-header p {
-  font-size: 13px;
-  color: #758176;
-  line-height: 1.6;
-  max-width: 620px;
+  font-size: 0.8125rem;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.55;
+  max-width: 520px;
+  margin: 0;
 }
+
+/* Refresh button */
 .workers-refresh {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 14px;
-  background: #fff;
-  border: 1px solid #dce4dd;
-  border-radius: 9px;
-  font-size: 12px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.16);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255,255,255,0.35);
+  border-radius: 11px;
+  font-size: 0.8rem;
   font-weight: 600;
   flex-shrink: 0;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
 }
 .workers-refresh:hover {
-  background: #edf3ed;
+  background: rgba(255,255,255,0.28);
+  transform: translateY(-1px);
 }
 .workers-refresh:disabled {
-  opacity: 0.65;
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
+
+/* View toggle nav (Individual workers / Gangs) */
+.workers-page > nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 5px;
+  border-radius: 14px;
+  background: hsl(220 16% 94%);
+  width: fit-content;
+  margin: 20px 32px 0;
+}
+.workers-page > nav .workers-refresh {
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  backdrop-filter: none;
+  color: hsl(220 10% 50%);
+  background: transparent;
+  box-shadow: none;
+}
+.workers-page > nav .workers-refresh:hover {
+  background: rgba(255,255,255,0.7);
+  color: hsl(22 90% 44%);
+  transform: none;
+}
+.workers-page > nav .workers-refresh[aria-pressed="true"] {
+  background: white;
+  color: hsl(22 90% 44%);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+  transform: scale(1.02);
+}
+
+/* -- Metric Cards -- */
 .workers-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr 1.25fr;
   gap: 14px;
-  margin-bottom: 22px;
+  margin: 20px 32px 0;
 }
 .workers-metrics article {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
-  border: 1px solid #dde5dc;
-  border-radius: 12px;
+  gap: 16px;
+  border: 1.5px solid hsl(220 20% 88%);
+  border-radius: 16px;
   padding: 20px;
-  background: #fff;
-  box-shadow: 0 2px 4px #243d2c03;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   min-width: 0;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.workers-metrics article:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.09);
+  transform: translateY(-2px);
 }
 .workers-metric-icon {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
-  background: #eef4ed;
-  color: #477452;
-  border-radius: 11px;
+  background: linear-gradient(135deg, hsl(22 90% 48%) 0%, hsl(32 95% 55%) 100%);
+  color: white;
+  border-radius: 13px;
+  box-shadow: 0 2px 8px hsl(22 90% 48% / 0.35);
 }
 .workers-metrics p {
-  font-size: 11px;
-  color: #6d7e72;
-  margin-bottom: 7px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: hsl(220 10% 52%);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .workers-metrics strong {
   display: block;
-  font-size: 25px;
-  font-weight: 600;
+  font-size: 1.625rem;
+  font-weight: 700;
   letter-spacing: -0.035em;
-  line-height: 1.25;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+  color: hsl(220 25% 10%);
 }
 .workers-metrics strong.workers-range {
-  font-size: 19px;
+  font-size: 1.125rem;
   padding-top: 4px;
 }
 .workers-metrics small {
   display: block;
-  margin-top: 7px;
-  font-size: 10px;
-  color: #859086;
+  margin-top: 6px;
+  font-size: 0.6875rem;
+  color: hsl(220 10% 60%);
 }
+
+/* -- Register form -- */
 .workers-register {
   display: grid;
   grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2fr);
-  border: 1px solid #dce4dc;
-  border-radius: 12px;
+  border: 1.5px solid hsl(220 20% 88%);
+  border-radius: 16px;
   overflow: hidden;
-  background: #fff;
-  margin-bottom: 26px;
+  background: white;
+  margin: 20px 32px 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 .workers-register-intro {
   padding: 24px;
-  background: #edf3eb;
-  border-right: 1px solid #dde6da;
+  background: linear-gradient(160deg, hsl(22 90% 98%) 0%, hsl(32 95% 97%) 100%);
+  border-right: 1.5px solid hsl(22 90% 48% / 0.12);
 }
 .workers-register-icon {
   display: inline-flex;
-  color: #477452;
+  color: hsl(22 90% 48%);
   margin-bottom: 12px;
 }
 .workers-register h2 {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
+  color: hsl(220 25% 10%);
 }
 .workers-register-intro p {
-  color: #738272;
-  font-size: 12px;
+  color: hsl(220 10% 46%);
+  font-size: 0.75rem;
   line-height: 1.7;
   max-width: 245px;
 }
@@ -210,59 +278,151 @@
 }
 .workers-register-fields label {
   display: grid;
-  gap: 8px;
-  color: #4c5f51;
-  font-size: 12px;
-  font-weight: 500;
+  gap: 7px;
+  color: hsl(220 10% 40%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   min-width: 0;
 }
 .workers-input {
   width: 100%;
-  height: 43px;
-  background: #fafbf8;
-  border: 1px solid #d9e2d6;
-  border-radius: 8px;
+  height: 42px;
+  background: hsl(220 16% 97%);
+  border: 1.5px solid hsl(220 20% 88%);
+  border-radius: 10px;
   padding: 0 12px;
-  font-size: 13px;
-  color: #253b30;
+  font-size: 0.875rem;
+  color: hsl(220 25% 10%);
   font-weight: 400;
   min-width: 0;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 .workers-input::placeholder {
-  color: #99a299;
+  color: hsl(220 10% 66%);
 }
 .workers-input:focus {
-  outline: 3px solid #2858421a;
-  border-color: #769980;
-  background: #fff;
+  outline: none;
+  border-color: hsl(22 90% 48%);
+  box-shadow: 0 0 0 3px hsl(22 90% 48% / 0.12);
+  background: white;
 }
 .workers-submit {
   display: inline-flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  min-height: 43px;
-  border-radius: 8px;
-  padding: 10px 16px;
-  background: #285842;
+  min-height: 42px;
+  border-radius: 10px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, hsl(22 90% 48%) 0%, hsl(32 95% 55%) 100%);
   color: white;
-  font-weight: 600;
-  font-size: 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
   white-space: nowrap;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 10px hsl(22 90% 48% / 0.35);
+  transition: box-shadow 0.2s, transform 0.15s;
 }
 .workers-submit:hover {
-  background: #204b37;
+  box-shadow: 0 4px 18px hsl(22 90% 48% / 0.45);
+  transform: translateY(-1px);
 }
 .workers-submit:disabled {
-  background: #a1b4a5;
+  background: hsl(220 10% 78%);
+  box-shadow: none;
   cursor: not-allowed;
+  transform: none;
 }
 .workers-form-note {
   grid-column: 1 / -1;
-  color: #869187;
-  font-size: 10px;
-  line-height: 1.5;
+  color: hsl(220 10% 60%);
+  font-size: 0.6875rem;
+  line-height: 1.55;
 }
+
+/* -- Gangs section -- */
+.workers-gangs {
+  border: 1.5px solid hsl(220 20% 88%);
+  border-radius: 16px;
+  padding: 20px;
+  margin: 20px 32px 0;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.workers-gangs-heading {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.workers-gangs h2 {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.workers-gangs p {
+  font-size: 0.8rem;
+  color: hsl(220 10% 50%);
+  margin-top: 5px;
+}
+.workers-gang-create {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.workers-gang-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.workers-gang-card {
+  display: grid;
+  gap: 5px;
+  text-align: left;
+  border: 1.5px solid hsl(220 20% 88%);
+  border-radius: 12px;
+  padding: 14px 18px;
+  min-width: 160px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.workers-gang-card:hover {
+  border-color: hsl(22 90% 48%);
+  box-shadow: 0 2px 10px hsl(22 90% 48% / 0.12);
+  transform: translateY(-1px);
+}
+.workers-gang-card strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.workers-gang-card span {
+  font-size: 0.75rem;
+  color: hsl(220 10% 52%);
+}
+.workers-gang-card small {
+  font-size: 0.6875rem;
+  color: hsl(22 90% 48%);
+  font-weight: 600;
+}
+.workers-gang-card[aria-pressed="true"] {
+  border-color: hsl(22 90% 48%);
+  background: hsl(22 90% 98%);
+  box-shadow: 0 0 0 3px hsl(22 90% 48% / 0.12);
+}
+
+/* -- Registry panel -- */
+.workers-page .registry-panel {
+  border-radius: 16px;
+  margin: 20px 32px;
+}
+
+/* -- Profile link -- */
 .workers-profile-link {
   display: flex;
   align-items: center;
@@ -270,104 +430,81 @@
   text-align: left;
 }
 .workers-profile-link > svg {
-  color: #809585;
+  color: hsl(220 10% 60%);
 }
 .workers-profile-link:hover {
-  color: #285842;
+  color: hsl(22 90% 44%);
 }
-.workers-page .registry-panel {
-  border-radius: 12px;
+
+/* -- Standalone form note -- */
+.workers-page > .workers-form-note {
+  margin: 8px 32px 0;
+  color: hsl(220 10% 52%);
+  font-size: 0.8rem;
 }
+
+/* -- Focus rings -- */
 .workers-refresh:focus-visible,
 .workers-submit:focus-visible,
 .workers-profile-link:focus-visible {
-  outline: 3px solid #78a88d;
+  outline: 3px solid hsl(22 90% 48% / 0.5);
   outline-offset: 3px;
 }
+
+/* -- Spin animation -- */
 .workers-spin {
   animation: workers-spin 1s linear infinite;
 }
 @keyframes workers-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
+
+/* -- Responsive -- */
 @media (max-width: 1100px) {
-  .workers-metrics article {
-    padding: 16px;
-    gap: 10px;
+  .workers-metrics {
+    grid-template-columns: 1fr 1fr;
+    margin: 16px 24px 0;
   }
-  .workers-metric-icon {
-    width: 34px;
-    height: 34px;
-  }
-  .workers-metrics strong {
-    font-size: 22px;
-  }
-  .workers-metrics strong.workers-range {
-    font-size: 16px;
+  .workers-metrics article:last-child {
+    grid-column: 1 / -1;
   }
   .workers-register {
     grid-template-columns: 1fr;
+    margin: 16px 24px 0;
   }
   .workers-register-intro {
     border-right: 0;
-    border-bottom: 1px solid #dde6da;
+    border-bottom: 1.5px solid hsl(22 90% 48% / 0.1);
     padding: 18px 22px;
   }
-  .workers-register-icon {
-    float: left;
-    margin: 2px 14px 0 0;
-  }
-  .workers-register-intro p {
-    max-width: none;
-  }
-  .workers-register-fields {
-    padding: 22px;
-  }
+  .workers-register-icon { float: left; margin: 2px 14px 0 0; }
+  .workers-register-intro p { max-width: none; }
+  .workers-register-fields { padding: 22px; }
+  .workers-page > nav { margin-left: 24px; margin-right: 24px; }
+  .workers-gangs { margin-left: 24px; margin-right: 24px; }
+  .workers-page .registry-panel { margin: 16px 24px; }
 }
 @media (max-width: 640px) {
-  .workers-page {
-    padding: 22px 16px;
-  }
-  .workers-header {
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .workers-header h1 {
-    font-size: 27px;
-  }
-  .workers-header h1 span {
-    display: none;
-  }
-  .workers-refresh {
-    padding: 9px 10px;
-    margin-top: 20px;
-  }
-  .workers-metrics {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  .workers-metrics article {
-    align-items: center;
-  }
-  .workers-metrics strong.workers-range {
-    padding-top: 0;
-    font-size: 20px;
-  }
-  .workers-metrics small {
-    margin-top: 4px;
-  }
-  .workers-register-fields {
-    grid-template-columns: 1fr;
-    padding: 20px;
-  }
-  .workers-submit {
-    width: 100%;
-  }
+  .workers-header { padding: 20px 20px 18px; flex-wrap: wrap; }
+  .workers-header h1 { font-size: 1.375rem; }
+  .workers-header h1 span { display: none; }
+  .workers-header-icon { width: 44px; height: 44px; border-radius: 12px; }
+  .workers-metrics { grid-template-columns: 1fr; gap: 10px; margin: 14px 16px 0; }
+  .workers-metrics article:last-child { grid-column: auto; }
+  .workers-metrics article { align-items: center; }
+  .workers-metrics strong.workers-range { padding-top: 0; font-size: 1rem; }
+  .workers-register { margin: 14px 16px 0; }
+  .workers-register-fields { grid-template-columns: 1fr; padding: 20px; }
+  .workers-submit { width: 100%; }
+  .workers-page > nav { margin: 14px 16px 0; width: auto; }
+  .workers-gangs { margin: 14px 16px 0; }
+  .workers-page .registry-panel { margin: 14px 16px; }
+  .workers-page > .workers-form-note { margin-left: 16px; margin-right: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .workers-spin {
-    animation: none;
-  }
+  .workers-spin { animation: none; }
+  .workers-metrics article,
+  .workers-gang-card,
+  .workers-refresh,
+  .workers-submit { transition: none; transform: none !important; }
 }
