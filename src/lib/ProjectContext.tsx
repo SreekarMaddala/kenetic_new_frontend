@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from "react";
-import { useRouterState, useNavigate, useParams } from "@tanstack/react-router";
+import { useRouterState, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { projectApi, type Project } from "./api";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,8 +16,15 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const params = useParams({ strict: false });
-  const projectId = (params as Record<string, string | undefined>).projectId;
+  // This provider sits above the project outlet. Read the active child matches,
+  // rather than the params of the provider's own (root) route.
+  const projectId = useRouterState({
+    select: (state) =>
+      [...state.matches]
+        .reverse()
+        .map((match) => (match.params as Record<string, string | undefined>).projectId)
+        .find((id) => !!id),
+  });
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
@@ -31,7 +38,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const foundProject = projectId
     ? projects.find(
-        (p) => p.projectId === projectId || (p as any).id === projectId || (p as any)._id === projectId,
+        (p) =>
+          p.projectId === projectId || (p as any).id === projectId || (p as any)._id === projectId,
       )
     : undefined;
 

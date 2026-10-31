@@ -15,6 +15,12 @@ function InventoryCatalog() {
   const [itemId, setItemId] = useState("");
   const [location, setLocation] = useState("");
   const [tab, setTab] = useState("stock");
+  const [createRequest, setCreateRequest] = useState(0);
+  const openCreate = (view: "catalog" | "receipts") => {
+    setTab(view);
+    if (view === "receipts") setLocation("central");
+    setCreateRequest((request) => request + 1);
+  };
   const stock = useQuery({
     queryKey: ["inventory-summary"],
     queryFn: () => api.get<InventoryItem[]>("/inventory"),
@@ -27,13 +33,36 @@ function InventoryCatalog() {
   return (
     <div>
       <div className="p-6 pb-0 max-w-7xl mx-auto space-y-5">
-        <div>
-          <h1 className="text-3xl font-bold">Central Warehouse</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            One material catalog and warehouse across all projects. Select a category, material, and
-            location to view its records.
-          </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Central Warehouse</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              One material catalog and warehouse across all projects. Select a category, material,
+              and location to view its records.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => openCreate("catalog")}
+              className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold hover:bg-secondary"
+            >
+              Register new material
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreate("receipts")}
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
+            >
+              Add stock quantity
+            </button>
+          </div>
         </div>
+        <p className="rounded-xl border border-border bg-[color:var(--surface)] p-3 text-sm text-muted-foreground">
+          <strong className="text-foreground">New material?</strong> Register its details first.{" "}
+          <strong className="text-foreground">Adding quantity?</strong> Use Add stock quantity to
+          record a warehouse receipt.
+        </p>
         <div className="grid gap-4 md:grid-cols-3">
           <label className="space-y-2 text-sm font-medium">
             1. Material category
@@ -102,14 +131,17 @@ function InventoryCatalog() {
           {[
             ["stock", "Stock by location"],
             ["movements", "Tracking"],
-            ["receipts", "Warehouse receipts"],
+            ["receipts", "Add stock / receipts"],
             ["catalog", "Material catalog"],
           ].map(([value, label]) => (
             <button
               key={value}
               role="tab"
               aria-selected={tab === value}
-              onClick={() => setTab(value)}
+              onClick={() => {
+                setTab(value);
+                setCreateRequest(0);
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-semibold ${tab === value ? "bg-primary text-primary-foreground" : "border border-border"}`}
             >
               {label}
@@ -172,7 +204,10 @@ function InventoryCatalog() {
           description="Receive registered materials into the central warehouse before issuing them to projects."
           endpoint="/warehouse/grn"
           idKey="warehouseEventId"
-          createLabel="Receive material"
+          createLabel="Add stock quantity"
+          createRequest={createRequest}
+          submitLabel="Add quantity to warehouse"
+          createDescription="Choose a registered material and enter the quantity received. Saving adds that quantity to the central warehouse stock. To add more later, record another receipt."
           fields={[
             ...materialSelectionFields(items),
             {
@@ -181,7 +216,15 @@ function InventoryCatalog() {
               readOnly: true,
               defaultValue: "Central warehouse",
             },
-            { key: "qty", label: "Quantity", type: "number", min: 0.01, required: true },
+            {
+              key: "qty",
+              label: "Quantity to add",
+              type: "number",
+              min: 0.01,
+              required: true,
+              placeholder: "e.g. 100",
+              helperText: "Enter the quantity in the unit shown beside the selected material.",
+            },
             { key: "rate", label: "Rate", type: "number" },
             { key: "vendor", label: "Supplier", required: true },
             { key: "date", label: "Date", type: "date", required: true },
@@ -226,15 +269,30 @@ function InventoryCatalog() {
       {tab === "catalog" && (
         <WorkflowLedger
           title="Universal material catalog"
-          description="Register each material once. Locations and stock are maintained through warehouse receipts and movements."
+          description="Register material details here. To add or increase stock, use Add stock quantity."
           endpoint="/inventory"
           idKey="itemId"
           createLabel="Register material"
+          createRequest={createRequest}
+          submitLabel="Save material details"
+          createDescription="This form registers the material details only. After saving, click Add stock quantity to enter the quantity received at the central warehouse."
           fields={[
             { key: "category", label: "Material category", required: true },
             { key: "name", label: "Material name", required: true },
-            { key: "unit", label: "Unit", required: true },
-            { key: "reorderLevel", label: "Reorder level", type: "number" },
+            {
+              key: "unit",
+              label: "Unit",
+              required: true,
+              placeholder: "e.g. bags, kg, pcs",
+              helperText:
+                "The measurement unit used for every receipt and movement of this material.",
+            },
+            {
+              key: "reorderLevel",
+              label: "Low-stock alert level",
+              type: "number",
+              helperText: "Optional alert threshold. This does not add stock quantity.",
+            },
           ]}
           defaults={{ status: "Active" }}
           columns={[

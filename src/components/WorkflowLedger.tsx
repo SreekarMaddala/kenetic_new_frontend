@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from "react";
+import { useState, useEffect, useMemo, type FormEvent, type ReactNode } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -36,7 +36,7 @@ export type Field = {
   defaultValue?: string;
   readOnly?: boolean;
   placeholder?: string;
-  helperText?: string;
+  helperText?: string | ((values: Record<string, string>) => string);
 };
 
 export type LedgerAction = {
@@ -57,6 +57,9 @@ type Props = {
   editFields?: Field[];
   columns: { key: string; label: string }[];
   createLabel?: string;
+  createDescription?: ReactNode;
+  createRequest?: number;
+  submitLabel?: string;
   defaults?: DomainRecord;
   actions?: LedgerAction[];
   transform?: (rows: DomainRecord[]) => DomainRecord[];
@@ -146,6 +149,9 @@ export function WorkflowLedger({
   editFields,
   columns,
   createLabel = "Add record",
+  createDescription,
+  createRequest = 0,
+  submitLabel = "Save Record",
   defaults,
   actions = [],
   transform,
@@ -169,6 +175,14 @@ export function WorkflowLedger({
     setProjectFilter("ALL");
     setMonthFilter("ALL");
   }, [endpoint]);
+
+  useEffect(() => {
+    if (createRequest > 0) {
+      setEditing(null);
+      setRequestId(crypto.randomUUID());
+      setOpen(true);
+    }
+  }, [createRequest, endpoint]);
 
   useEffect(() => {
     setSelections({});
@@ -693,6 +707,12 @@ export function WorkflowLedger({
               </button>
             </div>
 
+            {!editing && createDescription && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+                {createDescription}
+              </div>
+            )}
+
             <fieldset disabled={mutation.isPending} className="space-y-4">
               {(editing ? (editFields ?? []) : (fields ?? [])).map((field) => (
                 <div key={field.key} className="space-y-1.5">
@@ -761,7 +781,11 @@ export function WorkflowLedger({
                     />
                   )}
                   {field.helperText && (
-                    <p className="text-[10px] text-muted-foreground">{field.helperText}</p>
+                    <p className="text-[10px] text-muted-foreground" aria-live="polite">
+                      {typeof field.helperText === "function"
+                        ? field.helperText(selections)
+                        : field.helperText}
+                    </p>
                   )}
                 </div>
               ))}
@@ -781,7 +805,7 @@ export function WorkflowLedger({
                 disabled={mutation.isPending}
                 className="h-10 px-5 rounded-xl bg-orange-600 text-white font-bold text-xs hover:bg-orange-700 transition-colors disabled:opacity-40 disabled:pointer-events-none shadow-sm"
               >
-                {mutation.isPending ? "Saving Record..." : "Save Record"}
+                {mutation.isPending ? "Saving..." : editing ? "Save changes" : submitLabel}
               </button>
             </div>
           </form>
