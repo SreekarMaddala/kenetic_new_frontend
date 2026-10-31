@@ -2,6 +2,7 @@ import { WorkflowLedger, reviewActions, reversalActions, type Field } from "./Wo
 import { useProject } from "../lib/ProjectContext";
 import { useQuery } from "@tanstack/react-query";
 import { vendorApi, api, type DomainRecord, type InventoryItem } from "../lib/api";
+import { vendorMaterialOptions, paymentMaterialSelection } from "../lib/vendorMaterials";
 
 export function PaymentLedger() {
   const { projectId, projects } = useProject();
@@ -31,15 +32,13 @@ export function PaymentLedger() {
       optionsByValue: Object.fromEntries(
         (vendors.data ?? []).map((vendor) => [
           vendor.vendorId,
-          (materials.data ?? [])
-            .filter((item) => vendor.materialIds?.includes(item.itemId))
-            .map((item) => ({ value: item.itemId, label: `${item.name} (${item.unit})` })),
+          vendorMaterialOptions(vendor, materials.data ?? []),
         ]),
       ),
       helperText:
         materials.isError || vendors.isError
           ? "Unable to load vendor materials. Refresh and try again."
-          : "Select a vendor first. Assign materials to the vendor in Vendors if the list is empty.",
+          : "Select a vendor to see their saved materials. Add materials in Vendors if the list is empty.",
     },
     ...(projectId
       ? [
@@ -80,6 +79,8 @@ export function PaymentLedger() {
       onCreate={(body) =>
         api.post(endpoint, {
           ...body,
+          materialId: undefined,
+          ...paymentMaterialSelection(String(body.materialId)),
           projectId,
         })
       }

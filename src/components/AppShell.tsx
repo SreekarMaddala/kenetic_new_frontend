@@ -142,7 +142,7 @@ const GLOBAL_NAV = [
   { to: "/employees", label: "Employees", icon: usersIcon },
   { to: "/workers", label: "Workers", icon: usersIcon },
   { to: "/vendors", label: "Vendors", icon: usersIcon },
-  { to: "/inventory", label: "Inventory Catalog", icon: inventoryIcon },
+  { to: "/inventory", label: "Central Warehouse", icon: inventoryIcon },
   { to: "/my-salary", label: "My Salary", icon: usersIcon },
   { to: "/subcontractors", label: "Subcontractors", icon: usersIcon },
   { to: "/vehicles", label: "Vehicles", icon: cartIcon },
@@ -172,6 +172,11 @@ const getProjectNav = (projectId: string, role?: string) => {
       {
         subLabel: "Inventory & Logistics",
         items: [
+          {
+            to: `/projects/${projectId}/materials`,
+            label: "Project Materials",
+            icon: inventoryIcon,
+          },
           {
             to: `/projects/${projectId}/logistics`,
             label: "Logistics (Load & KM)",
@@ -206,8 +211,8 @@ const getProjectNav = (projectId: string, role?: string) => {
       subLabel: "Site Operations",
       items: [
         {
-          to: `/projects/${projectId}/warehouse`,
-          label: "Warehouse Receipts & Issues",
+          to: `/projects/${projectId}/materials`,
+          label: "Project Materials",
           icon: inventoryIcon,
         },
         {

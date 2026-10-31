@@ -34,6 +34,7 @@ export type Field = {
   optionsByValue?: Record<string, { value: string; label: string }[]>;
   min?: number;
   defaultValue?: string;
+  readOnly?: boolean;
   placeholder?: string;
   helperText?: string;
 };
@@ -704,10 +705,20 @@ export function WorkflowLedger({
                     )}
                   </label>
 
+                  {field.readOnly && (
+                    <input
+                      type="hidden"
+                      name={field.key}
+                      value={
+                        editing ? String(editing[field.key] ?? "") : (field.defaultValue ?? "")
+                      }
+                    />
+                  )}
                   {field.options || field.optionsByValue ? (
                     <select
                       key={field.dependsOn ? (selections[field.dependsOn] ?? "") : field.key}
                       name={field.key}
+                      disabled={field.readOnly}
                       required={field.requiredWhen?.(selections) ?? field.required}
                       defaultValue={
                         editing ? String(editing[field.key] ?? "") : (field.defaultValue ?? "")
@@ -740,6 +751,7 @@ export function WorkflowLedger({
                     <input
                       name={field.key}
                       type={field.type ?? "text"}
+                      readOnly={field.readOnly}
                       required={field.requiredWhen?.(selections) ?? field.required}
                       min={field.type === "number" ? (field.min ?? 0) : undefined}
                       step={field.type === "number" ? "any" : undefined}

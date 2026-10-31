@@ -525,8 +525,8 @@ function VendorsPage() {
                 </p>
                 {materialsSupplied && !editingVendor?.materialIds?.length && (
                   <p className="mt-2 text-muted-foreground">
-                    Previously entered: {materialsSupplied}. Select the matching catalog materials
-                    above to use them in payments.
+                    Saved materials: {materialsSupplied}. These names are also available when
+                    recording payments.
                   </p>
                 )}
               </div>

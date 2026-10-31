@@ -464,11 +464,13 @@ export interface InventoryItem {
   name: string;
   category: string;
   totalStock: string;
+  centralStock?: number | string;
   deployedStock?: string;
   estimatedValue?: string;
   status: string;
   unit?: string;
   createdAt?: string;
+  projectBalances?: { projectId: string; quantity: number; receivedQty: number; usedQty: number; returnedQty: number }[];
 }
 export interface CreateInventoryBody {
   name: string;

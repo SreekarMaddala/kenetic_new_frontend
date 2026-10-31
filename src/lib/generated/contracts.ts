@@ -162,6 +162,7 @@ export type MaterialCreateRequest = {
   materialName: string;
   name?: string;
   unit: string;
+  category?: string;
   priority?: string;
   description?: string;
   remarks?: string;
@@ -169,6 +170,7 @@ export type MaterialCreateRequest = {
   qty?: number;
   requiredDate?: string;
   date?: string;
+  catalogItemId?: string;
   status?: "pending" | "approved" | "rejected" | "issued" | "Pending" | "Approved" | "Rejected" | "Issued";
   materialId?: string;
 };
@@ -309,12 +311,14 @@ export type WarehouseEventCreateRequest = {
   unit: string;
   vendor?: string;
   issuedTo?: string;
+  category?: string;
   qty: number;
   quantity?: number;
   rate?: number;
   date?: string;
   targetProjectId?: string;
   indentId?: string;
+  movementType?: "issue" | "return" | "usage";
 };
 
 export type BillCreateRequest = {
@@ -370,6 +374,7 @@ export type PaymentCreateRequest = {
   contractorId?: string;
   mode: "NEFT" | "RTGS" | "Cheque" | "Cash" | "UPI";
   status?: "Draft" | "Pending" | "Approved" | "Rejected";
+  materialName?: string;
   paymentId?: string;
 };
 

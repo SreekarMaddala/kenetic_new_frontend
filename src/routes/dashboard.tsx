@@ -45,7 +45,7 @@ export const Route = createFileRoute("/dashboard")({
 function DashboardPage() {
   const qc = useQueryClient();
   const inventory = useQuery({
-    queryKey: ["ledger", "/inventory"],
+    queryKey: ["inventory-summary"],
     queryFn: () => api.get<DomainRecord[]>("/inventory"),
   });
   const stockAlerts = (inventory.data ?? [])
