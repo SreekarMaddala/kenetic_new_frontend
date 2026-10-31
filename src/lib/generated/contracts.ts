@@ -134,11 +134,17 @@ export type LabourAttendanceCreateRequest = {
   labourAttendanceId?: string;
   targetProjectId?: string;
   advanceId?: string;
-  operation?: "register" | "allocate" | "attendance" | "debit" | "advance" | "advance_clear" | "advance_delete" | "gang_create" | "register_allocate";
+  operation?: "register" | "allocate" | "attendance" | "debit" | "advance" | "advance_clear" | "advance_delete" | "gang_create" | "register_allocate" | "gang_configure" | "gang_allocate" | "gang_attendance" | "gang_advance" | "gang_advance_return";
   status?: "Present" | "Half Day" | "Absent";
   paymentStatus?: "Paid" | "Not paid";
   nightShift?: boolean;
   gangId?: string;
+  size?: number;
+  present?: number;
+  halfDay?: number;
+  nightCount?: number;
+  headcountFrom?: string;
+  attendanceMode?: "headcount";
 };
 
 export type DprCreateRequest = {

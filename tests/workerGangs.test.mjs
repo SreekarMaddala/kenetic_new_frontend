@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { createGangOnboardingRequest } from "../src/lib/gangOnboarding.ts";
+import { localDate } from "../src/lib/projectForm.ts";
 
 function workforce(gangResponse = []) {
   const module = { exports: {} };
@@ -31,13 +33,15 @@ function workforce(gangResponse = []) {
       Intl,
       Number,
       String,
+      Date,
       require(name) {
         if (name === "react/jsx-runtime") return { jsx, jsxs: jsx };
         if (name === "react")
           return {
             useState(initial) {
               const index = cursor++;
-              if (!(index in states)) states[index] = initial;
+              if (!(index in states))
+                states[index] = typeof initial === "function" ? initial() : initial;
               return [
                 states[index],
                 (value) => {
@@ -45,7 +49,16 @@ function workforce(gangResponse = []) {
                 },
               ];
             },
+            useRef(initial) {
+              const index = cursor++;
+              if (!(index in states)) states[index] = { current: initial };
+              return states[index];
+            },
           };
+        if (name === "../lib/gangOnboarding") return { createGangOnboardingRequest };
+        if (name === "../lib/projectForm") return { localDate };
+        if (name === "../components/GangHeadcount")
+          return { GangManagement: "GangManagement", gangMoney: (value) => String(value) };
         if (name === "@tanstack/react-router") return { createFileRoute: () => () => ({}) };
         if (name === "../contexts/AuthContext")
           return { useAuth: () => ({ user: { role: "operations_admin" } }) };
@@ -59,7 +72,7 @@ function workforce(gangResponse = []) {
               async post(path, body) {
                 calls.push({ path, body });
                 if (body.operation === "gang_create") {
-                  const gang = { gangId: "gng_1", name: body.name };
+                  const gang = { gangId: "gng_1", ...body };
                   gangs.push(gang);
                   return gang;
                 }
@@ -122,7 +135,7 @@ function workforce(gangResponse = []) {
   };
 }
 
-test("public gang responses without internal metadata open the labourer onboarding form", async () => {
+test("existing gangs open setup and account management without requiring named labourers", async () => {
   const app = workforce([{ gangId: "gng_saved", name: "Saved gang", status: "Active" }]);
   let screen = app.render();
   await app.loadGangs();
@@ -130,21 +143,14 @@ test("public gang responses without internal metadata open the labourer onboardi
   screen = app.render();
   screen.find((node) => node.props?.className === "workers-gang-card").props.onClick();
   screen = app.render();
-  assert.ok(
-    screen.some(
-      (node) => node.type === "h2" && node.props.children === "Onboard labourer in Saved gang",
-    ),
+  assert.equal(
+    screen.find((node) => node.type === "GangManagement").props.gang.gangId,
+    "gng_saved",
   );
-  screen
-    .find((node) => node.props?.placeholder === "e.g. Ravi Kumar")
-    .props.onChange({ target: { value: "Ravi" } });
-  screen = app.render();
-  screen
-    .find((node) => node.type === "form" && node.props.className === "workers-register")
-    .props.onSubmit({ preventDefault() {} });
-  await app.flush();
-  assert.equal(app.calls[0].body.operation, "register");
-  assert.equal(app.calls[0].body.gangId, "gng_saved");
+  assert.equal(
+    screen.some((node) => node.props?.placeholder === "e.g. Ravi Kumar"),
+    false,
+  );
 });
 
 test("worker responses are rejected even when workers belong to a gang", async () => {
@@ -159,56 +165,49 @@ test("worker responses are rejected even when workers belong to a gang", async (
   }
 });
 
-test("create a gang first, then register workers directly inside it", async () => {
+test("create a gang with size and one rate, while individual registration remains separate", async () => {
   const app = workforce();
   let screen = app.render();
-  assert.ok(screen.some((node) => node.props?.title === "Individual workers"));
-  screen.find((node) => node.type === "button" && node.props.children === "Gangs").props.onClick();
+  screen
+    .find(
+      (node) =>
+        node.type === "button" &&
+        Array.isArray(node.props.children) &&
+        node.props.children.includes("New gang"),
+    )
+    .props.onClick();
+  for (const [label, value] of [
+    ["Gang name", "Masonry gang"],
+    ["Gang size", "10"],
+    ["Gang daily rate", "800"],
+  ]) {
+    screen = app.render();
+    screen
+      .find((node) => node.props?.["aria-label"] === label)
+      .props.onChange({ target: { value } });
+  }
   screen = app.render();
+  screen
+    .find((node) => node.type === "form" && node.props.className.includes("workers-gang-create"))
+    .props.onSubmit({ preventDefault() {} });
+  await app.flush();
+  assert.equal(app.calls.length, 1);
+  const body = app.calls[0].body;
+  assert.equal(body.operation, "gang_create");
+  assert.equal(body.attendanceMode, "headcount");
+  assert.equal(body.size, 10);
+  assert.equal(body.rate, 800);
+  assert.match(body.headcountFrom, /^\d{4}-\d{2}-\d{2}$/);
+  screen = app.render();
+  assert.equal(screen.find((node) => node.type === "GangManagement").props.gang.gangId, "gng_1");
   assert.equal(
-    screen.some((node) => node.type === "form" && node.props.className === "workers-register"),
+    screen.some((node) => node.props?.placeholder === "e.g. Ravi Kumar"),
     false,
   );
-  screen
-    .find((node) => node.props?.["aria-label"] === "Gang name")
-    .props.onChange({ target: { value: "Masonry gang" } });
-  screen = app.render();
-  screen
-    .find((node) => node.type === "form" && node.props.className === "workers-gang-create")
-    .props.onSubmit({ preventDefault() {} });
-  await app.flush();
-  screen = app.render();
-  const table = screen.find((node) => node.props?.title === "Masonry gang — Members");
-  assert.equal(table.props.rows.length, 0);
-  assert.equal(app.calls[0].body.operation, "gang_create");
-  assert.equal(app.calls[0].body.name, "Masonry gang");
-  screen
-    .find((node) => node.props?.placeholder === "e.g. Ravi Kumar")
-    .props.onChange({ target: { value: "Ravi" } });
-  screen = app.render();
-  screen
-    .find((node) => node.type === "form" && node.props.className === "workers-register")
-    .props.onSubmit({ preventDefault() {} });
-  await app.flush();
-  assert.equal(app.calls[1].body.operation, "register");
-  assert.equal(app.calls[1].body.gangId, "gng_1");
-  assert.equal(app.calls[1].body.name, "Ravi");
-  screen = app.render();
-  const members = screen.find((node) => node.props?.title === "Masonry gang — Members").props.rows;
-  assert.equal(members.length, 1);
-  assert.equal(members[0].gangName, "Masonry gang");
   screen
     .find((node) => node.type === "button" && node.props.children === "Individual workers")
     .props.onClick();
   screen = app.render();
-  assert.equal(
-    screen.some((node) => node.type === "form" && node.props.className === "workers-register"),
-    true,
-  );
-  assert.equal(
-    screen.find((node) => node.props?.title === "Individual workers").props.rows.length,
-    0,
-  );
   screen
     .find((node) => node.props?.placeholder === "e.g. Ravi Kumar")
     .props.onChange({ target: { value: "Independent worker" } });
@@ -217,11 +216,6 @@ test("create a gang first, then register workers directly inside it", async () =
     .find((node) => node.type === "form" && node.props.className === "workers-register")
     .props.onSubmit({ preventDefault() {} });
   await app.flush();
-  assert.equal(app.calls[2].body.name, "Independent worker");
-  assert.equal("gangId" in app.calls[2].body, false);
-  screen = app.render();
-  assert.equal(
-    screen.find((node) => node.props?.title === "Individual workers").props.rows.length,
-    1,
-  );
+  assert.equal(app.calls[1].body.name, "Independent worker");
+  assert.equal("gangId" in app.calls[1].body, false);
 });

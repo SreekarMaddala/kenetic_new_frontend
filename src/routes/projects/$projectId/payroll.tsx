@@ -84,6 +84,8 @@ function Payroll({ projectId }: { projectId: string }) {
         qc.invalidateQueries({ queryKey: ["dashboard-analytics"] }),
         qc.invalidateQueries({ queryKey: ["my-salary"] }),
         qc.invalidateQueries({ queryKey: ["worker-profile"] }),
+        qc.invalidateQueries({ queryKey: ["gang-account"] }),
+        qc.invalidateQueries({ queryKey: ["gang-headcounts"] }),
         qc.invalidateQueries({ queryKey: ["ledger"] }),
         qc.invalidateQueries({ queryKey: ["posted-spending", projectId] }),
         qc.invalidateQueries({ queryKey: ["executive-report"] }),
@@ -140,6 +142,7 @@ function Payroll({ projectId }: { projectId: string }) {
               { key: "category", header: "Category" },
               { key: "gross", header: "Gross wages (INR)" },
               { key: "advanceRecovery", header: "Advances deducted (INR)" },
+              { key: "carryForward", header: "Advance carried forward (INR)" },
               { key: "deductions", header: "Total deductions including advances (INR)" },
               { key: "dailyPaid", header: "Daily wages already paid (INR)" },
               { key: "netPay", header: "Final wages after deductions (INR)" },
@@ -158,6 +161,40 @@ function Payroll({ projectId }: { projectId: string }) {
       />
       {cycle && !cycles.isError && (
         <>
+          {allItems.some((item) => item.category === "Gang headcount") && (
+            <section
+              className="rounded-xl border border-border bg-card p-5 space-y-3"
+              aria-label="Gang payment calculation"
+            >
+              <h2 className="font-semibold">Gang payment, made clear</h2>
+              <p className="text-sm text-muted-foreground">
+                Wages earned − advance deducted = payment to the gang. Extra advance carries forward
+                to future wages. Advances added after this payroll was prepared are included in the
+                next payroll.
+              </p>
+              {items
+                .filter((item) => item.category === "Gang headcount")
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm"
+                  >
+                    <strong>{item.name}</strong>
+                    <span>
+                      {money(item.gross)} earned − {money(item.advanceRecovery)} advance ={" "}
+                      <strong>
+                        {money(item.netPay)} {item.status === "Paid" ? "paid" : "to pay"}
+                      </strong>
+                      {item.carryForward > 0 && (
+                        <small className="block text-muted-foreground">
+                          {money(item.carryForward)} advance carries forward from this snapshot
+                        </small>
+                      )}
+                    </span>
+                  </div>
+                ))}
+            </section>
+          )}
           <label className="grid gap-1 text-sm max-w-sm">
             Worker group / report filter
             <select

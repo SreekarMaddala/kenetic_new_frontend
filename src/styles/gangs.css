@@ -1,0 +1,578 @@
+.gang-workspace,
+.gang-management {
+  color: #17382e;
+  display: grid;
+  gap: 24px;
+}
+.gang-management {
+  margin: 24px 32px;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #dce5df;
+  border-radius: 18px;
+}
+.gang-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.gang-eyebrow {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  color: #6a8174;
+}
+.gang-section-heading h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 5px 0;
+}
+.gang-section-heading p,
+.gang-assignment-action p {
+  color: #6b7b73;
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+.gang-primary,
+.gang-secondary {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-radius: 9px;
+  min-height: 42px;
+  padding: 10px 17px;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.gang-primary {
+  color: #fff;
+  background: #245640;
+}
+.gang-primary:hover {
+  background: #193f2e;
+}
+.gang-secondary {
+  color: #284c3d;
+  background: #fff;
+  border-color: #d5e2d9;
+}
+.gang-secondary:hover {
+  background: #f1f6f1;
+}
+.gang-workspace button:disabled,
+.gang-management button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.gang-workspace button:focus-visible,
+.gang-management button:focus-visible,
+.gang-management a:focus-visible,
+.gang-workspace a:focus-visible {
+  outline: 3px solid #81b296;
+  outline-offset: 3px;
+}
+.gang-workspace input,
+.gang-workspace select,
+.gang-management input,
+.gang-management select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d5e0d9;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #fff;
+  color: #1b3a2d;
+  font: inherit;
+  font-size: 0.875rem;
+}
+.gang-workspace input:focus,
+.gang-management input:focus,
+.gang-management select:focus {
+  outline: 2px solid #94bda5;
+  outline-offset: 2px;
+}
+.gang-day-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 36px;
+  padding: 18px 22px;
+  background: #edf4ee;
+  border: 1px solid #dce8de;
+  border-radius: 12px;
+}
+.gang-day-totals span {
+  font-size: 0.8rem;
+  color: #64776a;
+}
+.gang-day-totals strong {
+  color: #234f37;
+  font-size: 1rem;
+  margin-right: 6px;
+}
+.gang-attendance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+  gap: 20px;
+}
+.gang-attendance-card {
+  border: 1px solid #dce5df;
+  border-radius: 16px;
+  padding: 24px;
+  background: #fff;
+  display: grid;
+  align-content: start;
+  gap: 20px;
+}
+.gang-attendance-card.is-saved {
+  border-color: #b7d2bd;
+}
+.gang-attendance-card > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+  flex-wrap: wrap;
+}
+.gang-title {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.gang-title h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.gang-title p {
+  font-size: 0.75rem;
+  color: #718076;
+  margin-top: 4px;
+}
+.gang-title p > span {
+  padding: 0 4px;
+}
+.gang-avatar {
+  display: grid;
+  place-items: center;
+  height: 42px;
+  width: 42px;
+  border-radius: 12px;
+  background: #edf4ee;
+  flex-shrink: 0;
+}
+.gang-status {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  color: #8a6b2b;
+  background: #fff7e8;
+  border-radius: 20px;
+  padding: 5px 9px;
+}
+.gang-status.is-saved {
+  color: #2c6543;
+  background: #edf5ed;
+}
+.gang-count-fields {
+  display: grid;
+  gap: 16px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.gang-count-fields label,
+.gang-setup label,
+.gang-project-picker label,
+.gang-cash-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 0.8125rem;
+  font-weight: 550;
+}
+.gang-count-fields .gang-present-input {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccdbce;
+  border-radius: 10px;
+  background: #f6faf6;
+  padding: 5px 14px 5px 6px;
+}
+.gang-present-input input {
+  background: transparent;
+  border: 0;
+  width: 110px;
+  font-size: 2rem;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+.gang-present-input > span {
+  margin-left: auto;
+  color: #849087;
+  font-weight: 400;
+}
+.gang-extras {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.gang-optional-counts summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: #718174;
+}
+.gang-optional-counts[open] summary {
+  margin-bottom: 16px;
+}
+.gang-optional-counts > small {
+  display: block;
+  color: #7a877d;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  margin-top: 12px;
+}
+.gang-count-fields > small {
+  color: #7a877d;
+  font-size: 0.7rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.gang-wage-preview {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #edf0ec;
+  padding: 18px 0;
+  margin-top: 18px;
+}
+.gang-wage-preview span {
+  color: #738174;
+  font-size: 0.75rem;
+}
+.gang-wage-preview strong {
+  font-size: 1.25rem;
+  white-space: nowrap;
+}
+.gang-attendance-card form > .gang-primary {
+  width: 100%;
+}
+.gang-readonly {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.gang-readonly > div {
+  display: grid;
+  gap: 5px;
+}
+.gang-readonly strong {
+  font-size: 1.4rem;
+  font-weight: 650;
+}
+.gang-readonly strong small {
+  color: #99a49c;
+  font-size: 1rem;
+}
+.gang-readonly span,
+.gang-readonly p {
+  font-size: 0.75rem;
+  color: #7b887f;
+  line-height: 1.6;
+}
+.gang-readonly > p {
+  grid-column: 1 / -1;
+}
+.gang-assignment-action {
+  display: grid;
+  gap: 15px;
+}
+.gang-setup {
+  padding: 22px;
+  border-radius: 12px;
+  border: 1px solid #dce8de;
+  background: #f5f9f4;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 18px;
+}
+.gang-setup .gang-note,
+.gang-setup .gang-error {
+  grid-column: 1 / -1;
+}
+.gang-project-picker {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 0.75fr;
+  gap: 18px;
+  align-items: end;
+  border-top: 1px solid #edf0ec;
+  padding-top: 24px;
+}
+.gang-project-picker h3 {
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+.gang-project-picker p {
+  font-size: 0.75rem;
+  color: #7a867f;
+  margin-top: 5px;
+}
+.gang-account {
+  border-top: 1px solid #e3eae4;
+  padding-top: 28px;
+  display: grid;
+  gap: 20px;
+}
+.gang-money-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid #dce6df;
+  border-radius: 13px;
+  overflow: hidden;
+}
+.gang-money-cards > div {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 20px;
+  border-right: 1px solid #e3eae4;
+}
+.gang-money-cards > div:last-child {
+  border-right: 0;
+}
+.gang-money-cards span {
+  font-size: 0.75rem;
+  color: #6d7e70;
+}
+.gang-money-cards strong {
+  font-size: 1.4rem;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+.gang-money-cards small {
+  font-size: 0.6875rem;
+  color: #849184;
+  line-height: 1.6;
+}
+.gang-money-cards .is-balance {
+  background: #edf5ec;
+}
+.gang-equation {
+  color: #718174;
+  font-size: 0.75rem;
+  text-align: center;
+}
+.gang-advance-summary {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: center;
+  padding: 20px;
+  border-radius: 12px;
+  background: #faf8f1;
+  border: 1px solid #ece7d7;
+}
+.gang-advance-summary span {
+  display: block;
+  font-size: 0.75rem;
+  color: #8a7e58;
+}
+.gang-advance-summary strong {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 650;
+  margin: 6px 0;
+}
+.gang-advance-summary p {
+  font-size: 0.75rem;
+  color: #8a8169;
+  max-width: 460px;
+  line-height: 1.6;
+}
+.gang-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.gang-cash-form {
+  display: grid;
+  gap: 18px;
+  border: 1px solid #c5d9ca;
+  background: #f6faf6;
+  border-radius: 12px;
+  padding: 24px;
+}
+.gang-cash-form h3 {
+  font-size: 1rem;
+  font-weight: 650;
+}
+.gang-cash-form > p {
+  font-size: 0.8125rem;
+  color: #718074;
+  line-height: 1.65;
+}
+.gang-cash-form fieldset {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 18px;
+  padding: 0;
+  border: 0;
+}
+.gang-cash-reason {
+  grid-column: 1 / -1;
+}
+.gang-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #326a45;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  width: fit-content;
+}
+.gang-text-link:hover {
+  text-decoration: underline;
+}
+.gang-note {
+  color: #758477;
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+.gang-error {
+  color: #ad382e;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+.gang-error button {
+  text-decoration: underline;
+  margin-left: 8px;
+}
+.gang-money-history {
+  border-top: 1px solid #e3eae4;
+  padding-top: 20px;
+}
+.gang-money-history summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.gang-money-history summary span {
+  color: #98a199;
+  font-weight: 400;
+  font-size: 0.75rem;
+  margin-left: 10px;
+}
+.gang-money-history p {
+  font-size: 0.8125rem;
+  color: #819085;
+  margin-top: 18px;
+}
+.gang-table-scroll {
+  overflow-x: auto;
+  margin-top: 18px;
+}
+.gang-table-scroll table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.gang-table-scroll th {
+  color: #849186;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.gang-table-scroll th,
+.gang-table-scroll td {
+  padding: 13px 10px;
+  border-bottom: 1px solid #edf0ec;
+}
+.gang-table-scroll td:first-child {
+  white-space: nowrap;
+}
+.gang-table-scroll td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.gang-table-scroll small {
+  display: block;
+  font-size: 0.6875rem;
+  color: #849186;
+  margin-top: 4px;
+}
+.gang-empty {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 44px 20px;
+  border: 1px dashed #cbd9cd;
+  border-radius: 14px;
+  background: #fafcf9;
+}
+.gang-empty h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.gang-empty p {
+  color: #7b887e;
+  max-width: 440px;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+@media (max-width: 1100px) {
+  .gang-management {
+    margin: 20px 24px;
+  }
+  .gang-money-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+  .gang-money-cards > div:nth-child(2) {
+    border-right: 0;
+  }
+  .gang-money-cards > div:nth-child(-n + 2) {
+    border-bottom: 1px solid #e3eae4;
+  }
+}
+@media (max-width: 640px) {
+  .gang-management {
+    margin: 16px;
+    padding: 20px;
+  }
+  .gang-section-heading h2 {
+    font-size: 1.1rem;
+  }
+  .gang-setup,
+  .gang-project-picker,
+  .gang-cash-form fieldset {
+    grid-template-columns: 1fr;
+  }
+  .gang-attendance-card {
+    padding: 20px;
+  }
+  .gang-money-cards > div {
+    padding: 16px;
+  }
+  .gang-money-cards strong {
+    font-size: 1.15rem;
+  }
+  .gang-cash-form {
+    padding: 18px;
+  }
+  .gang-advance-summary .gang-actions {
+    width: 100%;
+  }
+  .gang-actions > button {
+    flex: 1 1 auto;
+  }
+}

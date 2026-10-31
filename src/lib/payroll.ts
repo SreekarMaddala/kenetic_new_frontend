@@ -7,6 +7,7 @@ export interface PayrollItem {
   groupKey: string;
   group: string;
   advanceRecovery: number;
+  carryForward: number;
   reference: string;
   paidAt: string;
   remaining: number;
@@ -38,6 +39,7 @@ export function payrollItems(cycles: DomainRecord[], month: string): PayrollItem
       groupKey,
       group: salary ? "Salaried staff" : String(member.gangName || "Individual workers"),
       advanceRecovery: Number(member.advanceRecovery ?? 0),
+      carryForward: Number(member.carryForward ?? 0),
       reference: String(receipt?.reference ?? (paid ? (cycle.paymentReference ?? "") : "")),
       paidAt: String(receipt?.paidAt ?? (paid ? (cycle.paidAt ?? "") : "")),
       remaining: paid ? 0 : Number(member.net ?? 0),

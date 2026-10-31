@@ -38,6 +38,30 @@
   color: #244d3d;
 }
 
+.workers-header-icon svg {
+  stroke: currentColor;
+}
+
+.workers-assignment {
+  margin: 20px 32px 0;
+  padding: 24px;
+  border: 1px solid #d5e4d4;
+  border-radius: 16px;
+  background: #fff;
+  display: grid;
+  gap: 16px;
+}
+.workers-assignment h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.workers-assignment > p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #64756c;
+  max-width: 680px;
+}
+
 .workers-header-text {
   display: flex;
   flex-direction: column;
@@ -133,13 +157,13 @@
   box-shadow: none;
 }
 .workers-page > nav .workers-refresh:hover {
-  background: rgba(255,255,255,0.7);
+  background: rgba(255, 255, 255, 0.7);
   color: #244d3d;
 }
 .workers-page > nav .workers-refresh[aria-pressed="true"] {
   background: white;
   color: #244d3d;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 /* -- Metric Cards -- */
@@ -161,7 +185,7 @@
   transition: box-shadow 0.15s;
 }
 .workers-metrics article:hover {
-  box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
 }
 .workers-metric-icon {
   display: grid;
@@ -264,7 +288,9 @@
   color: #1a2e1a;
   font-weight: 400;
   min-width: 0;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .workers-input::placeholder {
   color: hsl(220 10% 65%);
@@ -272,7 +298,7 @@
 .workers-input:focus {
   outline: none;
   border-color: #477452;
-  box-shadow: 0 0 0 3px rgba(36,77,61,0.1);
+  box-shadow: 0 0 0 3px rgba(36, 77, 61, 0.1);
   background: white;
 }
 .workers-submit {
@@ -337,29 +363,86 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-.workers-gang-list {
+.gang-create-form {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr 1fr auto;
+  align-items: end;
+  padding: 20px;
+  margin-bottom: 22px;
+  border: 1px solid #dce6df;
+  border-radius: 12px;
+  background: #f7faf6;
+  gap: 16px;
+}
+.gang-create-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.gang-create-form .workers-form-note,
+.gang-create-form .gang-error {
+  grid-column: 1 / -1;
+}
+.gang-card-top {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  margin-bottom: 8px;
+}
+.gang-card-top small {
+  border-radius: 20px;
+  padding: 4px 8px;
+  background: #edf3eb;
+}
+.workers-legacy-records {
+  margin: 24px 32px;
+  padding: 20px 24px;
+  border: 1px solid #dce5df;
+  border-radius: 12px;
+  font-size: 0.8125rem;
+  background: white;
+}
+.workers-legacy-records summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.workers-legacy-records p {
+  margin: 14px 0;
+  color: #758477;
+  line-height: 1.7;
+}
+.workers-legacy-records > div {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.workers-gang-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
 }
 .workers-gang-card {
   display: grid;
-  gap: 4px;
+  gap: 10px;
   text-align: left;
   border: 1.5px solid hsl(220 20% 88%);
   border-radius: 10px;
-  padding: 12px 16px;
+  padding: 22px;
   min-width: 160px;
   background: white;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .workers-gang-card:hover {
   border-color: #477452;
-  box-shadow: 0 1px 6px rgba(36,77,61,0.1);
+  box-shadow: 0 1px 6px rgba(36, 77, 61, 0.1);
 }
 .workers-gang-card strong {
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #1a2e1a;
 }
@@ -375,7 +458,7 @@
 .workers-gang-card[aria-pressed="true"] {
   border-color: #244d3d;
   background: #f5f9f4;
-  box-shadow: 0 0 0 3px rgba(36,77,61,0.08);
+  box-shadow: 0 0 0 3px rgba(36, 77, 61, 0.08);
 }
 
 /* -- Registry panel -- */
@@ -409,7 +492,7 @@
 .workers-refresh:focus-visible,
 .workers-submit:focus-visible,
 .workers-profile-link:focus-visible {
-  outline: 3px solid rgba(36,77,61,0.4);
+  outline: 3px solid rgba(36, 77, 61, 0.4);
   outline-offset: 3px;
 }
 
@@ -418,16 +501,26 @@
   animation: workers-spin 1s linear infinite;
 }
 @keyframes workers-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* -- Responsive -- */
 @media (max-width: 1100px) {
+  .gang-create-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .workers-assignment {
+    margin: 16px 24px 0;
+  }
   .workers-metrics {
     grid-template-columns: 1fr 1fr;
     margin: 16px 24px 0;
   }
-  .workers-metrics article:last-child { grid-column: 1 / -1; }
+  .workers-metrics article:last-child {
+    grid-column: 1 / -1;
+  }
   .workers-register {
     grid-template-columns: 1fr;
     margin: 16px 24px 0;
@@ -437,28 +530,90 @@
     border-bottom: 1.5px solid #dde6da;
     padding: 18px 22px;
   }
-  .workers-register-icon { float: left; margin: 2px 14px 0 0; }
-  .workers-register-intro p { max-width: none; }
-  .workers-register-fields { padding: 22px; }
-  .workers-page > nav { margin-left: 24px; margin-right: 24px; }
-  .workers-gangs { margin-left: 24px; margin-right: 24px; }
-  .workers-page .registry-panel { margin: 16px 24px; }
+  .workers-register-icon {
+    float: left;
+    margin: 2px 14px 0 0;
+  }
+  .workers-register-intro p {
+    max-width: none;
+  }
+  .workers-register-fields {
+    padding: 22px;
+  }
+  .workers-page > nav {
+    margin-left: 24px;
+    margin-right: 24px;
+  }
+  .workers-gangs {
+    margin-left: 24px;
+    margin-right: 24px;
+  }
+  .workers-page .registry-panel {
+    margin: 16px 24px;
+  }
 }
 @media (max-width: 640px) {
-  .workers-header { padding: 18px 18px 16px; }
-  .workers-header h1 { font-size: 1.25rem; }
-  .workers-header h1 span { display: none; }
-  .workers-header-icon { width: 40px; height: 40px; border-radius: 10px; }
-  .workers-metrics { grid-template-columns: 1fr; gap: 8px; margin: 14px 16px 0; }
-  .workers-metrics article:last-child { grid-column: auto; }
-  .workers-register { margin: 14px 16px 0; }
-  .workers-register-fields { grid-template-columns: 1fr; padding: 18px; }
-  .workers-submit { width: 100%; }
-  .workers-page > nav { margin: 14px 16px 0; width: auto; }
-  .workers-gangs { margin: 14px 16px 0; }
-  .workers-page .registry-panel { margin: 14px 16px; }
-  .workers-page > .workers-form-note { margin-left: 16px; margin-right: 16px; }
+  .gang-create-form {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .workers-legacy-records {
+    margin: 16px;
+    padding: 18px;
+  }
+  .workers-assignment {
+    margin: 14px 16px 0;
+    padding: 18px;
+  }
+  .workers-header {
+    padding: 18px 18px 16px;
+  }
+  .workers-header h1 {
+    font-size: 1.25rem;
+  }
+  .workers-header h1 span {
+    display: none;
+  }
+  .workers-header-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+  .workers-metrics {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 14px 16px 0;
+  }
+  .workers-metrics article:last-child {
+    grid-column: auto;
+  }
+  .workers-register {
+    margin: 14px 16px 0;
+  }
+  .workers-register-fields {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+  .workers-submit {
+    width: 100%;
+  }
+  .workers-page > nav {
+    margin: 14px 16px 0;
+    width: auto;
+  }
+  .workers-gangs {
+    margin: 14px 16px 0;
+  }
+  .workers-page .registry-panel {
+    margin: 14px 16px;
+  }
+  .workers-page > .workers-form-note {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .workers-spin { animation: none; }
+  .workers-spin {
+    animation: none;
+  }
 }

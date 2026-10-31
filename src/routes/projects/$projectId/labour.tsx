@@ -144,8 +144,8 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
     <>
       <p className="text-sm text-muted-foreground">
         {admin
-          ? "Allocate a whole gang below, or use Allocate workers to manage individual allocations. Supervisors then record gang attendance and wages."
-          : "Mark gang attendance and daily wage payments together below. The admin must confirm each member's allocation for this date first. Use individual records for member exceptions."}
+          ? "Assign gangs below. Supervisors record how many people worked; gang advances are deducted when you prepare payroll. Use worker allocation for individual workers."
+          : "Enter how many people worked in each gang below. Your admin manages gang advances and payments. Individual workers are listed separately."}
       </p>
       {admin && (
         <button
@@ -192,7 +192,7 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
         </div>
       ) : query.isLoading ? (
         <p>Loading workers...</p>
-      ) : (
+      ) : workers.length ? (
         <>
           {query.hasNextPage && (
             <div className="flex justify-between items-center gap-4 text-sm">
@@ -208,10 +208,10 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
           )}
           <div className="grid gap-4 md:grid-cols-3">
             {[
-              ["Present at this project", `${present.length} / ${siteWorkers.length}`],
-              ["Half Day", `${halfDay.length}`],
-              ["Paid today", money(paid)],
-              ["Unpaid wages today", money(wages - paid)],
+              ["Individual workers present", `${present.length} / ${siteWorkers.length}`],
+              ["Individual workers · half days", `${halfDay.length}`],
+              ["Individual wages paid today", money(paid)],
+              ["Individual wages unpaid today", money(wages - paid)],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-border bg-card p-6">
                 <p className="text-xs uppercase text-muted-foreground">{label}</p>
@@ -359,6 +359,10 @@ function AttendanceDay({ projectId, day }: { projectId: string; day: string }) {
             )}
           </details>
         </>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No individual worker records for this view. Gang attendance is managed above.
+        </p>
       )}
       {projects.error && (
         <p role="alert" className="text-red-600">

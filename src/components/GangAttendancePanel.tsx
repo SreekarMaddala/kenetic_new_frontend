@@ -5,7 +5,7 @@ import { api, type DomainRecord } from "../lib/api";
 import { gangAttendancePlan, gangSummaries, type GangAction } from "../lib/gangAttendance";
 import { saveWorkerBatch } from "../lib/workerAttendance";
 import { exportToExcel } from "../lib/excel";
-import { ProjectGangOnboarding } from "./GangProjectOnboarding";
+import { GangHeadcountPanel } from "./GangHeadcount";
 
 const input = "rounded-lg border border-border bg-background px-3 py-2 text-sm";
 const button =
@@ -35,82 +35,90 @@ export function GangAttendancePanel(props: Props) {
       ),
   });
   const groups = gangSummaries(query.data ?? [], projectId);
+  if (query.isSuccess && !groups.length) return <GangHeadcountPanel {...props} />;
   return (
-    <section
-      className="rounded-2xl border border-border bg-card p-5 space-y-4"
-      aria-label="Gang attendance and wages"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-semibold text-lg">Gang attendance &amp; daily wages</h2>
-          <p className="text-sm text-muted-foreground">
-            Apply attendance to all members together. Wages use each member's own daily rate.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            className={input}
-            disabled={blocked || query.isFetching}
-            onClick={() => query.refetch()}
-          >
-            Refresh gangs
-          </button>
-          <button
-            className={input}
-            disabled={blocked || query.isFetching || query.isError || !groups.length}
-            onClick={() =>
-              exportToExcel(
-                groups.map((group) => ({
-                  Gang: group.name,
-                  Date: day,
-                  "Members at this project": group.assigned,
-                  "Attendance recorded": group.recorded,
-                  Present: group.present,
-                  "Half day": group.halfDays,
-                  Absent: group.absent,
-                  "Total wages (INR)": group.wages,
-                  "Paid (INR)": group.paid,
-                  "Unpaid (INR)": group.unpaid,
-                })),
-                `gang-attendance-${projectId}-${day}`,
-              )
-            }
-          >
-            Export gang wages
-          </button>
-        </div>
-      </div>
-      {admin && <ProjectGangOnboarding projectId={projectId} day={day} blocked={blocked} refresh={props.refresh} />}
-      {query.isPending ? (
-        <p>Loading all gang members...</p>
-      ) : query.isError ? (
-        <p role="alert">
-          Unable to load gang members: {query.error.message}{" "}
-          <button
-            className={input}
-            disabled={blocked || query.isFetching}
-            onClick={() => query.refetch()}
-          >
-            Retry gangs
-          </button>
-        </p>
-      ) : groups.length ? (
-        groups.map((group) => (
-          <GangAttendanceCard
-            key={group.id}
-            {...props}
-            group={group}
-            blocked={blocked || query.isFetching || query.isError}
-          />
-        ))
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          {admin
-            ? "No gang labourers yet. Use the form above to onboard them directly to this project."
-            : "No gang members assigned to this project for this date. Ask your admin to allocate the gang."}
-        </p>
-      )}
-    </section>
+    <>
+      <GangHeadcountPanel {...props} />
+      <details className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <summary className="cursor-pointer text-sm font-semibold">
+          Earlier named-worker gang attendance
+        </summary>
+        <section
+          className="rounded-2xl border border-border bg-card p-5 space-y-4"
+          aria-label="Gang attendance and wages"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-lg">Gang attendance &amp; daily wages</h2>
+              <p className="text-sm text-muted-foreground">
+                Apply attendance to all members together. Wages use each member's own daily rate.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className={input}
+                disabled={blocked || query.isFetching}
+                onClick={() => query.refetch()}
+              >
+                Refresh gangs
+              </button>
+              <button
+                className={input}
+                disabled={blocked || query.isFetching || query.isError || !groups.length}
+                onClick={() =>
+                  exportToExcel(
+                    groups.map((group) => ({
+                      Gang: group.name,
+                      Date: day,
+                      "Members at this project": group.assigned,
+                      "Attendance recorded": group.recorded,
+                      Present: group.present,
+                      "Half day": group.halfDays,
+                      Absent: group.absent,
+                      "Total wages (INR)": group.wages,
+                      "Paid (INR)": group.paid,
+                      "Unpaid (INR)": group.unpaid,
+                    })),
+                    `gang-attendance-${projectId}-${day}`,
+                  )
+                }
+              >
+                Export gang wages
+              </button>
+            </div>
+          </div>
+          {query.isPending ? (
+            <p>Loading all gang members...</p>
+          ) : query.isError ? (
+            <p role="alert">
+              Unable to load gang members: {query.error.message}{" "}
+              <button
+                className={input}
+                disabled={blocked || query.isFetching}
+                onClick={() => query.refetch()}
+              >
+                Retry gangs
+              </button>
+            </p>
+          ) : groups.length ? (
+            groups.map((group) => (
+              <GangAttendanceCard
+                key={group.id}
+                {...props}
+                group={group}
+                blocked={blocked || query.isFetching || query.isError}
+              />
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {admin
+                ? "No named-worker gang attendance for this date. Manage headcount gangs from Workers."
+                : "No gang members assigned to this project for this date. Ask your admin to allocate the gang."}
+            </p>
+          )}
+        </section>
+      </details>
+    </>
   );
 }
 
