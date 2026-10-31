@@ -32,6 +32,8 @@ test("supervisors cannot navigate to administration or finance", () => {
   }
   assert.equal(canAccessRoute("supervisor", "/projects/p1/supervisors"), true);
   assert.equal(canAccessRoute("supervisor", "/projects/p1/payroll"), true);
+  assert.equal(canAccessRoute("supervisor", "/projects/p1/subcontractors"), true);
+  assert.equal(canAccessRoute("supervisor", "/subcontractors"), false);
 });
 test("each role gets its own landing page", () => {
   assert.equal(homeForRole("super_admin"), "/organizations");

@@ -42,7 +42,7 @@ export function canAccessRoute(role: AppRole, pathname: string): boolean {
   return (
     pathname === "/projects" ||
     pathname === "/my-salary" ||
-    /^\/projects\/[^/]+\/(supervisors|labour|payroll|logistics|materials|issues|inspections|equipment)$/.test(
+    /^\/projects\/[^/]+\/(supervisors|labour|payroll|logistics|materials|subcontractors|issues|inspections|equipment)$/.test(
       pathname,
     )
   );

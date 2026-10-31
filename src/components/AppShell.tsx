@@ -173,6 +173,11 @@ const getProjectNav = (projectId: string, role?: string) => {
         subLabel: "Inventory & Logistics",
         items: [
           {
+            to: `/projects/${projectId}/subcontractors`,
+            label: "Procurement Requests",
+            icon: inventoryIcon,
+          },
+          {
             to: `/projects/${projectId}/materials`,
             label: "Project Materials",
             icon: inventoryIcon,

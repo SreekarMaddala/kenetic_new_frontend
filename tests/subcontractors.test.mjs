@@ -13,7 +13,9 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query";
 
-test("project subcontractor selectors coexist with cached paginated ledgers", () => {
+test("supervisors submit procurement while administrators review and reverse requests", async () => {
+  let role = "operations_admin";
+  const calls = [];
   const endpoint = "/projects/pro_one/subcontractors";
   const company = {
     subcontractorId: "sub_one",
@@ -64,6 +66,8 @@ test("project subcontractor selectors coexist with cached paginated ledgers", ()
   }).outputText;
   vm.runInNewContext(output, {
     exports,
+    window: { prompt: () => "Order cancelled" },
+    crypto: { randomUUID: () => "reverse-test-001" },
     require: (name) => {
       if (name === "react/jsx-runtime") return jsx;
       if (name === "@tanstack/react-query") return { useQuery };
@@ -76,13 +80,19 @@ test("project subcontractor selectors coexist with cached paginated ledgers", ()
           Link: ({ children }) => React.createElement("a", null, children),
         };
       if (name.endsWith("WorkflowLedger"))
-        return { WorkflowLedger: Ledger, reviewActions: () => [], recordUrl: () => "" };
+        return {
+          WorkflowLedger: Ledger,
+          reviewActions: () => [],
+          recordUrl: (endpoint, id) => endpoint + "/" + id,
+        };
+      if (name.endsWith("AuthContext")) return { useAuth: () => ({ user: { role } }) };
       if (name.endsWith("FinanceLedgers"))
         return {
           SubcontractorPaymentLedger: () =>
             React.createElement("div", null, "Subcontractor Payments"),
         };
-      if (name.endsWith("lib/api")) return { api: { get: async () => [] } };
+      if (name.endsWith("lib/api"))
+        return { api: { get: async () => [], post: async (...args) => calls.push(args) } };
       throw new Error(`Unexpected import: ${name}`);
     },
   });
@@ -99,7 +109,14 @@ test("project subcontractor selectors coexist with cached paginated ledgers", ()
     );
     assert.equal(ledgers[0].rows.length, 1);
     assert.equal(ledgers[0].fields[0].options.length, 0);
-    assert.equal(ledgers[1].fields[1].options[0].value, "sub_assignment");
+    assert.equal(ledgers[1].fields, undefined);
+    const reverse = ledgers[1].actions.find((a) => a.label === "Reverse");
+    assert.equal(reverse.visible({ status: "Approved" }), true);
+    assert.equal(reverse.visible({ status: "Pending" }), false);
+    await reverse.run({ subcontractorId: "sub_request", version: 3 });
+    assert.equal(calls[0][0], endpoint + "/sub_request/reverse");
+    assert.equal(calls[0][1].reason, "Order cancelled");
+    assert.equal(calls[0][1].expectedVersion, 3);
 
     // With no assignments, the active company is available for assignment
     // and procurement has no contractor choices.
@@ -107,7 +124,19 @@ test("project subcontractor selectors coexist with cached paginated ledgers", ()
     ledgers.length = 0;
     render();
     assert.equal(ledgers[0].fields[0].options[0].value, "sub_one");
-    assert.equal(ledgers[1].fields[1].options.length, 0);
+    assert.equal(ledgers[1].fields, undefined);
+    role = "supervisor";
+    ledgers.length = 0;
+    const supervisorHtml = render();
+    assert.doesNotMatch(supervisorHtml, /Assigned Subcontractors|Subcontractor Payments/);
+    assert.match(supervisorHtml, /Procurement Requests/);
+    assert.equal(ledgers.length, 1);
+    assert.equal(ledgers[0].fields[1].options.length, 0);
+    assert.equal(ledgers[0].actions.length, 0);
+    client.setQueryData(["subcontractor-options", endpoint], [assignment]);
+    ledgers.length = 0;
+    render();
+    assert.equal(ledgers[0].fields[1].options[0].value, "sub_assignment");
   } finally {
     client.clear();
   }

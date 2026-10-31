@@ -103,7 +103,7 @@ export type SubcontractorCreateRequest = {
   registryId?: string;
   contractorId?: string;
   type?: "Contractor" | "Procurement";
-  status?: "Active" | "Inactive" | "Draft" | "Pending" | "Approved" | "Rejected";
+  status?: "Active" | "Inactive" | "Draft" | "Pending" | "Approved" | "Rejected" | "Reversed";
   subcontractorId?: string;
 };
 

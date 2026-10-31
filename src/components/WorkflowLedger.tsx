@@ -201,7 +201,8 @@ export function WorkflowLedger({
 
   const mutation = useMutation({
     mutationFn: (operation: () => Promise<unknown>) => operation(),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result === false) return;
       qc.invalidateQueries();
       setOpen(false);
       toast.success("Saved successfully.");
