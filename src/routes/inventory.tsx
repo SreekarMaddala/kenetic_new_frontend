@@ -31,68 +31,64 @@ function InventoryCatalog() {
     (!category || (item.category || "General") === category) && (!itemId || item.itemId === itemId);
   return (
     <div>
-      {/* ── Hero Banner ── */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, hsl(22 90% 48%) 0%, hsl(32 95% 55%) 50%, hsl(14 85% 42%) 100%)",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* decorative circles */}
-        <div style={{ position: "absolute", top: "-40px", right: "-40px", width: "220px", height: "220px", borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
-        <div style={{ position: "absolute", bottom: "-60px", right: "180px", width: "160px", height: "160px", borderRadius: "50%", background: "rgba(255,255,255,0.04)" }} />
-        <div style={{ position: "absolute", top: "10px", left: "40%", width: "80px", height: "80px", borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
-
-        <div className="p-6 pb-5 max-w-7xl mx-auto" style={{ position: "relative", zIndex: 1 }}>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              {/* warehouse icon badge */}
+      {/* ── Page Header ── */}
+      <div style={{
+        borderBottom: "1px solid hsl(220 20% 90%)",
+        background: "white",
+        padding: "24px 32px 20px",
+      }}>
+        <div style={{ maxWidth: "1120px", margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "20px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              {/* icon badge */}
               <div style={{
-                width: "56px", height: "56px", borderRadius: "16px",
-                background: "rgba(255,255,255,0.18)",
-                backdropFilter: "blur(8px)",
+                width: "46px", height: "46px", borderRadius: "12px",
+                background: "#edf3eb",
+                border: "1px solid #d5e4d4",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                border: "1px solid rgba(255,255,255,0.25)",
                 flexShrink: 0,
               }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#244d3d" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                   <polyline points="9 22 9 12 15 12 15 22"/>
                 </svg>
               </div>
               <div>
-                <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "white", letterSpacing: "-0.02em", margin: 0, fontFamily: "var(--font-display)" }}>
-                  Central Warehouse
-                </h1>
-                <p style={{ marginTop: "4px", fontSize: "0.8125rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>
-                  One material catalog and warehouse across{" "}
-                  <span style={{ color: "rgba(255,255,255,1)", fontWeight: 600 }}>all projects</span>.
-                  {" "}Select a category, material, and location to view records.
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+                  <h1 style={{ fontSize: "1.5rem", fontWeight: 750, color: "#1a2e1a", letterSpacing: "-0.02em", margin: 0 }}>
+                    Central Warehouse
+                  </h1>
+                  <span style={{
+                    fontSize: "0.6875rem", fontWeight: 600, padding: "3px 9px",
+                    borderRadius: "20px", border: "1px solid #d5e4d4",
+                    background: "#edf3eb", color: "#3d6b4a", letterSpacing: "0.01em",
+                  }}>Material hub</span>
+                </div>
+                <p style={{ fontSize: "0.8125rem", color: "hsl(220 10% 50%)", margin: 0, lineHeight: 1.5 }}>
+                  One catalog and warehouse across all projects. Select a category, material and location to view records.
                 </p>
               </div>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", flexShrink: 0 }}>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => openCreate("catalog")}
                 style={{
-                  borderRadius: "12px",
-                  border: "1.5px solid rgba(255,255,255,0.4)",
-                  background: "rgba(255,255,255,0.14)",
-                  backdropFilter: "blur(8px)",
-                  padding: "10px 18px",
+                  borderRadius: "9px",
+                  border: "1.5px solid hsl(220 20% 86%)",
+                  background: "white",
+                  padding: "9px 16px",
                   fontSize: "0.8125rem",
                   fontWeight: 600,
-                  color: "white",
+                  color: "hsl(220 25% 18%)",
                   cursor: "pointer",
-                  transition: "background 0.2s, transform 0.15s",
                   display: "flex", alignItems: "center", gap: "7px",
+                  transition: "background 0.15s, border-color 0.15s",
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.25)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.14)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#f3f4f0"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "white"; }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
                 Register material
@@ -101,22 +97,21 @@ function InventoryCatalog() {
                 type="button"
                 onClick={() => openCreate("receipts")}
                 style={{
-                  borderRadius: "12px",
-                  background: "white",
-                  padding: "10px 18px",
-                  fontSize: "0.8125rem",
-                  fontWeight: 700,
-                  color: "hsl(22 90% 40%)",
-                  cursor: "pointer",
+                  borderRadius: "9px",
                   border: "none",
-                  boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-                  transition: "box-shadow 0.2s, transform 0.15s",
+                  background: "#244d3d",
+                  padding: "9px 16px",
+                  fontSize: "0.8125rem",
+                  fontWeight: 650,
+                  color: "white",
+                  cursor: "pointer",
                   display: "flex", alignItems: "center", gap: "7px",
+                  transition: "background 0.15s",
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.22)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 12px rgba(0,0,0,0.15)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#1c3d30"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#244d3d"; }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="17 8 12 3 7 8"/>
                   <line x1="12" y1="3" x2="12" y2="15"/>
@@ -128,66 +123,63 @@ function InventoryCatalog() {
         </div>
       </div>
 
-      {/* ── Filter & Tab Card ── */}
-      <div className="max-w-7xl mx-auto px-6">
+      {/* ── Filter & Tab area ── */}
+      <div style={{ maxWidth: "1120px", margin: "0 auto", padding: "20px 32px 0" }}>
         {/* info banner */}
         <div style={{
-          marginTop: "16px",
-          borderRadius: "14px",
-          border: "1px solid hsl(22 90% 48% / 0.18)",
-          background: "linear-gradient(135deg, hsl(22 90% 98%) 0%, hsl(32 95% 97%) 100%)",
-          padding: "10px 16px",
+          borderRadius: "10px",
+          border: "1px solid #dde6da",
+          background: "#f5f9f4",
+          padding: "10px 14px",
           display: "flex",
           alignItems: "flex-start",
           gap: "10px",
+          marginBottom: "18px",
         }}>
-          <div style={{ marginTop: "1px", flexShrink: 0 }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="hsl(22 90% 48%)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-          </div>
-          <p style={{ fontSize: "0.8rem", color: "hsl(220 10% 40%)", margin: 0, lineHeight: 1.55 }}>
-            <strong style={{ color: "hsl(22 90% 40%)", fontWeight: 700 }}>New material?</strong>{" "}
+          <svg style={{ flexShrink: 0, marginTop: "1px" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d6b4a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p style={{ fontSize: "0.8rem", color: "hsl(220 10% 42%)", margin: 0, lineHeight: 1.55 }}>
+            <strong style={{ color: "#244d3d", fontWeight: 700 }}>New material?</strong>{" "}
             Register its details first.{" "}
-            <strong style={{ color: "hsl(22 90% 40%)", fontWeight: 700 }}>Adding quantity?</strong>{" "}
+            <strong style={{ color: "#244d3d", fontWeight: 700 }}>Adding quantity?</strong>{" "}
             Use <em>Add stock quantity</em> to record a warehouse receipt.
           </p>
         </div>
 
         {/* filter dropdowns */}
         <div style={{
-          marginTop: "16px",
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "12px",
+          gap: "10px",
+          marginBottom: "18px",
         }}>
           {/* Step 1 */}
           <div style={{
-            borderRadius: "14px",
+            borderRadius: "10px",
             border: "1.5px solid hsl(220 20% 88%)",
             background: "white",
-            padding: "14px 16px",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-            transition: "border-color 0.2s, box-shadow 0.2s",
+            padding: "12px 14px",
+            transition: "border-color 0.15s, box-shadow 0.15s",
           }}
-            onFocusCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(22 90% 48%)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px hsl(22 90% 48% / 0.12)"; }}
-            onBlurCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(220 20% 88%)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.05)"; }}
+            onFocusCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#477452"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px rgba(36,77,61,0.1)"; }}
+            onBlurCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(220 20% 88%)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "7px" }}>
               <span style={{
-                width: "20px", height: "20px", borderRadius: "6px",
-                background: "hsl(22 90% 48%)", color: "white",
-                fontSize: "0.6875rem", fontWeight: 700,
+                width: "18px", height: "18px", borderRadius: "5px",
+                background: "#244d3d", color: "white",
+                fontSize: "0.625rem", fontWeight: 700,
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}>1</span>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "hsl(220 10% 46%)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Material Category</span>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "hsl(220 10% 50%)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Material Category</span>
             </div>
             <select
               aria-label="Material category"
               style={{
-                width: "100%", height: "38px", padding: "0 10px",
-                borderRadius: "8px", border: "1px solid hsl(220 20% 90%)",
-                background: "hsl(220 16% 97%)", fontSize: "0.875rem",
+                width: "100%", height: "36px", padding: "0 10px",
+                borderRadius: "7px", border: "1px solid hsl(220 20% 90%)",
+                background: "#f9faf8", fontSize: "0.875rem",
                 color: "hsl(220 25% 10%)", outline: "none", cursor: "pointer",
               }}
               value={category}
@@ -200,33 +192,32 @@ function InventoryCatalog() {
 
           {/* Step 2 */}
           <div style={{
-            borderRadius: "14px",
+            borderRadius: "10px",
             border: "1.5px solid hsl(220 20% 88%)",
             background: "white",
-            padding: "14px 16px",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-            transition: "border-color 0.2s, box-shadow 0.2s",
-            opacity: category ? 1 : 0.7,
+            padding: "12px 14px",
+            opacity: category ? 1 : 0.6,
+            transition: "border-color 0.15s, box-shadow 0.15s, opacity 0.2s",
           }}
-            onFocusCapture={e => { if (category) { (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(22 90% 48%)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px hsl(22 90% 48% / 0.12)"; }}}
-            onBlurCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(220 20% 88%)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.05)"; }}
+            onFocusCapture={e => { if (category) { (e.currentTarget as HTMLDivElement).style.borderColor = "#477452"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px rgba(36,77,61,0.1)"; }}}
+            onBlurCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(220 20% 88%)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "7px" }}>
               <span style={{
-                width: "20px", height: "20px", borderRadius: "6px",
-                background: category ? "hsl(22 90% 48%)" : "hsl(220 10% 70%)", color: "white",
-                fontSize: "0.6875rem", fontWeight: 700,
+                width: "18px", height: "18px", borderRadius: "5px",
+                background: category ? "#244d3d" : "hsl(220 10% 72%)", color: "white",
+                fontSize: "0.625rem", fontWeight: 700,
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 transition: "background 0.2s",
               }}>2</span>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "hsl(220 10% 46%)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Material</span>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "hsl(220 10% 50%)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Material</span>
             </div>
             <select
               aria-label="Material"
               style={{
-                width: "100%", height: "38px", padding: "0 10px",
-                borderRadius: "8px", border: "1px solid hsl(220 20% 90%)",
-                background: "hsl(220 16% 97%)", fontSize: "0.875rem",
+                width: "100%", height: "36px", padding: "0 10px",
+                borderRadius: "7px", border: "1px solid hsl(220 20% 90%)",
+                background: "#f9faf8", fontSize: "0.875rem",
                 color: "hsl(220 25% 10%)", outline: "none", cursor: category ? "pointer" : "not-allowed",
               }}
               value={itemId}
@@ -242,31 +233,30 @@ function InventoryCatalog() {
 
           {/* Step 3 */}
           <div style={{
-            borderRadius: "14px",
+            borderRadius: "10px",
             border: "1.5px solid hsl(220 20% 88%)",
             background: "white",
-            padding: "14px 16px",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-            transition: "border-color 0.2s, box-shadow 0.2s",
+            padding: "12px 14px",
+            transition: "border-color 0.15s, box-shadow 0.15s",
           }}
-            onFocusCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(22 90% 48%)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px hsl(22 90% 48% / 0.12)"; }}
-            onBlurCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(220 20% 88%)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.05)"; }}
+            onFocusCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#477452"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px rgba(36,77,61,0.1)"; }}
+            onBlurCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(220 20% 88%)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "7px" }}>
               <span style={{
-                width: "20px", height: "20px", borderRadius: "6px",
-                background: "hsl(22 90% 48%)", color: "white",
-                fontSize: "0.6875rem", fontWeight: 700,
+                width: "18px", height: "18px", borderRadius: "5px",
+                background: "#244d3d", color: "white",
+                fontSize: "0.625rem", fontWeight: 700,
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}>3</span>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "hsl(220 10% 46%)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Location</span>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "hsl(220 10% 50%)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Location</span>
             </div>
             <select
               aria-label="Location"
               style={{
-                width: "100%", height: "38px", padding: "0 10px",
-                borderRadius: "8px", border: "1px solid hsl(220 20% 90%)",
-                background: "hsl(220 16% 97%)", fontSize: "0.875rem",
+                width: "100%", height: "36px", padding: "0 10px",
+                borderRadius: "7px", border: "1px solid hsl(220 20% 90%)",
+                background: "#f9faf8", fontSize: "0.875rem",
                 color: "hsl(220 25% 10%)", outline: "none", cursor: "pointer",
               }}
               value={location}
@@ -282,52 +272,46 @@ function InventoryCatalog() {
         </div>
 
         {stock.isError && (
-          <p role="alert" style={{ color: "hsl(0 72% 50%)", fontSize: "0.875rem", marginTop: "8px" }}>
+          <p role="alert" style={{ color: "hsl(0 72% 50%)", fontSize: "0.875rem", marginBottom: "12px" }}>
             Unable to load material selections. Refresh to try again.
           </p>
         )}
 
         {/* tab navigation */}
         <div style={{
-          marginTop: "16px",
-          marginBottom: "0",
           display: "flex",
-          gap: "6px",
+          gap: "4px",
           flexWrap: "wrap",
-          padding: "5px",
-          borderRadius: "14px",
-          background: "hsl(220 16% 94%)",
+          padding: "4px",
+          borderRadius: "10px",
+          background: "#eef2ee",
           width: "fit-content",
+          marginBottom: "0",
         }} role="tablist" aria-label="Warehouse views">
           {([
-            ["stock",     "📦", "Stock by location"],
-            ["movements", "📊", "Tracking"],
-            ["receipts",  "📥", "Add stock / receipts"],
-            ["catalog",   "📋", "Material catalog"],
-          ] as [string, string, string][]).map(([value, emoji, label]) => (
+            ["stock",     "Stock by location"],
+            ["movements", "Tracking"],
+            ["receipts",  "Add stock / receipts"],
+            ["catalog",   "Material catalog"],
+          ] as [string, string][]).map(([value, label]) => (
             <button
               key={value}
               role="tab"
               aria-selected={tab === value}
               onClick={() => { setTab(value); setCreateRequest(0); }}
               style={{
-                padding: "8px 16px",
-                borderRadius: "10px",
+                padding: "7px 14px",
+                borderRadius: "7px",
                 fontSize: "0.8125rem",
                 fontWeight: 600,
                 border: "none",
                 cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                transition: "all 0.2s cubic-bezier(0.34,1.56,0.64,1)",
+                transition: "all 0.15s ease",
                 background: tab === value ? "white" : "transparent",
-                color: tab === value ? "hsl(22 90% 44%)" : "hsl(220 10% 50%)",
-                boxShadow: tab === value ? "0 1px 6px rgba(0,0,0,0.10)" : "none",
-                transform: tab === value ? "scale(1.02)" : "scale(1)",
+                color: tab === value ? "#244d3d" : "hsl(220 10% 52%)",
+                boxShadow: tab === value ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
               }}
             >
-              <span style={{ fontSize: "0.9em" }}>{emoji}</span>
               {label}
             </button>
           ))}
