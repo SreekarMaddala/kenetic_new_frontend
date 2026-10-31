@@ -356,6 +356,10 @@ export type ExpenseCreateRequest = {
   date?: string;
   supervisorId?: string;
   status?: "Draft" | "Pending" | "Approved" | "Rejected";
+  paidTo?: string;
+  reference?: string;
+  paidById?: string;
+  paymentMode?: "Cash" | "UPI" | "NEFT" | "RTGS" | "Cheque" | "Card" | "Other";
   expenseId?: string;
 };
 

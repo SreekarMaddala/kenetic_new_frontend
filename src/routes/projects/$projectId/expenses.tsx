@@ -18,9 +18,15 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PageHeader } from "../../../components/AppShell";
-import { api, type DomainRecord } from "../../../lib/api";
+import { api, employeeApi, type DomainRecord } from "../../../lib/api";
 import { exportToExcel } from "../../../lib/excel";
 import { postedExpenseTotal } from "../../../lib/spending";
+import {
+  EXPENSE_PURPOSES,
+  EXPENSE_PAYMENT_MODES,
+  expenseDetails,
+  matchesExpensePeriod,
+} from "../../../lib/expenseDetails";
 
 export const Route = createFileRoute("/projects/$projectId/expenses")({ component: Page });
 
@@ -42,28 +48,11 @@ interface UnifiedExpense {
   category: string;
   amount: number;
   paidBy: string;
+  paidTo?: string;
+  paymentMode?: string;
+  reference?: string;
   status: string;
   raw: DomainRecord;
-}
-
-function isThisWeek(dateStr: string): boolean {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday start
-  startOfWeek.setHours(0, 0, 0, 0);
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 7);
-  endOfWeek.setHours(23, 59, 59, 999);
-  return d >= startOfWeek && d <= endOfWeek;
-}
-
-function isThisMonth(dateStr: string): boolean {
-  if (!dateStr) return false;
-  const now = new Date();
-  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  return dateStr.startsWith(currentMonthStr);
 }
 
 function Page() {
@@ -71,9 +60,11 @@ function Page() {
   const qc = useQueryClient();
 
   // Active Time Range Filter: "week" | "month" | "all"
-  const [timeRange, setTimeRange] = useState<"week" | "month" | "all">("month");
+  const [timeRange, setTimeRange] = useState<"week" | "month" | "all">("week");
   // Source Filter: "ALL" | "Vendor Payment" | "Logistics Fuel" | "Rental Transit" | "Labour Advance" | "Direct Expense"
   const [sourceFilter, setSourceFilter] = useState<string>("ALL");
+  const [payerFilter, setPayerFilter] = useState("ALL");
+  const [purposeFilter, setPurposeFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -83,6 +74,12 @@ function Page() {
   const [expAmount, setExpAmount] = useState("");
   const [expDate, setExpDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [expPaidBy, setExpPaidBy] = useState("");
+  const [expOtherPayer, setExpOtherPayer] = useState("");
+  const [expRecipient, setExpRecipient] = useState("");
+  const [expMode, setExpMode] = useState("");
+  const [expReference, setExpReference] = useState("");
+  const peopleQuery = useQuery({ queryKey: ["expense-payment-makers"], queryFn: employeeApi.list });
+  const paymentMakers = (peopleQuery.data ?? []).filter((person) => person.status === "Active");
   const [expenseRequestId, setExpenseRequestId] = useState(() => crypto.randomUUID());
 
   // Data Queries from all project modules
@@ -112,6 +109,20 @@ function Page() {
 
   const createExpenseMutation = useMutation({
     mutationFn: async () => {
+      const payer = paymentMakers.find((person) => person.employeeId === expPaidBy);
+      const payerName = expPaidBy === "__other" ? expOtherPayer.trim() : payer?.name;
+      if (
+        !payerName ||
+        !expRecipient.trim() ||
+        !EXPENSE_PAYMENT_MODES.includes(expMode) ||
+        !EXPENSE_PURPOSES.includes(expCat)
+      ) {
+        throw new Error(
+          "Select who paid, what the payment was for, its recipient, and payment method.",
+        );
+      }
+      if (expMode !== "Cash" && !expReference.trim())
+        throw new Error("Enter the transaction or receipt reference for this non-cash payment.");
       if (
         !expDesc.trim() ||
         !expAmount ||
@@ -127,7 +138,11 @@ function Page() {
         category: expCat,
         amount: Number(expAmount),
         date: expDate,
-        submittedBy: expPaidBy.trim(),
+        submittedBy: payerName,
+        ...(payer ? { paidById: payer.employeeId } : {}),
+        paidTo: expRecipient.trim(),
+        paymentMode: expMode,
+        reference: expReference.trim(),
         status: "Pending",
         requestId: expenseRequestId,
       });
@@ -141,6 +156,10 @@ function Page() {
       setExpDesc("");
       setExpAmount("");
       setExpPaidBy("");
+      setExpOtherPayer("");
+      setExpRecipient("");
+      setExpMode("");
+      setExpReference("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -170,7 +189,10 @@ function Page() {
         id: String(pay.paymentId ?? `pay-${idx}`),
         date: String(pay.date ?? new Date().toISOString().slice(0, 10)),
         source: pay.contractorId ? "Subcontractor Payment" : "Vendor Payment",
-        description: `${pay.contractorId ? "Subcontractor" : "Vendor"} Payment: ${String(pay.contractorName ?? pay.vendorName ?? pay.vendorId ?? "Supplier")} (${String(pay.mode ?? "Bank Transfer")})`,
+        description: String(
+          pay.description ||
+            `${pay.contractorId ? "Subcontractor" : "Vendor"} Payment: ${String(pay.contractorName ?? pay.vendorName ?? pay.vendorId ?? "Supplier")} (${String(pay.mode ?? "Bank Transfer")})`,
+        ),
         category: pay.contractorId ? "Subcontractor" : "Vendor & Material Bill",
         amount: Number(pay.amount ?? 0),
         paidBy: String(pay.reference ? `Ref: ${pay.reference}` : "Finance Admin"),
@@ -223,7 +245,7 @@ function Page() {
           amount: Number(ded.amount ?? 0),
           paidBy: "Site Supervisor",
           status: "Activity",
-          raw: ded,
+          raw: { ...ded, paidTo: workerName },
         });
       });
     });
@@ -249,7 +271,9 @@ function Page() {
         }),
       );
     // Sort by Date Descending
-    return list.sort((a, b) => (a.date < b.date ? 1 : -1));
+    return list
+      .map((item) => ({ ...item, ...expenseDetails(item.raw) }))
+      .sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [
     expensesQuery.data,
     paymentsQuery.data,
@@ -262,8 +286,9 @@ function Page() {
   const filteredExpenses = useMemo(() => {
     return combinedExpenses.filter((item) => {
       // 1. Time range filter
-      if (timeRange === "week" && !isThisWeek(item.date)) return false;
-      if (timeRange === "month" && !isThisMonth(item.date)) return false;
+      if (!matchesExpensePeriod(item.date, timeRange)) return false;
+      if (payerFilter !== "ALL" && item.paidBy !== payerFilter) return false;
+      if (purposeFilter !== "ALL" && item.category !== purposeFilter) return false;
 
       // 2. Source filter
       if (sourceFilter !== "ALL" && item.source !== sourceFilter) return false;
@@ -275,6 +300,9 @@ function Page() {
           item.description.toLowerCase().includes(q) ||
           item.category.toLowerCase().includes(q) ||
           item.paidBy.toLowerCase().includes(q) ||
+          (item.paidTo ?? "").toLowerCase().includes(q) ||
+          (item.reference ?? "").toLowerCase().includes(q) ||
+          (item.paymentMode ?? "").toLowerCase().includes(q) ||
           item.source.toLowerCase().includes(q) ||
           item.date.includes(q);
         if (!match) return false;
@@ -282,7 +310,7 @@ function Page() {
 
       return true;
     });
-  }, [combinedExpenses, timeRange, sourceFilter, search]);
+  }, [combinedExpenses, timeRange, sourceFilter, payerFilter, purposeFilter, search]);
 
   // Metrics calculation
   const totalSpending = useMemo(() => postedExpenseTotal(filteredExpenses), [filteredExpenses]);
@@ -333,7 +361,11 @@ function Page() {
       Description: e.description,
       Category: e.category,
       "Amount (INR)": e.amount,
-      "Paid By / Ref": e.paidBy,
+      "Paid By": e.paidBy,
+      "Paid For": e.category,
+      "Paid To": e.paidTo ?? "Not recorded",
+      "Payment Method": e.paymentMode ?? "Not recorded",
+      "Receipt / Reference": e.reference ?? "",
       Status: e.status,
     }));
 
@@ -406,7 +438,7 @@ function Page() {
         </p>
       )}
       <PageHeader
-        title="Project Expenses & Expenditure Ledger"
+        title="Weekly Expenses"
         eyebrow="Consolidated Finance & Site Operations"
         actions={
           <div className="flex items-center gap-2">
@@ -568,6 +600,32 @@ function Page() {
             <option value="Opening Balance">Opening Balance</option>
           </select>
 
+          <select
+            aria-label="Filter by payment maker"
+            value={payerFilter}
+            onChange={(e) => setPayerFilter(e.target.value)}
+            className="h-9 max-w-56 px-3 text-xs border border-border rounded-xl bg-background font-semibold"
+          >
+            <option value="ALL">All payment makers</option>
+            {[...new Set(combinedExpenses.map((item) => item.paidBy))].sort().map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter by payment purpose"
+            value={purposeFilter}
+            onChange={(e) => setPurposeFilter(e.target.value)}
+            className="h-9 max-w-56 px-3 text-xs border border-border rounded-xl bg-background font-semibold"
+          >
+            <option value="ALL">All payment purposes</option>
+            {[...new Set(combinedExpenses.map((item) => item.category))].sort().map((purpose) => (
+              <option key={purpose} value={purpose}>
+                {purpose}
+              </option>
+            ))}
+          </select>
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
             <input
@@ -607,9 +665,12 @@ function Page() {
                 <th className="py-3 px-4">DATE</th>
                 <th className="py-3 px-4">SOURCE MODULE</th>
                 <th className="py-3 px-4">DESCRIPTION / DETAILS</th>
-                <th className="py-3 px-4">CATEGORY</th>
+                <th className="py-3 px-4">PAID FOR</th>
                 <th className="py-3 px-4">AMOUNT</th>
-                <th className="py-3 px-4">PAID BY / REF</th>
+                <th className="py-3 px-4">PAID BY</th>
+                <th className="py-3 px-4">PAID TO</th>
+                <th className="py-3 px-4">PAYMENT METHOD</th>
+                <th className="py-3 px-4">RECEIPT / REFERENCE</th>
                 <th className="py-3 px-4 text-right">STATUS</th>
               </tr>
             </thead>
@@ -628,6 +689,9 @@ function Page() {
                   <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
                     {e.paidBy}
                   </td>
+                  <td className="py-3.5 px-4">{e.paidTo}</td>
+                  <td className="py-3.5 px-4">{e.paymentMode}</td>
+                  <td className="py-3.5 px-4">{e.reference || "-"}</td>
                   <td className="py-3.5 px-4 text-right whitespace-nowrap">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 uppercase tracking-wider">
                       <span className="size-1.5 rounded-full bg-emerald-500" />
@@ -639,7 +703,7 @@ function Page() {
 
               {!filteredExpenses.length && (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center">
+                  <td colSpan={10} className="p-12 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="size-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 shadow-sm">
                         <Inbox className="size-7" />
@@ -653,7 +717,11 @@ function Page() {
                         <p className="text-xs text-muted-foreground max-w-sm">
                           {isFetchingAny
                             ? "Fetching latest entries from vendor payments, logistics, and site operations..."
-                            : search || sourceFilter !== "ALL" || timeRange !== "all"
+                            : search ||
+                                sourceFilter !== "ALL" ||
+                                payerFilter !== "ALL" ||
+                                purposeFilter !== "ALL" ||
+                                timeRange !== "all"
                               ? `No records match your selected filters (${timeRange.toUpperCase()} time range, ${sourceFilter} source). Try clearing filters.`
                               : "There are currently no items recorded under project expenses. Click the Log Expense button above to log a new record."}
                         </p>
@@ -680,7 +748,7 @@ function Page() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleAddSubmit}
-            className="bg-[color:var(--surface)] border border-border rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200"
+            className="bg-[color:var(--surface)] border border-border rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200"
           >
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h3 className="font-bold text-base text-foreground">Log Direct Project Expense</h3>
@@ -709,16 +777,19 @@ function Page() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-foreground block">Category</label>
+                <label className="text-xs font-bold text-foreground block">Paid for *</label>
                 <select
+                  required
+                  aria-label="Paid for"
                   value={expCat}
                   onChange={(e) => setExpCat(e.target.value)}
                   className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background text-foreground font-semibold"
                 >
-                  <option value="Food & Mess">Food & Mess charges</option>
-                  <option value="Site Supplies">Site Supplies</option>
-                  <option value="Repairs">Repairs & Maintenance</option>
-                  <option value="Other">Other Expenses</option>
+                  {EXPENSE_PURPOSES.map((purpose) => (
+                    <option key={purpose} value={purpose}>
+                      {purpose}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -755,17 +826,88 @@ function Page() {
                 <label className="text-xs font-bold text-foreground block">
                   Paid By <span className="text-orange-600 font-bold">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   required
-                  placeholder="e.g. Rajesh Kumar (PM)"
+                  aria-label="Paid by"
                   value={expPaidBy}
                   onChange={(e) => setExpPaidBy(e.target.value)}
                   className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background text-foreground"
-                />
+                >
+                  <option value="">
+                    {peopleQuery.isPending ? "Loading people..." : "Select who made the payment"}
+                  </option>
+                  {paymentMakers.map((person) => (
+                    <option key={person.employeeId} value={person.employeeId}>
+                      {person.name} ({person.role.replaceAll("_", " ")})
+                    </option>
+                  ))}
+                  <option value="__other">Other person</option>
+                </select>
+                {expPaidBy === "__other" && (
+                  <input
+                    required
+                    aria-label="Other payment maker name"
+                    placeholder="Name of the person who paid"
+                    value={expOtherPayer}
+                    onChange={(e) => setExpOtherPayer(e.target.value)}
+                    className="w-full h-10 px-3 text-xs border border-border rounded-xl bg-background"
+                  />
+                )}
+                {peopleQuery.isError && (
+                  <p role="alert" className="text-xs text-destructive">
+                    Unable to load people.{" "}
+                    <button
+                      type="button"
+                      onClick={() => peopleQuery.refetch()}
+                      className="underline"
+                    >
+                      Retry
+                    </button>{" "}
+                    or select Other person.
+                  </p>
+                )}
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <label className="space-y-1.5 text-xs font-bold">
+                Paid to / recipient *
+                <input
+                  required
+                  value={expRecipient}
+                  onChange={(e) => setExpRecipient(e.target.value)}
+                  placeholder="Person, shop, or company paid"
+                  className="w-full h-10 px-3 border border-border rounded-xl bg-background"
+                />
+              </label>
+              <label className="space-y-1.5 text-xs font-bold">
+                Payment method *
+                <select
+                  required
+                  value={expMode}
+                  onChange={(e) => setExpMode(e.target.value)}
+                  className="w-full h-10 px-3 border border-border rounded-xl bg-background"
+                >
+                  <option value="">Select payment method</option>
+                  {EXPENSE_PAYMENT_MODES.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {mode}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="block space-y-1.5 text-xs font-bold">
+              Receipt / transaction reference{" "}
+              {expMode && expMode !== "Cash" ? "*" : "(optional for cash)"}
+              <input
+                required={!!expMode && expMode !== "Cash"}
+                value={expReference}
+                onChange={(e) => setExpReference(e.target.value)}
+                placeholder="Receipt number, UTR, or transaction ID"
+                className="w-full h-10 px-3 border border-border rounded-xl bg-background"
+              />
+            </label>
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
               <button
                 type="button"
