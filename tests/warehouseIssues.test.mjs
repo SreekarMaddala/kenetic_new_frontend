@@ -51,6 +51,43 @@ function warehouse(projectId = "project-a", amount = 10) {
   return { props: WarehouseIssues({}).props, calls };
 }
 
+function projectMaterials(role = "operations_admin", amount = 10) {
+  const calls = [];
+  const { Route } = component("../src/routes/projects/$projectId/materials.tsx", {
+    "@tanstack/react-router": { createFileRoute: () => (config) => ({ ...config, useParams: () => ({ projectId: "project-a" }) }) },
+    "../../../components/WorkflowLedger": { WorkflowLedger: "ledger" },
+    "../../../lib/api": { api: { post: (...args) => calls.push(args) } },
+    "../../../lib/ProjectContext": { useProject: () => ({ project: { name: "Site A" } }) },
+    "../../../contexts/AuthContext": { useAuth: () => ({ user: { role } }) },
+    "../../../lib/materialSelection": { materialSelectionFields },
+    "@tanstack/react-query": { useQuery: () => ({ data: [{ itemId: "cement", name: "Cement", category: "Binding", unit: "Bags", centralStock: amount, status: "Active" }] }) },
+  });
+  return { view: Route.component(), calls };
+}
+
+test("project materials is one table with allocation directly to the current project", () => {
+  const { view, calls } = projectMaterials();
+  assert.equal(view.type, "ledger");
+  assert.equal(view.props.title, "Project Materials");
+  assert.equal(view.props.createLabel, "Allocate to this project");
+  assert.equal(view.props.fields.some((f) => f.key === "targetProjectId" || f.key === "movementType"), false);
+  assert.deepEqual(Array.from(view.props.columns, (c) => c.label), ["Category", "Material", "Received", "Used", "Returned", "Remaining", "Unit"]);
+  view.props.onCreate({ category: "Binding", itemId: "cement", qty: 2, targetProjectId: "other-project", requestId: "allocation-001" });
+  assert.equal(calls[0][0], "/warehouse/issue-vouchers");
+  assert.equal(calls[0][1].targetProjectId, "project-a");
+  assert.equal(calls[0][1].movementType, "issue");
+  assert.equal(calls[0][1].qty, 2);
+});
+
+test("project allocation respects available warehouse stock and administrator permissions", () => {
+  const { view, calls } = projectMaterials("operations_admin", 0);
+  assert.throws(() => view.props.onCreate({ category: "Binding", itemId: "cement", qty: 9 }), /0 Bags available/);
+  assert.equal(calls.length, 0);
+  const supervisor = projectMaterials("supervisor");
+  assert.equal(supervisor.view.props.fields, undefined);
+  assert.throws(() => supervisor.view.props.onCreate({}), /Only administrators/);
+});
+
 test("project movements inherit the active project without any project selector", () => {
   const { props, calls } = warehouse();
   assert.equal(

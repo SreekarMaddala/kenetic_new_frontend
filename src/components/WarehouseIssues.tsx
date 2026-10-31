@@ -6,11 +6,13 @@ import { materialSelectionFields } from "../lib/materialSelection";
 
 export function WarehouseIssues({
   readOnly = false,
+  embedded = false,
   category = "",
   itemId = "",
   location = "",
 }: {
   readOnly?: boolean;
+  embedded?: boolean;
   category?: string;
   itemId?: string;
   location?: string;
@@ -59,10 +61,14 @@ export function WarehouseIssues({
   return (
     <WorkflowLedger
       title="Material movements"
+      hideHeading={embedded}
+      showSummary={!embedded}
       description={
-        projectId
-          ? `Material movements for ${project?.name ?? "this project"}. The current project is linked automatically.`
-          : "Track warehouse issues, project usage, and returns. Every movement is linked to a project and updates the shared material balance."
+        embedded
+          ? undefined
+          : projectId
+            ? `Material movements for ${project?.name ?? "this project"}. The current project is linked automatically.`
+            : "Track warehouse issues, project usage, and returns. Every movement is linked to a project and updates the shared material balance."
       }
       endpoint="/warehouse/issue-vouchers"
       idKey="warehouseEventId"

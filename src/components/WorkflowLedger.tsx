@@ -48,6 +48,8 @@ export type LedgerAction = {
 type Props = {
   className?: string;
   showSummary?: boolean;
+  hideHeading?: boolean;
+  emptyDescription?: string;
   eyebrow?: string;
   title: string;
   description?: string;
@@ -140,6 +142,8 @@ export function reversalActions(endpoint: string, idKey: string): LedgerAction[]
 export function WorkflowLedger({
   className = "",
   showSummary = true,
+  hideHeading = false,
+  emptyDescription,
   eyebrow = "Project Operations & Ledger",
   title,
   description,
@@ -379,6 +383,7 @@ export function WorkflowLedger({
   return (
     <section className={`p-6 max-w-7xl mx-auto space-y-6 animate-fade-up ${className}`}>
       <PageHeader
+        hideHeading={hideHeading}
         title={title}
         eyebrow={eyebrow}
         actions={
@@ -644,7 +649,8 @@ export function WorkflowLedger({
                             ? "Fetching latest entries from project operations ledger..."
                             : search
                               ? `No records match your search filter "${search}". Try clearing the search query.`
-                              : `There are currently no items recorded under ${title.toLowerCase()}. Use the action button above to log a new record.`}
+                              : (emptyDescription ??
+                                `There are currently no items recorded under ${title.toLowerCase()}.${fields ? " Use the action button above to log a new record." : ""}`)}
                         </p>
                       </div>
                       {fields && !query.isLoading && (

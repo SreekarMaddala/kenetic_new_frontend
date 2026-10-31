@@ -701,26 +701,30 @@ export function PageHeader({
   eyebrow,
   title,
   actions,
+  hideHeading = false,
 }: {
   eyebrow?: string;
   title: string;
   actions?: ReactNode;
+  hideHeading?: boolean;
 }) {
   return (
     <header className="page-header">
-      <div className="min-w-0">
-        {eyebrow && (
-          <div className="flex items-center gap-2 mb-2">
-            <p className="text-xs font-medium text-muted-foreground">{eyebrow}</p>
-          </div>
-        )}
-        <h1
-          className="text-2xl font-display font-semibold tracking-tight"
-          style={{ letterSpacing: "-0.025em" }}
-        >
-          {title}
-        </h1>
-      </div>
+      {!hideHeading && (
+        <div className="min-w-0">
+          {eyebrow && (
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-xs font-medium text-muted-foreground">{eyebrow}</p>
+            </div>
+          )}
+          <h1
+            className="text-2xl font-display font-semibold tracking-tight"
+            style={{ letterSpacing: "-0.025em" }}
+          >
+            {title}
+          </h1>
+        </div>
+      )}
       {actions ? <div className="page-actions flex flex-wrap gap-2">{actions}</div> : null}
     </header>
   );
