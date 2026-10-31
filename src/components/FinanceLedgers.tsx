@@ -117,7 +117,7 @@ export function SubcontractorPaymentLedger({ projectId }: { projectId: string })
   return (
     <WorkflowLedger
       title="Subcontractor Payments"
-      description="Record payments made to assigned subcontractors, then approve them to post project spending."
+      description="Record an advance or work payment for an assigned subcontractor. Approved amounts appear in global Subcontractor Analytics by project."
       endpoint={endpoint}
       idKey="paymentId"
       createLabel="Record subcontractor payment"
@@ -133,6 +133,15 @@ export function SubcontractorPaymentLedger({ projectId }: { projectId: string })
           helperText: contractors.isError
             ? "Unable to load subcontractors. Refresh and try again."
             : "Choose an active subcontractor assigned above.",
+        },
+        {
+          key: "paymentType",
+          label: "Payment category",
+          required: true,
+          options: [
+            { value: "Advance", label: "Advance" },
+            { value: "Payment", label: "Work payment" },
+          ],
         },
         { key: "amount", label: "Amount paid", type: "number", min: 0.01, required: true },
         { key: "date", label: "Payment date", type: "date", required: true },
@@ -155,6 +164,7 @@ export function SubcontractorPaymentLedger({ projectId }: { projectId: string })
       columns={[
         { key: "date", label: "Date" },
         { key: "contractorName", label: "Subcontractor" },
+        { key: "paymentType", label: "Payment category" },
         { key: "amount", label: "Amount" },
         { key: "mode", label: "Mode" },
         { key: "reference", label: "Reference" },

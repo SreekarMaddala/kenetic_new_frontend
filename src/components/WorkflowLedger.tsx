@@ -48,6 +48,7 @@ export type LedgerAction = {
 type Props = {
   className?: string;
   showSummary?: boolean;
+  showMonthFilter?: boolean;
   hideHeading?: boolean;
   emptyDescription?: string;
   eyebrow?: string;
@@ -66,6 +67,7 @@ type Props = {
   actions?: LedgerAction[];
   transform?: (rows: DomainRecord[]) => DomainRecord[];
   onCreate?: (body: DomainRecord) => Promise<unknown>;
+  onRefresh?: () => void;
   upload?: boolean;
 };
 
@@ -142,6 +144,7 @@ export function reversalActions(endpoint: string, idKey: string): LedgerAction[]
 export function WorkflowLedger({
   className = "",
   showSummary = true,
+  showMonthFilter = true,
   hideHeading = false,
   emptyDescription,
   eyebrow = "Project Operations & Ledger",
@@ -160,6 +163,7 @@ export function WorkflowLedger({
   actions = [],
   transform,
   onCreate,
+  onRefresh,
   upload,
 }: Props) {
   const qc = useQueryClient();
@@ -391,7 +395,10 @@ export function WorkflowLedger({
           <div className="flex items-center gap-2">
             <button
               className="h-9 px-3 border border-border rounded-xl text-xs font-semibold hover:bg-secondary transition-colors flex items-center gap-1.5 bg-[color:var(--surface)] text-foreground shadow-sm"
-              onClick={() => query.refetch()}
+              onClick={() => {
+                query.refetch();
+                onRefresh?.();
+              }}
               disabled={query.isFetching}
             >
               <RotateCw
@@ -521,7 +528,7 @@ export function WorkflowLedger({
             </div>
           )}
 
-          {availableMonths.length > 0 && (
+          {showMonthFilter && availableMonths.length > 0 && (
             <div className="flex items-center gap-2">
               <Calendar className="size-4 text-primary shrink-0" />
               <select

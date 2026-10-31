@@ -375,6 +375,7 @@ export type PaymentCreateRequest = {
   mode: "NEFT" | "RTGS" | "Cheque" | "Cash" | "UPI";
   status?: "Draft" | "Pending" | "Approved" | "Rejected";
   materialName?: string;
+  paymentType?: "Advance" | "Payment";
   paymentId?: string;
 };
 
